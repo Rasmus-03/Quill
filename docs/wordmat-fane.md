@@ -1,67 +1,67 @@
-# WordMat-fanen i WordCraft
+# The WordMat tab
 
-Alt det, du kender fra WordMat — som en fane i WordCraft. Kræver programmet
-Maxima (samme regnemotor WordMat bruger).
+Everything you know from WordMat — as a tab in Quill. Needs the
+Maxima program (the same calculation engine WordMat uses).
 
-## Genveje
+## Shortcuts
 
-| Tast | Gør |
+| Key | Does |
 |---|---|
-| Alt+M | Ny ligning ved cursoren |
-| Alt+B | Beregn det markerede |
-| Alt+L | Isolér variabel i det markerede |
+| Alt+M | New equation at the cursor |
+| Alt+B | Calculate the selection |
+| Alt+L | Isolate a variable in the selection |
 
-## Arbejdsgange
+## Workflows
 
-**Regn på en ligning:** Stil cursoren i den, eller markér den (eller noget
-af den), og tryk på knappen. Svaret sættes på med `=` i grønt — inde i
-samme ligning. Kør igen efter redigering: det gamle svar erstattes.
+**Calculate an equation:** put the cursor in it, or select it (or part of
+it), and press the button. The answer is appended with `=` in green — inside
+the same equation. Re-run after editing: the old answer is replaced.
 
-**Flere variable:** En dialog spørger hvilken variabel (`x`, `y`, …).
-Én variabel vælges selv. Kommandoer tager også `{"var": "y"}`.
+**Several variables:** a dialog asks which variable (`x`, `y`, …).
+One variable is picked automatically. Commands also take `{"var": "y"}`.
 
-**Enheder:** Markér f.eks. `5 km/h to m/s` → Konverter. Danske
-decimalkommaer virker overalt (`2,5`).
+**Units:** select e.g. `5 km/h to m/s` → Convert. Danish decimal
+commas work everywhere (`2,5`).
 
-**Definitioner:** Markér `g := 9.82` → Definér. Bruges i alle beregninger
-i dokumentet, indtil du sletter dem.
+**Definitions:** select `g := 9.82` → Definér. Used in every calculation
+in the document until you delete them.
 
-**Gemte ligninger:** Højreklik en ligning → Gem ligning. Den ligger under
-Formelsamling → Mine. Gem igen for at fjerne.
+**Saved equations:** right-click an equation → Gem ligning. It shows up under
+Formelsamling → Mine. Save again to remove.
 
-**Formelsamling:** Rente, andengrad og geometri — klik sætter formlen ind
-som ny ligning.
+**Formula collection:** interest, quadratics and geometry — click inserts
+the formula as a new equation.
 
-## Knapperne
+## The buttons (Danish labels, kept for Danish students)
 
-- **Beregn** — talværdi (Eksakt/Decimal-tilstand fra Mere-gruppen)
+- **Beregn** — numeric value (Eksakt/Decimal mode from the Mere group)
 - **Reducér, Faktorisér, Udvid, Differentier, Stamfunktion**
 - **Løs ligning, Løs numerisk, Isolér, Løs diff.ligning**
 - **Enheder, Decimaltal, Til LaTeX**
-- **Determinant, Invers, Egenværdier, Løs system** (skriv `matrix([1,2],[3,4])`)
-- **Grænseværdi** (`udtryk, var, punkt`), **Taylorrække** (`udtryk, var, punkt, orden`)
-- **Middel, Spredning** (`[1, 2, 3, 4]` — punktum-decimaler i lister)
-- **Mere:** Maxima-kommando (rå Maxima), Forrige resultat, Eksakt, Decimal
+- **Determinant, Invers, Egenværdier, Løs system** (write `matrix([1,2],[3,4])`)
+- **Grænseværdi** (`expression, var, point`), **Taylorrække** (`expression, var, point, order`)
+- **Middel, Spredning** (`[1, 2, 3, 4]` — dotted decimals inside lists)
+- **Mere:** Maxima-kommando (raw Maxima), Forrige resultat, Eksakt, Decimal
 
-## Grafer
+## Graphs
 
-Markér f.eks. `x^2, -5, 5` og tryk **Tegn graf** (Graf-gruppen). Flere
-kurver adskilles med `;`: `x^2; 2*x+1, -5, 5`. Udtryk som `f(x)=x^2`
-eller `y=x^2` virker også; `e^x` og `ln(x)` forstås. Uden interval
-tegnes -10..10. Brøkstreger/polers (f.eks. `1/x`) bliver til slip i
-kurven, ikke vrøvl. Grafen erstatter markeringen som billede (PNG).
+Select e.g. `x^2, -5, 5` and press **Tegn graf** (the Graf group). Several
+curves are separated with `;`: `x^2; 2*x+1, -5, 5`. Forms like `f(x)=x^2`
+or `y=x^2` work too; `e^x` and `ln(x)` are understood. Without a range
+-10..10 is drawn. Poles (e.g. `1/x`) become gaps in the curve, not garbage.
+The graph replaces the selection as a picture (PNG).
 
-## Krav
+## Requirements
 
-- **Maxima** i PATH (`sudo pacman -S maxima` på Arch/CachyOS).
-  Uden den melder knapperne pænt fejl i stedet for at crashe.
-- **SolveReal** (valgfri, bedre løsninger over reelle tal):
-  læg `solvereal.mac` i `~/.local/share/mathcraft/packages/` og sæt
-  `MATHCRAFT_SOLVEREAL` til stien. Uden den bruges Maximas egen solve().
-  (SolveReal er GPL-licenseret og medfølger aldrig appen — du henter og
-  installerer den selv.)
+- **Maxima** in PATH (`sudo pacman -S maxima` on Arch/CachyOS).
+  Without it the buttons report a clean error instead of crashing.
+- **SolveReal** (optional, better real-domain solving):
+  place `solvereal.mac` in `~/.local/share/mathcraft/packages/` and point
+  `MATHCRAFT_SOLVEREAL` at it. Without it Maxima's own solve() is used.
+  (SolveReal is GPL-licensed and never ships with the app — you fetch and
+  install it yourself.)
 
-## Første start
+## First launch
 
-WordMat-fanen opretter sig selv ved første start. Slettes den ved et
-uheld, kommer den igen ved næste start.
+The WordMat tab creates itself on first launch. If deleted by accident,
+it comes back on next launch.

@@ -1,38 +1,39 @@
 # Quill
 
-Gratis tekstbehandling med dansk matematik indbygget.
+Free word processing with Danish mathematics built in.
 
-Quill er et Word-kompatibelt skriveprogram (.docx ud og ind) med en **WordMat-fane** til
-matematik: regn, løs ligninger, enheder, matricer, grafer — med svar i grønt direkte i ligningen.
+Quill is a Word-compatible writing app (.docx in and out) with a **WordMat tab** for
+mathematics: calculate, solve equations, units, matrices, plots — with answers in green
+right inside the equation.
 
-## Installér (Linux)
+## Install (Linux)
 
-1. Hent `quill-1.0.0-linux-x86_64.AppImage` under [Releases](../../releases).
-2. Installér regnemotoren Maxima (medfølger ikke):
+1. Download `quill-1.0.0-linux-x86_64.AppImage` from [Releases](../../releases).
+2. Install the Maxima calculation engine (not bundled):
    - Arch/CachyOS: `sudo pacman -S maxima`
    - Debian/Ubuntu: `sudo apt install maxima`
    - Fedora: `sudo dnf install maxima`
-3. Kør AppImage-filen. WordMat-fanen opretter sig selv ved første start.
+3. Run the AppImage. The WordMat tab creates itself on first launch.
 
-Valgfrit (bedre løsninger over reelle tal): læg `solvereal.mac` i
-`~/.local/share/mathcraft/packages/` og sæt `MATHCRAFT_SOLVEREAL` til stien.
-SolveReal er GPL og hentes separat — den bundtes aldrig med Quill.
+Optional (better real-domain solving): place `solvereal.mac` in
+`~/.local/share/mathcraft/packages/` and point `MATHCRAFT_SOLVEREAL` at it.
+SolveReal is GPL and never ships with Quill — you fetch it yourself.
 
-## WordMat-fanen
+## The WordMat tab
 
-| Tast | Gør |
+| Key | Does |
 |---|---|
-| Alt+M | Ny ligning |
-| Alt+B | Beregn markeringen |
-| Alt+L | Isolér variabel |
+| Alt+M | New equation |
+| Alt+B | Calculate the selection |
+| Alt+L | Isolate a variable |
 
-Markér f.eks. `x^2-4=0` → **Isolér** giver `x = -2 eller x = 2` i grønt.
-Markér `x^2, -5, 5` → **Tegn graf**. Se alle arbejdsgange i
+Select e.g. `x^2-4=0` → **Isolér** gives `x = -2 eller x = 2` in green.
+Select `x^2, -5, 5` → **Tegn graf**. All workflows are in
 [`docs/wordmat-fane.md`](docs/wordmat-fane.md).
 
-## Licens
+## License
 
-Gratis og open source (MIT OR Apache-2.0 — se `LICENSE-MIT`, `LICENSE-APACHE`).
-Bygger på WordCraft fra ArtCraft-teamet og bidragydere (se `ATTRIBUTION.md`).
-Original matematik-kode i `crates/engine/src/cmd/mathcraft.rs`,
+Free and open source (MIT OR Apache-2.0 — see `LICENSE-MIT`, `LICENSE-APACHE`).
+Builds on WordCraft by the ArtCraft team and contributors (see `ATTRIBUTION.md`).
+Original mathematics code in `crates/engine/src/cmd/mathcraft.rs`,
 `mathgraf.rs`, `crates/doc/src/math_edit.rs`.
