@@ -2132,6 +2132,14 @@ const LAYOUT_WORDMAT: &[(&str, &[&str])] = &[
 /// First-run setup: create the Math tab with all math groups when
 /// missing (e.g. fresh prefs). Idempotent; never touches existing tabs.
 /// A leftover Danish "WordMat" tab is rebuilt once as "Math".
+///
+/// The built-in layout's version ([`MATH_LAYOUT_VERSION`]) is stored in the
+/// saved ribbon (see [`crate::RibbonLayout::math_layout_version`]); a saved
+/// layout that lags gets missing math commands appended **once** — picking
+/// up new features on old prefs — and then the "deliberately removed never
+/// returns" rule holds again until we bump the version for a layout change.
+const MATH_LAYOUT_VERSION: u32 = 2;
+
 pub fn ensure_wordmat_tab(session: &mut Session) {
     if session.ribbon.tabs.iter().any(|t| t.name == "WordMat") {
         let _ = session.ribbon.remove("WordMat", None, None);
@@ -2149,6 +2157,21 @@ pub fn ensure_wordmat_tab(session: &mut Session) {
                 }
             }
         }
+        // Saved from an older Quill: pick up new math buttons once (then
+        // removals of the user's own stick again). Never resurrects with a
+        // current version — see the doc comment.
+        if session.ribbon.math_layout_version < MATH_LAYOUT_VERSION {
+            for (group, cmds) in LAYOUT_WORDMAT {
+                let Some(tab) = session.ribbon.tabs.iter_mut().find(|t| t.name == "Math") else { break };
+                let Some(g) = tab.groups.iter_mut().find(|g| g.name == *group) else { continue };
+                for cmd in *cmds {
+                    if !g.commands.iter().any(|c| c == cmd) {
+                        g.commands.push(cmd.to_string());
+                    }
+                }
+            }
+            session.ribbon.math_layout_version = MATH_LAYOUT_VERSION;
+        }
         return;
     }
     let reg = super::registry();
@@ -2164,6 +2187,7 @@ pub fn ensure_wordmat_tab(session: &mut Session) {
             let _ = session.ribbon.add(&reg, "Math", group, cmd, None);
         }
     }
+    session.ribbon.math_layout_version = MATH_LAYOUT_VERSION;
 }
 
 pub fn specs() -> Vec<CommandSpec> {
@@ -2775,6 +2799,38 @@ mod tests {
         run(&mut s, "math.trin", json!({}));
         let t = text(&s);
         assert!(t.contains("ingen reelle løsninger"), "got {t}");
+    }
+
+    #[test]
+    fn old_math_tab_picks_up_new_commands_exactly_once() {
+        use wordcraft_doc::Document;
+        let mut s = Session::new(Document::new());
+        // An old saved layout: a Math tab with only the old Calculate
+        // group, tagged with version 1 (pre-trin).
+        let reg = crate::cmd::registry();
+        assert!(s.ribbon.new_tab(Some("Math"), Some("View")).is_ok());
+        let _ = s.ribbon.new_group("Math", Some("Calculate"));
+        let _ = s.ribbon.add(&reg, "Math", "Calculate", "math.beregn", None);
+        s.ribbon.math_layout_version = 1;
+
+        ensure_wordmat_tab(&mut s);
+        let calc = |s: &Session| {
+            s.ribbon.tabs.iter().find(|t| t.name == "Math").unwrap().groups.iter().find(|g| g.name == "Calculate").unwrap().commands.clone()
+        };
+        let cmds = calc(&s);
+        assert!(cmds.contains(&"math.beregn".to_string()), "kept old: {cmds:?}");
+        assert!(cmds.contains(&"math.trin".to_string()), "picked up: {cmds:?}");
+        // Missing groups (History under More) materialize as themselves.
+        assert!(s.ribbon.tabs.iter().find(|t| t.name == "Math").unwrap().groups.iter().any(|g| g.name == "More"));
+        assert_eq!(s.ribbon.math_layout_version, MATH_LAYOUT_VERSION);
+
+        // After the upgrade: a deliberate removal never comes back.
+        let _ = s.ribbon.remove("Math", Some("Calculate"), Some("math.trin"));
+        ensure_wordmat_tab(&mut s);
+        assert!(!calc(&s).contains(&"math.trin".to_string()));
+        // Idempotence: no duplicates on repeated runs.
+        ensure_wordmat_tab(&mut s);
+        assert_eq!(calc(&s).iter().filter(|c| *c == "math.beregn").count(), 1);
     }
 
     #[test]

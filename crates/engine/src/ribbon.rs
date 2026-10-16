@@ -60,6 +60,17 @@ pub struct RibbonLayout {
     /// The Quick Access Toolbar's commands; `None` for the default ones ([`DEFAULT_QAT`]).
     #[serde(skip_serializing_if = "Option::is_none")]
     pub qat: Option<Vec<String>>,
+    /// The built-in Math tab's layout version (`ensure_wordmat_tab`), 0 for
+    /// layouts saved before versioning existed. A saved layout older than
+    /// [`cmd::mathcraft::MATH_LAYOUT_VERSION`] gets its missing math
+    /// commands appended exactly once; after that a deliberately removed
+    /// button stays removed until the built-in layout changes again.
+    #[serde(default, skip_serializing_if = "is_zero")]
+    pub math_layout_version: u32,
+}
+
+fn is_zero(v: &u32) -> bool {
+    *v == 0
 }
 
 fn is_false(b: &bool) -> bool {
@@ -136,6 +147,7 @@ impl RibbonLayout {
             }
             out.tabs.push(TabEntry { name, custom, hidden, groups });
         }
+        out.math_layout_version = v.get("math_layout_version").and_then(Value::as_u64).unwrap_or(0).min(u32::MAX as u64) as u32;
         if let Some(q) = v.get("qat").and_then(Value::as_array) {
             let mut ids: Vec<String> = Vec::new();
             for id in q.iter().take(MAX_COMMANDS).filter_map(Value::as_str) {
