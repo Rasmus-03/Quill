@@ -52,8 +52,10 @@ fn solvereal_path() -> Option<String> {
 const MAXIMA_TIMEOUT_S: u64 = 30;
 
 /// Run one Maxima batch string, bounded by [`MAXIMA_TIMEOUT_S`].
+/// Returns (stdout, stderr): stderr carries the Maxima error text a
+/// failed batch prints before silently continuing.
 /// Desktop only: the engine also compiles for web, where processes don't exist.
-fn run_maxima(batch_string: &str) -> Result<String, String> {
+fn run_maxima(batch_string: &str) -> Result<(String, String), String> {
     #[cfg(target_arch = "wasm32")]
     {
         let _ = batch_string;
@@ -67,11 +69,20 @@ fn run_maxima(batch_string: &str) -> Result<String, String> {
             .args(["--very-quiet", &format!("--batch-string={batch_string}")])
             .stdin(std::process::Stdio::null())
             .stdout(std::process::Stdio::piped())
+            .stderr(std::process::Stdio::piped())
             .spawn()
             .map_err(|e| format!("cannot start Maxima ({} missing? install it, e.g. `sudo pacman -S maxima`): {e}", maxima_bin()))?;
-        // Drain stdout on a thread so a flood of output can never deadlock
-        // the wait below (pipe buffer full while we only poll).
+        // Drain both pipes on threads so a flood of output can never
+        // deadlock the wait below (pipe buffer full while we only poll).
         let mut cap = child.stdout.take();
+        let mut cap_err = child.stderr.take();
+        let drain_err = std::thread::spawn(move || {
+            let mut v = Vec::new();
+            if let Some(o) = cap_err.as_mut() {
+                let _ = o.read_to_end(&mut v);
+            }
+            v
+        });
         let drain = std::thread::spawn(move || {
             let mut v = Vec::new();
             if let Some(o) = cap.as_mut() {
@@ -95,7 +106,7 @@ fn run_maxima(batch_string: &str) -> Result<String, String> {
         if !status.success() {
             return Err("Maxima fejlede".to_string());
         }
-        Ok(String::from_utf8_lossy(&bytes).into_owned())
+        Ok((String::from_utf8_lossy(&bytes).into_owned(), String::from_utf8_lossy(&drain_err.join().unwrap_or_default()).into_owned()))
     }
 }
 
@@ -162,24 +173,57 @@ pub(crate) fn batch(prelude: &[String], defs: &[String], cmd: &str) -> Result<St
     b.push_str("MC_RES:(");
     b.push_str(cmd.trim().trim_end_matches(';'));
     b.push_str(");print(\"MC>>>\",MC_RES);");
-    let text = run_maxima(&b)?;
+    let (out, stderr) = run_maxima(&b)?;
+    let full = join_output_lines(&out)?;
+    // A failed Maxima batch still reaches the print: MC_RES stays
+    // unbound and the anchor echoes the bare symbol. Never paint that
+    // as a green answer — error instead.
+    if full == "MC_RES" {
+        return Err(maxima_error(&stderr));
+    }
+    Ok(full)
+}
+
+/// Human-readable error for a failed Maxima batch, from stderr.
+fn maxima_error(stderr: &str) -> String {
+    let t = stderr.trim();
+    if t.is_empty() {
+        return "Maxima gave no result".to_string();
+    }
+    // Drop the trailing ECL debug hint line; keep the actual error text.
+    let lines: Vec<&str> = t
+        .lines()
+        .map(str::trim)
+        .filter(|l| !l.is_empty() && !l.starts_with("-- an error"))
+        .collect();
+    format!("Maxima error: {}", lines.join("; "))
+}
+
+/// Reassemble one `MC>>>` value from wrapped output lines: join
+/// continuations until the brackets balance (the `print` return value is
+/// echoed again right after and must never be glued on). More than
+/// [`OUTPUT_LINE_LIMIT`] continuation lines is an explicit error, never
+/// a silently truncated answer.
+const OUTPUT_LINE_LIMIT: usize = 4000;
+
+fn join_output_lines(text: &str) -> Result<String, String> {
     let lines: Vec<&str> = text.lines().map(str::trim).collect();
-    let start = lines.iter().position(|l| *l == "MC>>>" || l.starts_with("MC>>> ")).ok_or_else(|| "Maxima gav intet resultat".to_string())?;
-    // A long value wraps over several lines — but the `print` return
-    // value is echoed again right after. Join lines only until the
-    // brackets balance, so the echo never gets glued on.
+    let start = lines
+        .iter()
+        .position(|l| *l == "MC>>>" || l.starts_with("MC>>> "))
+        .ok_or_else(|| "Maxima produced no result".to_string())?;
     let mut full = lines[start].strip_prefix("MC>>>").unwrap_or("").trim().to_string();
     for (i, l) in lines[start + 1..].iter().enumerate() {
         if brackets_balanced(&full) && !full.is_empty() {
             break;
         }
-        if i >= 4000 {
+        if i >= OUTPUT_LINE_LIMIT {
             return Err("Maxima output too large".to_string());
         }
         full.push_str(l.trim());
     }
     if full.is_empty() {
-        return Err("Maxima gav et tomt resultat".to_string());
+        return Err("Maxima produced an empty result".to_string());
     }
     Ok(full)
 }
@@ -426,6 +470,13 @@ pub(crate) fn math_input(s: &mut Session) -> Result<(String, Target), CmdError> 
         {
             return Ok((strip_trailing_eq(&stripped), Target::Doc(None)));
         }
+        // New text typed after a stale green answer: keep only the new
+        // text so the answer neither stacks nor glues onto the input.
+        if let Some(stripped) = strip_green_prefix(s)
+            && !stripped.trim().is_empty()
+        {
+            return Ok((strip_trailing_eq(stripped.trim()), Target::Doc(None)));
+        }
         if let Some(before) = strip_trailing_object(s) {
             return Ok((strip_trailing_eq(&before), Target::Doc(None)));
         }
@@ -522,6 +573,40 @@ fn strip_trailing_eq(input: &str) -> String {
         Some(rest) if !rest.ends_with('=') && !rest.ends_with('<') && !rest.ends_with('>') && !rest.ends_with('!') => rest.trim_end().to_string(),
         _ => t,
     }
+}
+
+/// If the selection contains a green answer span FOLLOWED BY new
+/// non-green text (the user typed after a previous answer without
+/// selecting it fully), return only the trailing new text: the stale
+/// `{expr} = {ans}` prefix is dropped so answers never stack or glue.
+fn strip_green_prefix(s: &Session) -> Option<String> {
+    use crate::doc::props::TextColor;
+    let (a, b) = s.sel.ordered();
+    if a == b || a.path != b.path {
+        return None;
+    }
+    let para = s.doc.para_at(&a)?;
+    let text = &para.text;
+    // Byte spans of runs partitioning the paragraph text.
+    let mut spans: Vec<(usize, usize, bool)> = Vec::new();
+    let mut off = 0usize;
+    for r in para.runs.iter() {
+        let end = off + r.len;
+        spans.push((off, end, r.props.color == Some(TextColor::Rgb(ANSWER_GREEN))));
+        off = end;
+    }
+    // First green span that starts inside the selection but not at its start.
+    for (start, end, green) in spans.iter().map(|(s, e, g)| (*s, *e, *g)) {
+        if !green || end <= a.off || start >= b.off {
+            continue;
+        }
+        if start <= a.off {
+            break;
+        }
+        let cut = end.min(b.off);
+        return Some(text.get(cut..b.off)?.to_string());
+    }
+    None
 }
 
 /// If the selection ends with our green appended answer, return the input
@@ -1243,6 +1328,10 @@ fn diff_int(s: &mut Session, v: &Value, maxima_fn: &str, what: &str) -> CmdResul
 /// Beregn: numeric value. `2+2` → `4`; `x^2=4` → floated solutions.
 fn beregn(s: &mut Session, v: &Value) -> CmdResult {
     let (input, target) = math_input(s)?;
+    // Blacklist check on the RAW text first: the Danish rewrite below
+    // splits letter runs (`system` → `s*y*s*t*e*m`) and would neuter the
+    // token check; the transform must never hide hostile names.
+    check_maxima_safe(input.trim())?;
     let expr = split_idents(&dots_ctx(input.trim(), &def_names(s)), &def_names(s));
     // Exact (default, WordMat Eksakt) evaluates as-is; decimal mode
     // (WordMat Tal) wraps everything in float().
@@ -1463,6 +1552,8 @@ fn decimal(s: &mut Session, _: &Value) -> CmdResult {
 /// several variables open the variable picker (WordMat-style dialog).
 fn isoler(s: &mut Session, v: &Value) -> CmdResult {
     let (input, target) = math_input(s)?;
+    // Raw-text check first; see beregn (split_idents must not hide names).
+    check_maxima_safe(input.trim())?;
     let expr = split_idents(&dots_ctx(input.trim(), &def_names(s)), &def_names(s));
     let mut cmds = Vec::new();
     let mut varname = String::new();
@@ -1513,6 +1604,8 @@ fn poly_solve_raw(pre: &[String], defs: &[String], eq: &str, var: &str) -> Resul
 /// Solve equation: plain Maxima solve (exact, complex domain).
 fn solve_plain(s: &mut Session, v: &Value) -> CmdResult {
     let (input, target) = math_input(s)?;
+    // Raw-text check first; see beregn.
+    check_maxima_safe(input.trim())?;
     let expr = split_idents(&dots_ctx(input.trim(), &def_names(s)), &def_names(s));
     let mut cmds = Vec::new();
     for e in expand_pm(&expr) {
@@ -1550,6 +1643,8 @@ fn solve_plain(s: &mut Session, v: &Value) -> CmdResult {
 /// Solve numeric: nsolve when SolveReal is installed, else floated solve.
 fn solvenum(s: &mut Session, v: &Value) -> CmdResult {
     let (input, target) = math_input(s)?;
+    // Raw-text check first; see beregn.
+    check_maxima_safe(input.trim())?;
     let expr = split_idents(&dots_ctx(input.trim(), &def_names(s)), &def_names(s));
     let mut cmds = Vec::new();
     for e in expand_pm(&expr) {
@@ -1893,7 +1988,7 @@ fn unary_tex(s: &mut Session, _: &Value) -> CmdResult {
     b.push_str("tex(");
     b.push_str(&expr);
     b.push_str(");");
-    let stdout = run_maxima(&b).map_err(err)?;
+    let (stdout, _stderr) = run_maxima(&b).map_err(err)?;
     let tex: Vec<&str> = stdout.lines().map(str::trim).filter(|l| l.starts_with("$$")).collect();
     if tex.is_empty() {
         return Err(err("Could not convert to LaTeX".to_string()));
@@ -2021,6 +2116,54 @@ mod tests {
         assert!(check_maxima_safe("stringout(\"f\", x)").is_err());
         // Case-insensitive, %-prefixed too.
         assert!(check_maxima_safe("SYSTEM(\"id\")").is_err());
+    }
+
+    #[test]
+    fn join_reassembles_wrapped_values() {
+        assert_eq!(join_output_lines("MC>>> [x = 1]").unwrap(), "[x = 1]");
+        // Wrapped over two lines, echo after must not glue on.
+        assert_eq!(
+            join_output_lines("MC>>> [[1,\n2]]\n[[1,2]]").unwrap(),
+            "[[1,2]]"
+        );
+        assert!(join_output_lines("nothing here").is_err());
+        assert!(join_output_lines("MC>>>").is_err());
+        // Never-balanced output hits the explicit limit, not silent truncation.
+        let big = "MC>>> [[[[[\n".to_string() + &"x\n".repeat(5000);
+        assert_eq!(join_output_lines(&big).unwrap_err(), "Maxima output too large");
+    }
+
+    #[test]
+    fn hostile_equation_is_rejected_without_maxima() {
+        let mut s = s();
+        select_all(&mut s, "system(\"id\")");
+        let err = s.run("math.beregn", &json!({})).unwrap_err();
+        assert!(err.to_string().contains("not allowed"));
+        select_all(&mut s, "loadfile(\"/tmp/x.mac\")");
+        let err = s.run("math.isoler", &json!({"var": "x"})).unwrap_err();
+        assert!(err.to_string().contains("not allowed"));
+    }
+
+    #[test]
+    #[ignore]
+    fn unary_minus_binds_tighter_than_nothing() {
+        // -2^2 is -(2^2), not (-2)^2: standard precedence end to end.
+        let mut s = s();
+        select_all(&mut s, "-2^2");
+        run(&mut s, "math.beregn", json!({}));
+        assert_eq!(text(&s), "-2^2 = -4");
+        select_all(&mut s, "(-2)^2");
+        run(&mut s, "math.beregn", json!({}));
+        assert_eq!(text(&s), "(-2)^2 = 4");
+    }
+
+    #[test]
+    #[ignore]
+    fn division_by_zero_is_a_clean_error() {
+        let mut s = s();
+        select_all(&mut s, "1/0");
+        let err = s.run("math.beregn", &json!({})).unwrap_err();
+        assert!(err.to_string().contains("Maxima"), "got {err}");
     }
 
     #[test]
