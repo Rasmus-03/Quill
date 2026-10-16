@@ -1,6 +1,6 @@
 # Quill
 
-Gratis tekstbehandling med dansk skolematematik indbygget.
+Gratis tekstbehandling med dansk matematik indbygget.
 
 Quill er et Word-kompatibelt skriveprogram (.docx ud og ind) med en **WordMat-fane** til
 matematik: regn, løs ligninger, enheder, matricer, grafer — med svar i grønt direkte i ligningen.
