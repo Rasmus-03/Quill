@@ -1776,17 +1776,17 @@ fn undefine(s: &mut Session, v: &Value) -> CmdResult {
 
 /// The WordMat tab layout (also the migration source for old prefs).
 const LAYOUT_WORDMAT: &[(&str, &[&str])] = &[
-    ("Beregn", &["math.beregn", "math.simplify", "math.factor", "math.expand", "math.diff", "math.integrate"]),
-    ("Løs", &["math.solve", "math.solvenum", "math.isoler", "math.solvede", "math.nyligning"]),
-    ("Definér", &["math.define", "math.undefine"]),
-    ("Enheder", &["math.enhed", "math.numeric"]),
+    ("Calculate", &["math.beregn", "math.simplify", "math.factor", "math.expand", "math.diff", "math.integrate"]),
+    ("Solve", &["math.solve", "math.solvenum", "math.isoler", "math.solvede", "math.nyligning"]),
+    ("Define", &["math.define", "math.undefine"]),
+    ("Units", &["math.enhed", "math.numeric"]),
     ("LaTeX", &["math.latex"]),
     ("Matrix", &["math.determinant", "math.invers", "math.egenvaerdier", "math.ligningssystem"]),
-    ("Statistik", &["math.middel", "math.spredning"]),
+    ("Statistics", &["math.middel", "math.spredning"]),
     ("Calculus", &["math.diff", "math.integrate", "math.graense", "math.taylor"]),
-    ("Formler", &["math.formler", "math.gem"]),
-    ("Graf", &["math.graf"]),
-    ("Mere", &["math.maxima", "math.forrige", "math.exakt", "math.decimal", "equation.number"]),
+    ("Formulas", &["math.formler", "math.gem"]),
+    ("Graph", &["math.graf"]),
+    ("More", &["math.maxima", "math.forrige", "math.exakt", "math.decimal", "equation.number"]),
 ];
 
 /// First-run setup: create the WordMat tab with all math groups when
@@ -1824,42 +1824,42 @@ pub fn ensure_wordmat_tab(session: &mut Session) {
 
 pub fn specs() -> Vec<CommandSpec> {
     vec![
-        CommandSpec::new("math.nyligning", "Ny ligning", "WordMat › Løs", nyligning).key("Alt+M").params("{}"),
-        CommandSpec::new("math.beregn", "Beregn", "WordMat › Beregn", beregn).key("Alt+B").params("{}"),
-        CommandSpec::new("math.solve", "Løs ligning", "WordMat › Løs", solve_plain).params(r#"{"var"?: variable, default "x"}"#),
-        CommandSpec::new("math.solvenum", "Løs numerisk", "WordMat › Løs", solvenum).params(r#"{"var"?: variable, default "x"}"#),
-        CommandSpec::new("math.isoler", "Isolér", "WordMat › Løs", isoler).key("Alt+L").params(r#"{"var"?: variable to isolate, default "x"}"#),
-        CommandSpec::new("math.solvede", "Løs diff.ligning", "WordMat › Løs", solvede).params(r#"{"dep"?: default "y", "indep"?: default "x"}"#),
-        CommandSpec::new("math.define", "Definér", "WordMat › Definér", define).params(r#"{"name"?, "value"?}"#),
-        CommandSpec::new("math.undefine", "Slet definitioner", "WordMat › Definér", undefine).params(r#"{"name"?: empty clears all}"#),
-        CommandSpec::new("math.enhed", "Enheder", "WordMat › Enheder", enhed).params(r#"{"float"?: true for decimals}"#),
-        CommandSpec::new("math.numeric", "Decimaltal", "WordMat › Enheder", |s, _| unary(s, "float", "evaluere")).params("{}"),
-        CommandSpec::new("math.simplify", "Reducér", "WordMat › Omskriv", simplify_best).params("{}"),
-        CommandSpec::new("math.diff", "Differentier", "WordMat › Beregn", |s, v| diff_int(s, v, "diff", "differentiere"))
+        CommandSpec::new("math.nyligning", "New equation", "Math › Solve", nyligning).key("Alt+M").params("{}"),
+        CommandSpec::new("math.beregn", "Calculate", "Math › Calculate", beregn).key("Alt+B").params("{}"),
+        CommandSpec::new("math.solve", "Solve equation", "Math › Solve", solve_plain).params(r#"{"var"?: variable, default "x"}"#),
+        CommandSpec::new("math.solvenum", "Solve numeric", "Math › Solve", solvenum).params(r#"{"var"?: variable, default "x"}"#),
+        CommandSpec::new("math.isoler", "Isolate", "Math › Solve", isoler).key("Alt+L").params(r#"{"var"?: variable to isolate, default "x"}"#),
+        CommandSpec::new("math.solvede", "Solve ODE", "Math › Solve", solvede).params(r#"{"dep"?: default "y", "indep"?: default "x"}"#),
+        CommandSpec::new("math.define", "Define", "Math › Define", define).params(r#"{"name"?, "value"?}"#),
+        CommandSpec::new("math.undefine", "Delete definitions", "Math › Define", undefine).params(r#"{"name"?: empty clears all}"#),
+        CommandSpec::new("math.enhed", "Units", "Math › Units", enhed).params(r#"{"float"?: true for decimals}"#),
+        CommandSpec::new("math.numeric", "Decimal", "Math › Units", |s, _| unary(s, "float", "evaluere")).params("{}"),
+        CommandSpec::new("math.simplify", "Simplify", "Math › Rewrite", simplify_best).params("{}"),
+        CommandSpec::new("math.diff", "Differentiate", "Math › Calculate", |s, v| diff_int(s, v, "diff", "differentiere"))
             .params(r#"{"var"?: variable, default "x"}"#),
-        CommandSpec::new("math.integrate", "Stamfunktion", "WordMat › Beregn", |s, v| diff_int(s, v, "integrate", "integrere"))
+        CommandSpec::new("math.integrate", "Antiderivative", "Math › Calculate", |s, v| diff_int(s, v, "integrate", "integrere"))
             .params(r#"{"var"?: variable, default "x"}"#),
-        CommandSpec::new("math.expand", "Udvid", "WordMat › Omskriv", |s, _| unary(s, "expand", "udvide")).params("{}"),
-        CommandSpec::new("math.factor", "Faktorisér", "WordMat › Omskriv", |s, _| unary(s, "factor", "faktorisere")).params("{}"),
-        CommandSpec::new("math.latex", "Til LaTeX", "WordMat › LaTeX", |s, _| unary_tex(s, &Value::Null)).params("{}"),
-        CommandSpec::new("math.determinant", "Determinant", "WordMat › Matrix", |s, _| unary_shallow(s, "determinant", "beregne determinant"))
+        CommandSpec::new("math.expand", "Expand", "Math › Rewrite", |s, _| unary(s, "expand", "udvide")).params("{}"),
+        CommandSpec::new("math.factor", "Factor", "Math › Rewrite", |s, _| unary(s, "factor", "faktorisere")).params("{}"),
+        CommandSpec::new("math.latex", "To LaTeX", "Math › LaTeX", |s, _| unary_tex(s, &Value::Null)).params("{}"),
+        CommandSpec::new("math.determinant", "Determinant", "Math › Matrix", |s, _| unary_shallow(s, "determinant", "beregne determinant"))
             .params("{}"),
-        CommandSpec::new("math.invers", "Invers", "WordMat › Matrix", |s, _| unary_shallow(s, "invert", "invertere")).params("{}"),
-        CommandSpec::new("math.egenvaerdier", "Egenværdier", "WordMat › Matrix", |s, _| unary_shallow(s, "eigenvalues", "finde egenværdier"))
+        CommandSpec::new("math.invers", "Inverse", "Math › Matrix", |s, _| unary_shallow(s, "invert", "invertere")).params("{}"),
+        CommandSpec::new("math.egenvaerdier", "Eigenvalues", "Math › Matrix", |s, _| unary_shallow(s, "eigenvalues", "finde egenværdier"))
             .params("{}"),
-        CommandSpec::new("math.ligningssystem", "Løs system", "WordMat › Matrix", ligningssystem).params("{}"),
-        CommandSpec::new("math.graense", "Grænseværdi", "WordMat › Calculus", graense).params("{}"),
-        CommandSpec::new("math.taylor", "Taylorrække", "WordMat › Calculus", taylor).params("{}"),
-        CommandSpec::new("math.middel", "Middel", "WordMat › Statistik", |s, _| stats_op(s, "mean", "middelværdi")).params("{}"),
-        CommandSpec::new("math.spredning", "Spredning", "WordMat › Statistik", |s, _| stats_op(s, "std", "spredning")).params("{}"),
-        CommandSpec::new("math.maxima", "Maxima-kommando", "WordMat › Mere", maxima_cmd)
+        CommandSpec::new("math.ligningssystem", "Solve system", "Math › Matrix", ligningssystem).params("{}"),
+        CommandSpec::new("math.graense", "Limit", "Math › Calculus", graense).params("{}"),
+        CommandSpec::new("math.taylor", "Taylor series", "Math › Calculus", taylor).params("{}"),
+        CommandSpec::new("math.middel", "Mean", "Math › Statistics", |s, _| stats_op(s, "mean", "middelværdi")).params("{}"),
+        CommandSpec::new("math.spredning", "Standard deviation", "Math › Statistics", |s, _| stats_op(s, "std", "spredning")).params("{}"),
+        CommandSpec::new("math.maxima", "Maxima command", "Math › More", maxima_cmd)
             .params(r#"{"cmd"?: rå Maxima-kode (kører direkte, kun eget input)}"#),
-        CommandSpec::new("math.forrige", "Forrige resultat", "WordMat › Mere", forrige).params("{}"),
-        CommandSpec::new("math.formler", "Formelsamling", "WordMat › Formler", formler).params("{}"),
-        CommandSpec::new("math.formel", "Indsæt formel", "WordMat › Formler", formel).params(r#"{"template": formula linear text}"#),
-        CommandSpec::new("math.gem", "Gem ligning", "WordMat › Formler", gem).params(r#"{"name"?: label}"#),
-        CommandSpec::new("math.exakt", "Eksakt", "WordMat › Mere", exakt).params("{}"),
-        CommandSpec::new("math.decimal", "Decimal", "WordMat › Mere", decimal).params("{}"),
+        CommandSpec::new("math.forrige", "Previous result", "Math › More", forrige).params("{}"),
+        CommandSpec::new("math.formler", "Formula collection", "Math › Formulas", formler).params("{}"),
+        CommandSpec::new("math.formel", "Insert formula", "Math › Formulas", formel).params(r#"{"template": formula linear text}"#),
+        CommandSpec::new("math.gem", "Save equation", "Math › Formulas", gem).params(r#"{"name"?: label}"#),
+        CommandSpec::new("math.exakt", "Exact", "Math › More", exakt).params("{}"),
+        CommandSpec::new("math.decimal", "Decimal", "Math › More", decimal).params("{}"),
     ]
 }
 

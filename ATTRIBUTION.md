@@ -49,6 +49,7 @@ Generated-in-code art is original and has no file to list: the UI icon set (`cra
 | `docs/images/review.png` | WordCraft contributors | screenshot of WordCraft itself (sample document written for WordCraft, rendered by `ui_shot`) | MIT OR Apache-2.0 | Original; no Microsoft UI or assets |
 | `docs/images/references.png` | WordCraft contributors | screenshot of WordCraft itself (sample document written for WordCraft, rendered by `ui_shot`) | MIT OR Apache-2.0 | Original; no Microsoft UI or assets |
 | `docs/images/hero.png` | WordCraft contributors | screenshot of WordCraft itself (sample document written for WordCraft, rendered by `ui_shot`) | MIT OR Apache-2.0 | Original; no Microsoft UI or assets |
+| `docs/images/quill-math.png` | Rasmus | user screenshot of Quill solving a quadratic equation, supplied for the README | MIT OR Apache-2.0 | Original; shows only Quill UI |
 | `docs/images/design.png` | WordCraft contributors | screenshot of WordCraft itself (sample document written for WordCraft, rendered by `ui_shot`) | MIT OR Apache-2.0 | Original; no Microsoft UI or assets |
 | `docs/images/dark.png` | WordCraft contributors | screenshot of WordCraft itself (sample document written for WordCraft, rendered by `ui_shot`) | MIT OR Apache-2.0 | Original; no Microsoft UI or assets |
 | `docs/images/backstage.png` | WordCraft contributors | screenshot of WordCraft itself (sample document written for WordCraft, rendered by `ui_shot`) | MIT OR Apache-2.0 | Original; no Microsoft UI or assets |

@@ -6,6 +6,8 @@ Quill is a Word-compatible writing app (.docx in and out) with a **WordMat tab**
 mathematics: calculate, solve equations, units, matrices, plots — with answers in green
 right inside the equation.
 
+![Quill solving a quadratic equation](docs/images/quill-math.png)
+
 ## Install (Linux)
 
 1. Download `quill-1.0.0-linux-x86_64.AppImage` from [Releases](../../releases).
