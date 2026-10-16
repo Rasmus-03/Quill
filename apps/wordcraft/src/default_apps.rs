@@ -161,7 +161,7 @@ mod tests {
         for t in WORD_MIME_TYPES {
             assert!(declared.contains(t), "{t} missing from MimeType=");
         }
-        assert!(entry.lines().any(|l| l == "Exec=wordcraft %F"), "files are passed on the command line");
+        assert!(entry.lines().any(|l| l == "Exec=quill %F"), "files are passed on the command line");
     }
 
     #[cfg(unix)]

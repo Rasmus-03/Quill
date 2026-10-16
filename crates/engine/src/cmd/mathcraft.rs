@@ -1401,8 +1401,13 @@ fn maxima_cmd(s: &mut Session, v: &Value) -> CmdResult {
         };
     }
     let (input, target) = math_input(s)?;
-    // Raw command: no Danish/comma/mult rewriting, Maxima as-is.
+    // Raw command: no Danish/comma/mult rewriting, Maxima as-is — but the
+    // input is a DOCUMENT selection, and a received .docx can hide
+    // hostiles in an equation. Same rule as Beregn: never execute what
+    // the user did not explicitly type. (The {"cmd"} variant above is
+    // the explicit escape hatch and stays raw.)
     let expr = input.trim().to_string();
+    check_maxima_safe(&expr)?;
     match batch(&base_prelude(), &defs(s), &expr) {
         Ok(r) => apply_result(s, target, input.trim(), r.trim()),
         Err(e) => Err(err(format!("Maxima-fejl: {e}"))),
@@ -2141,6 +2146,11 @@ mod tests {
         assert!(err.to_string().contains("not allowed"));
         select_all(&mut s, "loadfile(\"/tmp/x.mac\")");
         let err = s.run("math.isoler", &json!({"var": "x"})).unwrap_err();
+        assert!(err.to_string().contains("not allowed"));
+        // The raw Maxima command on a DOCUMENT selection is also gated:
+        // a received .docx must not smuggle code past it.
+        select_all(&mut s, "system(\"id\")");
+        let err = s.run("math.maxima", &json!({})).unwrap_err();
         assert!(err.to_string().contains("not allowed"));
     }
 
