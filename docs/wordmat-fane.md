@@ -1,4 +1,6 @@
-# The WordMat tab
+# The Math tab
+
+The tab emulates WordMat (the Danish mathematics add-in) with English commands.
 
 Everything you know from WordMat — as a tab in Quill. Needs the
 Maxima program (the same calculation engine WordMat uses).
@@ -23,29 +25,29 @@ One variable is picked automatically. Commands also take `{"var": "y"}`.
 **Units:** select e.g. `5 km/h to m/s` → Convert. Danish decimal
 commas work everywhere (`2,5`).
 
-**Definitions:** select `g := 9.82` → Definér. Used in every calculation
+**Definitions:** select `g := 9.82` → Define. Used in every calculation
 in the document until you delete them.
 
-**Saved equations:** right-click an equation → Gem ligning. It shows up under
-Formelsamling → Mine. Save again to remove.
+**Saved equations:** right-click an equation → Save equation. It shows up under
+Formula collection → Mine. Save again to remove.
 
 **Formula collection:** interest, quadratics and geometry — click inserts
 the formula as a new equation.
 
-## The buttons (Danish labels, kept for Danish students)
+## The buttons
 
-- **Beregn** — numeric value (Eksakt/Decimal mode from the Mere group)
-- **Reducér, Faktorisér, Udvid, Differentier, Stamfunktion**
-- **Løs ligning, Løs numerisk, Isolér, Løs diff.ligning**
-- **Enheder, Decimaltal, Til LaTeX**
-- **Determinant, Invers, Egenværdier, Løs system** (write `matrix([1,2],[3,4])`)
-- **Grænseværdi** (`expression, var, point`), **Taylorrække** (`expression, var, point, order`)
-- **Middel, Spredning** (`[1, 2, 3, 4]` — dotted decimals inside lists)
-- **Mere:** Maxima-kommando (raw Maxima), Forrige resultat, Eksakt, Decimal
+- **Calculate** — numeric value (Exact/Decimal mode from the More group)
+- **Simplify, Factor, Expand, Differentiate, Antiderivative**
+- **Solve equation, Solve numeric, Isolate, Solve ODE**
+- **Units, Decimal, To LaTeX**
+- **Determinant, Inverse, Eigenvalues, Solve system** (write `matrix([1,2],[3,4])`)
+- **Limit** (`expression, var, point`), **Taylor series** (`expression, var, point, order`)
+- **Mean, Standard deviation** (`[1, 2, 3, 4]` — dotted decimals inside lists)
+- **More:** Maxima command (raw Maxima), Previous result, Exact, Decimal
 
 ## Graphs
 
-Select e.g. `x^2, -5, 5` and press **Tegn graf** (the Graf group). Several
+Select e.g. `x^2, -5, 5` and press **Plot graph** (the Graph group). Several
 curves are separated with `;`: `x^2; 2*x+1, -5, 5`. Forms like `f(x)=x^2`
 or `y=x^2` work too; `e^x` and `ln(x)` are understood. Without a range
 -10..10 is drawn. Poles (e.g. `1/x`) become gaps in the curve, not garbage.
@@ -61,5 +63,5 @@ The graph replaces the selection as a picture (PNG).
 
 ## First launch
 
-The WordMat tab creates itself on first launch. If deleted by accident,
+The Math tab creates itself on first launch. If deleted by accident,
 it comes back on next launch.

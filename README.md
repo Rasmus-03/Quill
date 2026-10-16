@@ -31,8 +31,8 @@ SolveReal is GPL and never ships with Quill — you fetch it yourself.
 | Alt+B | Calculate the selection |
 | Alt+L | Isolate a variable |
 
-Select e.g. `x^2-4=0` → **Isolér** gives `x = -2 eller x = 2` in green.
-Select `x^2, -5, 5` → **Tegn graf**. All workflows are in
+Select e.g. `x^2-4=0` → **Isolate** gives `x = -2 or x = 2` in green.
+Select `x^2, -5, 5` → **Plot graph**. All workflows are in
 [`docs/wordmat-fane.md`](docs/wordmat-fane.md).
 
 ## License

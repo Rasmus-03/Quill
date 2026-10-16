@@ -35,9 +35,7 @@ fn real_solve(eq: &str, var: &str) -> String {
     if solvereal_path().is_some() {
         return format!("solvereal({eq},{var})");
     }
-    format!(
-        "block([_s: solve({eq},{var})], if _s=[] then [] else sublist(_s, lambda([_e], freeof(%i, rhs(_e)))))"
-    )
+    format!("block([_s: solve({eq},{var})], if _s=[] then [] else sublist(_s, lambda([_e], freeof(%i, rhs(_e)))))")
 }
 
 fn solvereal_path() -> Option<String> {
@@ -57,7 +55,7 @@ fn run_maxima(batch_string: &str) -> Result<String, String> {
     #[cfg(target_arch = "wasm32")]
     {
         let _ = batch_string;
-        return Err("Maxima kræver desktop-appen".to_string());
+        return Err("Maxima needs the desktop app".to_string());
     }
     #[cfg(not(target_arch = "wasm32"))]
     {
@@ -68,7 +66,7 @@ fn run_maxima(batch_string: &str) -> Result<String, String> {
             .stdin(std::process::Stdio::null())
             .stdout(std::process::Stdio::piped())
             .spawn()
-            .map_err(|e| format!("kan ikke starte Maxima ({} mangler? installer med `sudo pacman -S maxima`): {e}", maxima_bin()))?;
+            .map_err(|e| format!("cannot start Maxima ({} missing? install it, e.g. `sudo pacman -S maxima`): {e}", maxima_bin()))?;
         // Drain stdout on a thread so a flood of output can never deadlock
         // the wait below (pipe buffer full while we only poll).
         let mut cap = child.stdout.take();
@@ -86,7 +84,7 @@ fn run_maxima(batch_string: &str) -> Result<String, String> {
                 None if Instant::now() > deadline => {
                     let _ = child.kill();
                     let _ = child.wait();
-                    return Err("Maxima svarede ikke inden 30 sekunder; forenkl udtrykket".to_string());
+                    return Err("Maxima did not answer within 30 seconds; simplify the expression".to_string());
                 }
                 None => std::thread::sleep(Duration::from_millis(50)),
             }
@@ -136,7 +134,7 @@ pub(crate) fn check_maxima_safe(part: &str) -> Result<(), CmdError> {
         } else {
             let w = tok.trim_start_matches(['%', '?']);
             if BAD.contains(&w) {
-                return Err(err(format!("\"{tok}\" er ikke tilladt her (brug Maxima-kommando for rå Maxima)")));
+                return Err(err(format!("\"{tok}\" is not allowed here (use Maxima command for raw Maxima)")));
             }
             tok.clear();
         }
@@ -345,7 +343,7 @@ pub(crate) fn pick_var(s: &Session, v: &Value, eq: &str) -> VarPick {
 /// Ask the UI variable picker (no-op headless), then stop this turn.
 pub(crate) fn ask_var(s: &mut Session, command: &str, vars: Vec<String>) -> CmdResult {
     s.ui_requests.push(json!({"open": "mathVarPicker", "command": command, "vars": vars}));
-    s.status = "Vælg variabel i dialogen…".to_string();
+    s.status = "Pick a variable in the dialog…".to_string();
     sel_result(s)
 }
 /// Input the WordMat way: selected text, else the equation object at the
@@ -403,7 +401,7 @@ pub(crate) fn math_input(s: &mut Session) -> Result<(String, Target), CmdError> 
         // else) operates on the equation, so it survives as OMML.
         if let Some((at, end)) = sole_equation(s) {
             strip_answer_in_eq(s, &at);
-            let para = s.doc.para_at(&at).ok_or_else(|| err("Sæt cursoren i en ligning eller markér tekst først".to_string()))?;
+            let para = s.doc.para_at(&at).ok_or_else(|| err("Place the cursor in an equation or select text first".to_string()))?;
             let text = para.object_at(at.off).map(|o| o.plain_text().to_string()).unwrap_or_default();
             if !text.trim().is_empty() {
                 return Ok((strip_trailing_eq(&text), Target::Doc(Some((at, end)))));
@@ -422,21 +420,21 @@ pub(crate) fn math_input(s: &mut Session) -> Result<(String, Target), CmdError> 
     if s.math.is_some() {
         s.run("equation.exit", &json!({"before": true}))?;
     }
-    let at = equation_at_caret(s).ok_or_else(|| err("Sæt cursoren i en ligning eller markér tekst først".to_string()))?;
+    let at = equation_at_caret(s).ok_or_else(|| err("Place the cursor in an equation or select text first".to_string()))?;
     // Update semantics: drop a previous green answer (plus its " = ")
     // so re-running recomputes instead of stacking answers.
     strip_answer_in_eq(s, &at);
-    let para = s.doc.para_at(&at).ok_or_else(|| err("Sæt cursoren i en ligning eller markér tekst først".to_string()))?;
+    let para = s.doc.para_at(&at).ok_or_else(|| err("Place the cursor in an equation or select text first".to_string()))?;
     match para.object_at(at.off) {
         Some(InlineObject::Equation { .. }) => {
             let text = para.object_at(at.off).map(|o| o.plain_text().to_string()).unwrap_or_default();
             if text.trim().is_empty() {
-                return Err(err("Ligningen er tom".to_string()));
+                return Err(err("The equation is empty".to_string()));
             }
             let end = Pos { off: at.off + OBJ.len_utf8(), ..at.clone() };
             Ok((strip_trailing_eq(&text), Target::Doc(Some((at, end)))))
         }
-        _ => Err(err("Sæt cursoren i en ligning eller markér tekst først".to_string())),
+        _ => Err(err("Place the cursor in an equation or select text first".to_string())),
     }
 }
 
@@ -596,7 +594,7 @@ fn pretty_answer(result: &str) -> String {
     }
     let t = result.trim();
     if t == "[]" {
-        return "ingen reel løsning".to_string();
+        return "no real solution".to_string();
     }
     let mut s = t.to_string();
     if s.starts_with("%union(") && s.ends_with(')') {
@@ -607,7 +605,7 @@ fn pretty_answer(result: &str) -> String {
             .filter(|p| !p.is_empty())
             .collect();
         if !parts.is_empty() {
-            s = parts.join(" eller ");
+            s = parts.join(" or ");
         }
     }
     s = unbigfloat(&s);
@@ -743,9 +741,9 @@ fn apply_result(s: &mut Session, target: Target, input: &str, result: &str) -> C
             // Replace the highlighted part inside the equation, still
             // editing; the green result lands where the highlight was.
             if !math_del_anchor(s) {
-                return Err(err("Mistede markeringen; markér igen".to_string()));
+                return Err(err("Lost the selection; select again".to_string()));
             }
-            let m = s.math.clone().ok_or_else(|| err("Forlod ligningen".to_string()))?;
+            let m = s.math.clone().ok_or_else(|| err("Left the equation".to_string()))?;
             let show = pretty_answer(result);
             let mut ans = parse_linear(&show);
             paint_green(&mut ans);
@@ -832,7 +830,7 @@ fn split_qty(input: &str) -> Result<(String, String), String> {
         }
     }
     if !digits {
-        return Err("intet tal fundet; markér f.eks. \"5 km/h to m/s\"".to_string());
+        return Err("no number found; select e.g. \"5 km/h to m/s\"".to_string());
     }
     let num: String = t[..i].chars().filter(|c| *c != ' ').collect();
     let rest = t[i..].trim();
@@ -846,7 +844,7 @@ fn split_qty(input: &str) -> Result<(String, String), String> {
             }
         }
     }
-    Err("ingen målenhed fundet; markér f.eks. \"5 km/h to m/s\"".to_string())
+    Err("no unit found; select e.g. \"5 km/h to m/s\"".to_string())
 }
 
 /// Convert units: `5 km/h to m/s` → `25/18 ` m/s`.
@@ -861,14 +859,14 @@ fn enhed(s: &mut Session, v: &Value) -> CmdResult {
     check_maxima_safe(&unit_to)?;
     let (n, u) = match qty.split_once(' ') {
         Some((n, u)) => (n, u),
-        None => return Err(err("ingen enhed fundet".to_string())),
+        None => return Err(err("no unit found".to_string())),
     };
     let float = v.get("float").and_then(Value::as_bool).unwrap_or(false);
     let base = format!("(({n} ` ({u})) `` ({unit_to}))");
     let cmd = if float { format!("float({base})") } else { base };
     match batch(&unit_prelude(), &defs(s), &cmd) {
         Ok(r) => apply_result(s, target, input.trim(), &r),
-        Err(e) => Err(err(format!("Kunne ikke omregne enheder: {e}"))),
+        Err(e) => Err(err(format!("Could not convert units: {e}"))),
     }
 }
 
@@ -1179,7 +1177,7 @@ fn unary(s: &mut Session, maxima_fn: &str, what: &str) -> CmdResult {
     check_maxima_safe(&expr)?;
     match batch(&base_prelude(), &defs(s), &format!("{maxima_fn}({expr})")) {
         Ok(r) => apply_result(s, target, input.trim(), &r),
-        Err(e) => Err(err(format!("Kunne ikke {what}: {e}"))),
+        Err(e) => Err(err(format!("Could not {what}: {e}"))),
     }
 }
 
@@ -1191,7 +1189,7 @@ fn unary_shallow(s: &mut Session, maxima_fn: &str, what: &str) -> CmdResult {
     check_maxima_safe(&expr)?;
     match batch(&base_prelude(), &defs(s), &format!("{maxima_fn}({expr})")) {
         Ok(r) => apply_result(s, target, input.trim(), &r),
-        Err(e) => Err(err(format!("Kunne ikke {what}: {e}"))),
+        Err(e) => Err(err(format!("Could not {what}: {e}"))),
     }
 }
 
@@ -1212,7 +1210,7 @@ fn simplify_best(s: &mut Session, _: &Value) -> CmdResult {
     }
     match best {
         Some(r) => apply_result(s, target, input.trim(), &r),
-        None => Err(err("Kunne ikke reducere".to_string())),
+        None => Err(err("Could not simplify".to_string())),
     }
 }
 
@@ -1224,7 +1222,7 @@ fn diff_int(s: &mut Session, v: &Value, maxima_fn: &str, what: &str) -> CmdResul
     check_maxima_safe(&expr)?;
     match batch(&base_prelude(), &defs(s), &format!("{maxima_fn}({expr},{var})")) {
         Ok(r) => apply_result(s, target, input.trim(), &r),
-        Err(e) => Err(err(format!("Kunne ikke {what}: {e}"))),
+        Err(e) => Err(err(format!("Could not {what}: {e}"))),
     }
 }
 
@@ -1277,9 +1275,9 @@ fn beregn(s: &mut Session, v: &Value) -> CmdResult {
         }
     }
     if out.is_empty() {
-        return Err(err(format!("Kunne ikke beregne: {last_err}")));
+        return Err(err(format!("Could not calculate: {last_err}")));
     }
-    apply_result(s, target, input.trim(), &trim_float_zeros(&out.join(" eller ")))
+    apply_result(s, target, input.trim(), &trim_float_zeros(&out.join(" or ")))
 }
 
 /// Maxima-kommando: run raw Maxima on the selection (or {"cmd"}).
@@ -1287,7 +1285,7 @@ fn maxima_cmd(s: &mut Session, v: &Value) -> CmdResult {
     if let Some(c) = v.get("cmd").and_then(Value::as_str) {
         let cmd = c.trim();
         if cmd.is_empty() {
-            return Err(err("Tom Maxima-kommando".to_string()));
+            return Err(err("Empty Maxima command".to_string()));
         }
         return match batch(&base_prelude(), &defs(s), cmd) {
             Ok(r) => {
@@ -1313,17 +1311,17 @@ fn maxima_cmd(s: &mut Session, v: &Value) -> CmdResult {
 fn formulas() -> Vec<(&'static str, Vec<(&'static str, &'static str)>)> {
     vec![
         (
-            "Rente",
+            "Interest",
             vec![
                 ("Fremskrivning", "K_n=K_0⋅(1+r)^n"),
                 ("Gennemsnitsrente", "r=(K_n/K_0)^(1/n)-1"),
                 ("Annuitetsopsparing", "A_n=b⋅((1+r)^n-1)/r"),
-                ("Annuitetslån (ydelse)", "y=G⋅r/(1-(1+r)^(-n))"),
+                ("Annuity loan (payment)", "y=G⋅r/(1-(1+r)^(-n))"),
             ],
         ),
-        ("Andengrad", vec![("Diskriminant", "d=b^2-4⋅a⋅c"), ("Løsningsformel", "x=(-b±√(d))/(2⋅a)")]),
+        ("Quadratic", vec![("Diskriminant", "d=b^2-4⋅a⋅c"), ("Quadratic formula", "x=(-b±√(d))/(2⋅a)")]),
         (
-            "Geometri",
+            "Geometry",
             vec![
                 ("Pythagoras", "a^2+b^2=c^2"),
                 ("Cosinusrelation", "c^2=a^2+b^2-2⋅a⋅b⋅cos(C)"),
@@ -1351,7 +1349,7 @@ fn formler(s: &mut Session, _: &Value) -> CmdResult {
         }));
     }
     s.ui_requests.push(json!({"open": "mathFormulaPicker", "groups": groups}));
-    s.status = "Vælg formel i dialogen…".to_string();
+    s.status = "Pick a formula in the dialog…".to_string();
     sel_result(s)
 }
 
@@ -1359,7 +1357,7 @@ fn formler(s: &mut Session, _: &Value) -> CmdResult {
 fn formel(s: &mut Session, v: &Value) -> CmdResult {
     let t = v.get("template").and_then(Value::as_str).unwrap_or("").trim();
     if t.is_empty() {
-        return Err(err("Tom formelskabelon".to_string()));
+        return Err(err("Empty formula template".to_string()));
     }
     s.run("insert.equation", &json!({"linear": t}))
 }
@@ -1395,23 +1393,23 @@ fn gem(s: &mut Session, v: &Value) -> CmdResult {
     let (name, linear) = match (v.get("name").and_then(Value::as_str), found) {
         (Some(n), Some(l)) if !n.trim().is_empty() => (n.trim().to_string(), l),
         (Some(n), None) if !n.trim().is_empty() => {
-            return Err(err("Ingen ligning at gemme".to_string()));
+            return Err(err("No equation to save".to_string()));
         }
         (_, Some(l)) => {
             let name: String = l.chars().take(28).collect();
             (name, l)
         }
-        _ => return Err(err("Ingen ligning at gemme".to_string())),
+        _ => return Err(err("No equation to save".to_string())),
     };
     let linear = linear.trim().to_string();
     if linear.is_empty() {
-        return Err(err("Ingen ligning at gemme".to_string()));
+        return Err(err("No equation to save".to_string()));
     }
     if let Some(i) = s.prefs.saved_equations.iter().position(|e| e.linear == linear) {
         s.prefs.saved_equations.remove(i);
-        s.status = format!("Fjernede {name}");
+        s.status = format!("Removed {name}");
     } else {
-        s.status = format!("Gemte {name}");
+        s.status = format!("Saved {name}");
         s.prefs.saved_equations.push(crate::session::SavedEquation { name, linear });
     }
     sel_result(s)
@@ -1419,7 +1417,7 @@ fn gem(s: &mut Session, v: &Value) -> CmdResult {
 fn forrige(s: &mut Session, _: &Value) -> CmdResult {
     let last = s.math_last.clone().unwrap_or_default();
     if last.trim().is_empty() {
-        return Err(err("Intet tidligere resultat endnu".to_string()));
+        return Err(err("No previous result yet".to_string()));
     }
     replace_selection(s, &last)?;
     let end = s.sel.focus.clone();
@@ -1434,14 +1432,14 @@ fn forrige(s: &mut Session, _: &Value) -> CmdResult {
 /// Eksakt (exact results, WordMat Exact, the default).
 fn exakt(s: &mut Session, _: &Value) -> CmdResult {
     s.math_decimal = false;
-    s.status = "Eksakte resultater".to_string();
+    s.status = "Exact results".to_string();
     sel_result(s)
 }
 
 /// Decimaltal (WordMat Num): beregn answers come back decimal.
 fn decimal(s: &mut Session, _: &Value) -> CmdResult {
     s.math_decimal = true;
-    s.status = "Decimalresultater".to_string();
+    s.status = "Decimal results".to_string();
     sel_result(s)
 }
 
@@ -1462,11 +1460,7 @@ fn isoler(s: &mut Session, v: &Value) -> CmdResult {
             VarPick::Many(vars) => return ask_var(s, "math.isoler", vars),
         };
         varname = var.clone();
-        cmds.push(if is_inequality(&eq) {
-            format!("POLY::{eq}::{var}")
-        } else {
-            real_solve(&eq, &var)
-        });
+        cmds.push(if is_inequality(&eq) { format!("POLY::{eq}::{var}") } else { real_solve(&eq, &var) });
     }
     let pre = base_prelude();
     let d = defs(s);
@@ -1487,11 +1481,11 @@ fn isoler(s: &mut Session, v: &Value) -> CmdResult {
         }
     }
     if out.is_empty() {
-        return Err(err(format!("Kunne ikke isolere {varname}: {last_err}")));
+        return Err(err(format!("Could not isolate {varname}: {last_err}")));
     }
-    match apply_result(s, target, input.trim(), &out.join(" eller ")) {
+    match apply_result(s, target, input.trim(), &out.join(" or ")) {
         Ok(r) => Ok(r),
-        Err(e) => Err(err(format!("Kunne ikke isolere {varname}: {e}"))),
+        Err(e) => Err(err(format!("Could not isolate {varname}: {e}"))),
     }
 }
 
@@ -1502,7 +1496,7 @@ fn poly_solve_raw(pre: &[String], defs: &[String], eq: &str, var: &str) -> Resul
     batch(&p, defs, &format!("to_poly_solve([{eq}],[{var}])"))
 }
 
-/// Løs ligning: plain Maxima solve (exact, complex domain).
+/// Solve equation: plain Maxima solve (exact, complex domain).
 fn solve_plain(s: &mut Session, v: &Value) -> CmdResult {
     let (input, target) = math_input(s)?;
     let expr = split_idents(&dots_ctx(input.trim(), &def_names(s)), &def_names(s));
@@ -1534,12 +1528,12 @@ fn solve_plain(s: &mut Session, v: &Value) -> CmdResult {
         }
     }
     if out.is_empty() {
-        return Err(err(format!("Kunne ikke løse: {last_err}")));
+        return Err(err(format!("Could not solve: {last_err}")));
     }
-    apply_result(s, target, input.trim(), &out.join(" eller "))
+    apply_result(s, target, input.trim(), &out.join(" or "))
 }
 
-/// Løs numerisk: nsolve when SolveReal is installed, else floated solve.
+/// Solve numeric: nsolve when SolveReal is installed, else floated solve.
 fn solvenum(s: &mut Session, v: &Value) -> CmdResult {
     let (input, target) = math_input(s)?;
     let expr = split_idents(&dots_ctx(input.trim(), &def_names(s)), &def_names(s));
@@ -1577,18 +1571,18 @@ fn solvenum(s: &mut Session, v: &Value) -> CmdResult {
         }
     }
     if out.is_empty() {
-        return Err(err(format!("Kunne ikke løse numerisk: {last_err}")));
+        return Err(err(format!("Could not solve numerically: {last_err}")));
     }
-    apply_result(s, target, input.trim(), &trim_float_zeros(&out.join(" eller ")))
+    apply_result(s, target, input.trim(), &trim_float_zeros(&out.join(" or ")))
 }
 
-/// Løs ligningssystem: `x+y=3, 2x-y=0` → alle variable på én gang.
+/// Solve equation system: `x+y=3, 2x-y=0` → alle variable på én gang.
 /// Split first (commas separate equations), then Danish-rewrite per part.
 fn ligningssystem(s: &mut Session, _: &Value) -> CmdResult {
     let (input, target) = math_input(s)?;
     let raw = input.trim();
     if raw.is_empty() {
-        return Err(err("Markér ligninger som \"x+y=3, 2x-y=0\" først".to_string()));
+        return Err(err("Select equations like \"x+y=3, 2x-y=0\" first".to_string()));
     }
     let eqs: Vec<String> = split_top(raw)
         .into_iter()
@@ -1601,7 +1595,7 @@ fn ligningssystem(s: &mut Session, _: &Value) -> CmdResult {
         check_maxima_safe(e)?;
     }
     if eqs.is_empty() {
-        return Err(err("Markér ligninger som \"x+y=3, 2x-y=0\" først".to_string()));
+        return Err(err("Select equations like \"x+y=3, 2x-y=0\" first".to_string()));
     }
     // All variables across the system.
     let mut vars: Vec<String> = Vec::new();
@@ -1616,12 +1610,12 @@ fn ligningssystem(s: &mut Session, _: &Value) -> CmdResult {
         }
     }
     if vars.is_empty() {
-        return Err(err("Ingen variable fundet".to_string()));
+        return Err(err("No variables found".to_string()));
     }
     let cmd = format!("linsolve([{}],[{}])", eqs.join(","), vars.join(","));
     match batch(&base_prelude(), &defs(s), &cmd) {
         Ok(r) => apply_result(s, target, raw, &r),
-        Err(e) => Err(err(format!("Kunne ikke løse system: {e}"))),
+        Err(e) => Err(err(format!("Could not solve system: {e}"))),
     }
 }
 
@@ -1633,13 +1627,13 @@ fn graense(s: &mut Session, _: &Value) -> CmdResult {
     let e = p.first().cloned().unwrap_or_default();
     check_maxima_safe(&e)?;
     if e.is_empty() {
-        return Err(err("Markér f.eks. \"sin(x)/x, x, 0\" først".to_string()));
+        return Err(err("Select e.g. \"sin(x)/x, x, 0\" first".to_string()));
     }
     let v = p.get(1).cloned().unwrap_or_else(|| "x".to_string());
     let pt = p.get(2).cloned().unwrap_or_else(|| "0".to_string());
     match batch(&base_prelude(), &defs(s), &format!("limit({e},{v},{pt})")) {
         Ok(r) => apply_result(s, target, raw, &r),
-        Err(e) => Err(err(format!("Kunne ikke tage grænseværdi: {e}"))),
+        Err(e) => Err(err(format!("Could not take limit: {e}"))),
     }
 }
 
@@ -1651,14 +1645,14 @@ fn taylor(s: &mut Session, _: &Value) -> CmdResult {
     let e = p.first().cloned().unwrap_or_default();
     check_maxima_safe(&e)?;
     if e.is_empty() {
-        return Err(err("Markér f.eks. \"exp(x), x, 0, 3\" først".to_string()));
+        return Err(err("Select e.g. \"exp(x), x, 0, 3\" first".to_string()));
     }
     let v = p.get(1).cloned().unwrap_or_else(|| "x".to_string());
     let pt = p.get(2).cloned().unwrap_or_else(|| "0".to_string());
     let n = p.get(3).cloned().unwrap_or_else(|| "6".to_string());
     match batch(&base_prelude(), &defs(s), &format!("taylor({e},{v},{pt},{n})")) {
         Ok(r) => apply_result(s, target, raw, &r),
-        Err(e) => Err(err(format!("Kunne ikke udvikle: {e}"))),
+        Err(e) => Err(err(format!("Could not expand: {e}"))),
     }
 }
 
@@ -1668,28 +1662,28 @@ fn stats_op(s: &mut Session, maxima_fn: &str, what: &str) -> CmdResult {
     let expr = dots_shallow(input.trim());
     check_maxima_safe(&expr)?;
     if expr.is_empty() {
-        return Err(err("Markér f.eks. \"[1, 2, 3, 4]\" først".to_string()));
+        return Err(err("Select e.g. \"[1, 2, 3, 4]\" first".to_string()));
     }
     match batch(&stats_prelude(), &defs(s), &format!("{maxima_fn}({expr})")) {
         Ok(r) => apply_result(s, target, input.trim(), &trim_float_zeros(&r)),
-        Err(e) => Err(err(format!("Kunne ikke beregne {what}: {e}"))),
+        Err(e) => Err(err(format!("Could not compute {what}: {e}"))),
     }
 }
 
-/// Løs differentialligning via ode2: `diff(y,x)=y` → solution.
+/// Solve ODE via ode2: `diff(y,x)=y` → solution.
 fn solvede(s: &mut Session, v: &Value) -> CmdResult {
     let (input, target) = math_input(s)?;
     let expr = dots(input.trim());
     check_maxima_safe(&expr)?;
     if !expr.contains("diff(") {
-        return Err(err("Ikke en differentialligning; markér f.eks. diff(y,x)=y".to_string()));
+        return Err(err("Not a differential equation; markér f.eks. diff(y,x)=y".to_string()));
     }
     let dep = v.get("dep").and_then(Value::as_str).unwrap_or("y");
     let indep = v.get("indep").and_then(Value::as_str).unwrap_or("x");
     let quoted = expr.replacen("diff(", "'diff(", 1);
     match batch(&plain_prelude(), &defs(s), &format!("ode2({quoted},{dep},{indep})")) {
         Ok(r) => apply_result(s, target, input.trim(), &r),
-        Err(e) => Err(err(format!("Kunne ikke løse differentialligning: {e}"))),
+        Err(e) => Err(err(format!("Could not solve ODE: {e}"))),
     }
 }
 
@@ -1735,20 +1729,20 @@ fn define(s: &mut Session, v: &Value) -> CmdResult {
         let sel = s.selected_text();
         let sel = sel.trim();
         if sel.is_empty() {
-            return Err(err("Markér f.eks. \"f(x) := x^2\" først".to_string()));
+            return Err(err("Select e.g. \"f(x) := x^2\" first".to_string()));
         }
         let stmt = if sel.contains(":=") {
             sel.to_string()
         } else if let Some(k) = sel.find('=') {
             format!("{} := {}", sel[..k].trim(), sel[k + 1..].trim())
         } else {
-            return Err(err("Markér f.eks. \"f(x) := x^2\" først".to_string()));
+            return Err(err("Select e.g. \"f(x) := x^2\" first".to_string()));
         };
         let name = stmt.split(":=").next().unwrap_or("").trim().to_string();
         (name, stmt)
     };
     if name.is_empty() || !name.chars().next().is_some_and(|c| c.is_ascii_alphabetic()) {
-        return Err(err("Ugyldigt definitionsnavn".to_string()));
+        return Err(err("Bad definition name".to_string()));
     }
     // Constants (`g`) assign with `:` so uses evaluate; functions keep `:=`.
     let stmt = if !name.contains('(') {
@@ -1759,7 +1753,7 @@ fn define(s: &mut Session, v: &Value) -> CmdResult {
     s.math_defs.retain(|d| def_lhs(d) != name);
     check_maxima_safe(&stmt)?;
     s.math_defs.push(stmt.clone());
-    s.status = format!("Definerede {name}");
+    s.status = format!("Defined {name}");
     sel_result(s)
 }
 
@@ -1775,11 +1769,11 @@ fn undefine(s: &mut Session, v: &Value) -> CmdResult {
         .unwrap_or_else(|| s.selected_text().split(":=").next().unwrap_or("").trim().to_string());
     if name.is_empty() {
         s.math_defs.clear();
-        s.status = "Slettede alle definitioner".to_string();
+        s.status = "Cleared all definitions".to_string();
     } else {
         let before = s.math_defs.len();
         s.math_defs.retain(|d| def_lhs(d) != name);
-        s.status = if s.math_defs.len() < before { format!("Fjernede definition {name}") } else { format!("Ingen definition ved navn {name}") };
+        s.status = if s.math_defs.len() < before { format!("Removed definition {name}") } else { format!("No definition named {name}") };
     }
     sel_result(s)
 }
@@ -1799,35 +1793,39 @@ const LAYOUT_WORDMAT: &[(&str, &[&str])] = &[
     ("More", &["math.maxima", "math.forrige", "math.exakt", "math.decimal", "equation.number"]),
 ];
 
-/// First-run setup: create the WordMat tab with all math groups when
+/// First-run setup: create the Math tab with all math groups when
 /// missing (e.g. fresh prefs). Idempotent; never touches existing tabs.
+/// A leftover Danish "WordMat" tab is rebuilt once as "Math".
 pub fn ensure_wordmat_tab(session: &mut Session) {
     if session.ribbon.tabs.iter().any(|t| t.name == "WordMat") {
-        // Existing tab (old prefs): add whole missing groups (new features
-        // like Graf). Commands inside existing groups are left alone, so a
+        let _ = session.ribbon.remove("WordMat", None, None);
+    }
+    if session.ribbon.tabs.iter().any(|t| t.name == "Math") {
+        // Existing tab (old prefs): add whole missing groups (new features).
+        // Commands inside existing groups are left alone, so a
         // deliberately removed button never comes back.
         let reg = super::registry();
         for (group, cmds) in LAYOUT_WORDMAT {
-            let has = session.ribbon.tabs.iter().find(|t| t.name == "WordMat").is_some_and(|t| t.groups.iter().any(|g| g.name == *group));
-            if !has && session.ribbon.new_group("WordMat", Some(group)).is_ok() {
+            let has = session.ribbon.tabs.iter().find(|t| t.name == "Math").is_some_and(|t| t.groups.iter().any(|g| g.name == *group));
+            if !has && session.ribbon.new_group("Math", Some(group)).is_ok() {
                 for cmd in *cmds {
-                    let _ = session.ribbon.add(&reg, "WordMat", group, cmd, None);
+                    let _ = session.ribbon.add(&reg, "Math", group, cmd, None);
                 }
             }
         }
         return;
     }
     let reg = super::registry();
-    if session.ribbon.new_tab(Some("WordMat"), Some("View")).is_err() {
+    if session.ribbon.new_tab(Some("Math"), Some("View")).is_err() {
         return;
     }
-    let _ = session.ribbon.remove("WordMat", Some("New Group"), None);
+    let _ = session.ribbon.remove("Math", Some("New Group"), None);
     for (group, cmds) in LAYOUT_WORDMAT {
-        if session.ribbon.new_group("WordMat", Some(*group)).is_err() {
+        if session.ribbon.new_group("Math", Some(*group)).is_err() {
             continue;
         }
         for cmd in *cmds {
-            let _ = session.ribbon.add(&reg, "WordMat", group, cmd, None);
+            let _ = session.ribbon.add(&reg, "Math", group, cmd, None);
         }
     }
 }
@@ -1855,15 +1853,14 @@ pub fn specs() -> Vec<CommandSpec> {
         CommandSpec::new("math.determinant", "Determinant", "Math › Matrix", |s, _| unary_shallow(s, "determinant", "beregne determinant"))
             .params("{}"),
         CommandSpec::new("math.invers", "Inverse", "Math › Matrix", |s, _| unary_shallow(s, "invert", "invertere")).params("{}"),
-        CommandSpec::new("math.egenvaerdier", "Eigenvalues", "Math › Matrix", |s, _| unary_shallow(s, "eigenvalues", "finde egenværdier"))
-            .params("{}"),
+        CommandSpec::new("math.egenvaerdier", "Eigenvalues", "Math › Matrix", |s, _| unary_shallow(s, "eigenvalues", "eigenvalues")).params("{}"),
         CommandSpec::new("math.ligningssystem", "Solve system", "Math › Matrix", ligningssystem).params("{}"),
         CommandSpec::new("math.graense", "Limit", "Math › Calculus", graense).params("{}"),
         CommandSpec::new("math.taylor", "Taylor series", "Math › Calculus", taylor).params("{}"),
-        CommandSpec::new("math.middel", "Mean", "Math › Statistics", |s, _| stats_op(s, "mean", "middelværdi")).params("{}"),
+        CommandSpec::new("math.middel", "Mean", "Math › Statistics", |s, _| stats_op(s, "mean", "mean")).params("{}"),
         CommandSpec::new("math.spredning", "Standard deviation", "Math › Statistics", |s, _| stats_op(s, "std", "spredning")).params("{}"),
         CommandSpec::new("math.maxima", "Maxima command", "Math › More", maxima_cmd)
-            .params(r#"{"cmd"?: rå Maxima-kode (kører direkte, kun eget input)}"#),
+            .params(r#"{"cmd"?: raw Maxima code (runs directly, own input only)}"#),
         CommandSpec::new("math.forrige", "Previous result", "Math › More", forrige).params("{}"),
         CommandSpec::new("math.formler", "Formula collection", "Math › Formulas", formler).params("{}"),
         CommandSpec::new("math.formel", "Insert formula", "Math › Formulas", formel).params(r#"{"template": formula linear text}"#),
@@ -1885,7 +1882,7 @@ fn unary_tex(s: &mut Session, _: &Value) -> CmdResult {
     let stdout = run_maxima(&b).map_err(err)?;
     let tex: Vec<&str> = stdout.lines().map(str::trim).filter(|l| l.starts_with("$$")).collect();
     if tex.is_empty() {
-        return Err(err("Kunne ikke konvertere til LaTeX".to_string()));
+        return Err(err("Could not convert to LaTeX".to_string()));
     }
     apply_result(s, target, input.trim(), &tex.join("\n"))
 }
@@ -1937,7 +1934,7 @@ mod tests {
         let mut s = s();
         run(&mut s, "text.insert", json!({"text": "x", "raw": true}));
         let err = s.run("math.isoler", &json!({})).unwrap_err();
-        assert!(err.to_string().contains("Sæt cursoren i en ligning"));
+        assert!(err.to_string().contains("Place the cursor in an equation"));
     }
 
     #[test]
@@ -1971,10 +1968,10 @@ mod tests {
 
     #[test]
     fn pretty_answer_schools_the_output() {
-        assert_eq!(pretty_answer("[]"), "ingen reel løsning");
+        assert_eq!(pretty_answer("[]"), "no real solution");
         assert_eq!(pretty_answer("[x = 1.895494b0]"), "[x = 1.895494]");
         assert_eq!(pretty_answer("1.9b+3"), "1.9e+3");
-        assert_eq!(pretty_answer("%union([2 < x],[x < -2])"), "2 < x eller x < -2");
+        assert_eq!(pretty_answer("%union([2 < x],[x < -2])"), "2 < x or x < -2");
         assert_eq!(pretty_answer("[x = %e^2]"), "[x = e^2]");
         assert_eq!(pretty_answer(&"y = %e^x⋅%c".replace('⋅', "*")), "y = e^x⋅C");
         assert_eq!(pretty_answer("%pi"), "π");
@@ -2063,7 +2060,7 @@ mod tests {
     fn forrige_errors_without_result() {
         let mut s = s();
         let err = s.run("math.forrige", &json!({})).unwrap_err();
-        assert!(err.to_string().contains("Intet tidligere resultat"));
+        assert!(err.to_string().contains("No previous result"));
     }
 
     #[test]
@@ -2211,7 +2208,7 @@ mod tests {
         let _ = ask_var(&mut s, "math.isoler", vec!["x".to_string(), "y".to_string()]);
         assert_eq!(s.ui_requests.len(), 1);
         assert!(s.ui_requests[0].get("open").and_then(Value::as_str) == Some("mathVarPicker"));
-        assert!(s.status.contains("Vælg variabel"));
+        assert!(s.status.contains("Pick a variable"));
     }
 
     #[test]

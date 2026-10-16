@@ -491,7 +491,7 @@ impl WordApp {
         // First run (or wiped prefs): the math tab builds itself.
         wordcraft_engine::cmd::mathcraft::ensure_wordmat_tab(&mut session);
         if !wordcraft_engine::cmd::mathcraft::maxima_available() {
-            session.status = "Maxima mangler — regn ikke før den er installeret (sudo pacman -S maxima)".to_string();
+            session.status = "Maxima is missing — install it before calculating (e.g. sudo pacman -S maxima)".to_string();
         }
         WordApp {
             session,
@@ -931,13 +931,13 @@ impl WordApp {
         let mut choice: Option<String> = None;
         let mut cancel = false;
         let title = match pick.command.as_str() {
-            "math.beregn" => "Beregn for variabel",
-            "math.solve" => "Løs for variabel",
-            "math.solvenum" => "Løs numerisk for variabel",
-            _ => "Isolér for variabel",
+            "math.beregn" => "Calculate for variable",
+            "math.solve" => "Solve for variable",
+            "math.solvenum" => "Solve numeric for variable",
+            _ => "Isolate for variable",
         };
         egui::Window::new(title).collapsible(false).resizable(false).anchor(egui::Align2::CENTER_CENTER, [0.0, 0.0]).show(ctx, |ui| {
-            ui.label("Ligningen har flere variable. Vælg den der skal isoleres:");
+            ui.label("The equation has several variables. Pick the one to isolate:");
             ui.horizontal_wrapped(|ui| {
                 for v in &pick.vars {
                     if ui.button(v).clicked() {
@@ -945,7 +945,7 @@ impl WordApp {
                     }
                 }
             });
-            if ui.button("Annuller").clicked() {
+            if ui.button("Cancel").clicked() {
                 cancel = true;
             }
         });
@@ -965,7 +965,7 @@ impl WordApp {
         };
         let mut choice: Option<String> = None;
         let mut cancel = false;
-        egui::Window::new("Formelsamling").collapsible(false).resizable(true).anchor(egui::Align2::CENTER_CENTER, [0.0, 0.0]).show(ctx, |ui| {
+        egui::Window::new("Formula collection").collapsible(false).resizable(true).anchor(egui::Align2::CENTER_CENTER, [0.0, 0.0]).show(ctx, |ui| {
             egui::ScrollArea::vertical().max_height(400.0).show(ui, |ui| {
                 for g in &groups {
                     ui.strong(&g.name);
@@ -979,7 +979,7 @@ impl WordApp {
                     ui.separator();
                 }
             });
-            if ui.button("Annuller").clicked() {
+            if ui.button("Cancel").clicked() {
                 cancel = true;
             }
         });

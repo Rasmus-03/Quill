@@ -2486,12 +2486,12 @@ fn equation_menu(app: &mut WordApp, ui: &mut Ui) {
     }
     let display = app.session.run("equation.get", &json!({})).ok().and_then(|v| v.get("display").and_then(|d| d.as_bool())).unwrap_or(false);
     let items: [(&str, &str, serde_json::Value); 6] = [
-        (if display { "Skift til på linjen" } else { "Skift til centreret" }, "equation.display", json!({"value": !display})),
-        ("Professionel visning", "equation.convert", json!({"to": "professional"})),
-        ("Lineær visning", "equation.convert", json!({"to": "linear"})),
-        ("Ligningsnummer", "equation.number", json!({})),
-        ("Gem ligning", "math.gem", json!({})),
-        ("Luk ligning", "equation.exit", json!({})),
+        (if display { "Change to Inline" } else { "Change to Display" }, "equation.display", json!({"value": !display})),
+        ("Professional", "equation.convert", json!({"to": "professional"})),
+        ("Linear", "equation.convert", json!({"to": "linear"})),
+        ("Equation Number", "equation.number", json!({})),
+        ("Save equation", "math.gem", json!({})),
+        ("Close Equation", "equation.exit", json!({})),
     ];
     for (label, id, params) in items {
         if ui.button(tl!(label)).clicked() {

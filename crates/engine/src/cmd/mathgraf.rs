@@ -1,7 +1,7 @@
-//! Tegn graf (WordMat Grafer, gratis): plot funktioner med Maxima som
-//! punkt-sampler, tegnet med `image`-kraten. Ingen nye afhængigheder og
-//! ingen fonte: aksetal tegnes med en indbygget 3x5 bitmap-skrift, og
-//! selve udtrykket står som alt-tekst, ikke i billedet.
+//! Plot graph (free): plot functions with Maxima as the point sampler,
+//! drawn with the `image` crate. No new dependencies and no fonts:
+//! axis numbers use a built-in 3x5 bitmap font, and the expression itself
+//! lives in the alt text, not the picture.
 
 use serde_json::{Value, json};
 
@@ -19,7 +19,7 @@ const IMG_H: u32 = 600;
 const COLORS: [[u8; 3]; 3] = [[37, 99, 235], [220, 38, 38], [22, 163, 74]];
 
 pub fn specs() -> Vec<CommandSpec> {
-    vec![CommandSpec::new("math.graf", "Tegn graf", "WordMat › Graf", graf).params(r#"{"spec"?: "f(x)=x^2, -5, 5", "var"?: variable, "width"?: pt}"#)]
+    vec![CommandSpec::new("math.graf", "Plot graph", "Math › Graph", graf).params(r#"{"spec"?: "f(x)=x^2, -5, 5", "var"?: variable, "width"?: pt}"#)]
 }
 
 /// One parsed curve: display text (Danish, original) and Maxima expression.
@@ -65,7 +65,7 @@ fn is_number(t: &str) -> bool {
 fn parse_spec(raw: &str) -> Result<(Vec<String>, f64, f64), String> {
     let t = raw.trim();
     if t.is_empty() {
-        return Err("Markér f.eks. \"x^2, -5, 5\" først".to_string());
+        return Err("Select e.g. \"x^2, -5, 5\" first".to_string());
     }
     let comma_parts = split_top(t);
     let mut range = None;
@@ -84,17 +84,17 @@ fn parse_spec(raw: &str) -> Result<(Vec<String>, f64, f64), String> {
     }
     let curves: Vec<String> = split_curves(&curve_text).into_iter().map(|c| c.trim().to_string()).filter(|c| !c.is_empty()).collect();
     if curves.is_empty() {
-        return Err("Markér f.eks. \"x^2, -5, 5\" først".to_string());
+        return Err("Select e.g. \"x^2, -5, 5\" first".to_string());
     }
     if curves.len() > 3 {
-        return Err("Maks. 3 grafer ad gangen (adskil med ;)".to_string());
+        return Err("At most 3 graphs at a time (separate with ;)".to_string());
     }
     let (from, to) = range.unwrap_or((-10.0, 10.0));
     if !from.is_finite() || !to.is_finite() || from >= to {
-        return Err("Intervallet skal være to tal med fra < til, f.eks. \"x^2, -5, 5\"".to_string());
+        return Err("The range must be two numbers with from < to, e.g. \"x^2, -5, 5\"".to_string());
     }
     if to - from < 1e-9 {
-        return Err("Intervallet er for lille".to_string());
+        return Err("The range is too small".to_string());
     }
     Ok((curves, from, to))
 }
@@ -167,7 +167,7 @@ fn build_spec(s: &mut Session, v: &Value, raw: &str, from_param: bool) -> Result
     for c in &curves_raw {
         let (h, e) = strip_prefix(c);
         if e.is_empty() {
-            return Err(err(format!("\"{c}\" er ikke et funktionsudtryk; brug f.eks. \"x^2, -5, 5\"")));
+            return Err(err(format!("\"{c}\" is not a function expression; use e.g. \"x^2, -5, 5\"")));
         }
         if hint.is_none() {
             hint = h;
@@ -182,7 +182,7 @@ fn build_spec(s: &mut Session, v: &Value, raw: &str, from_param: bool) -> Result
                 h
             } else if from_param {
                 return Err(err(format!(
-                    "Flere variable ({}); angiv f.eks. {{\"var\": \"{}\"}}",
+                    "Several variables ({}); pass e.g. {{\"var\": \"{}\"}}",
                     vars.join(", "),
                     vars.first().cloned().unwrap_or_default()
                 )));
@@ -206,7 +206,7 @@ fn build_spec(s: &mut Session, v: &Value, raw: &str, from_param: bool) -> Result
 }
 
 /// Sample one curve: `Some((x, y))` per grid point, `None` = gap
-/// (pole, complex, undefined — drawn as a break, like WordMat).
+/// (pole, complex, undefined — drawn as a break).
 fn sample(pre: &[String], d: &[String], var: &str, expr: &str, from: f64, to: f64) -> Result<Vec<Option<(f64, f64)>>, String> {
     let mut xs = Vec::with_capacity(SAMPLES);
     for i in 0..SAMPLES {
@@ -230,7 +230,7 @@ fn parse_points(s: &str) -> Result<Vec<Option<(f64, f64)>>, String> {
     };
     skip_ws(&mut i);
     if b.get(i) != Some(&b'[') {
-        return Err("Kunne ikke læse punkter fra Maxima".to_string());
+        return Err("Could not read points from Maxima".to_string());
     }
     i += 1;
     let mut pts = Vec::new();
@@ -240,7 +240,7 @@ fn parse_points(s: &str) -> Result<Vec<Option<(f64, f64)>>, String> {
             break;
         }
         if b.get(i) != Some(&b'[') {
-            return Err("Kunne ikke læse punkter fra Maxima".to_string());
+            return Err("Could not read points from Maxima".to_string());
         }
         i += 1;
         skip_ws(&mut i);
@@ -257,7 +257,7 @@ fn parse_points(s: &str) -> Result<Vec<Option<(f64, f64)>>, String> {
             if nested {
                 skip_ws(&mut i);
                 if b.get(i) != Some(&b']') {
-                    return Err("Kunne ikke læse punkter fra Maxima".to_string());
+                    return Err("Could not read points from Maxima".to_string());
                 }
                 i += 1;
             }
@@ -266,19 +266,19 @@ fn parse_points(s: &str) -> Result<Vec<Option<(f64, f64)>>, String> {
             let x = parse_num(&s, &mut i)?;
             skip_ws(&mut i);
             if b.get(i) != Some(&b',') {
-                return Err("Kunne ikke læse punkter fra Maxima".to_string());
+                return Err("Could not read points from Maxima".to_string());
             }
             i += 1;
             let y = parse_num(&s, &mut i)?;
             skip_ws(&mut i);
             if b.get(i) != Some(&b']') {
-                return Err("Kunne ikke læse punkter fra Maxima".to_string());
+                return Err("Could not read points from Maxima".to_string());
             }
             i += 1;
             if nested {
                 skip_ws(&mut i);
                 if b.get(i) != Some(&b']') {
-                    return Err("Kunne ikke læse punkter fra Maxima".to_string());
+                    return Err("Could not read points from Maxima".to_string());
                 }
                 i += 1;
             }
@@ -293,7 +293,7 @@ fn parse_points(s: &str) -> Result<Vec<Option<(f64, f64)>>, String> {
         }
     }
     if pts.is_empty() {
-        return Err("Ingen punkter (er intervallet gyldigt?)".to_string());
+        return Err("No points (is the range valid?)".to_string());
     }
     Ok(pts)
 }
@@ -544,7 +544,7 @@ fn render(from: f64, to: f64, curves: &[Vec<Option<(f64, f64)>>]) -> image::RgbI
     cv.img
 }
 
-/// Tegn graf: `x^2, -5, 5` → sampled curves as a picture replacing the spec.
+/// Plot graph: `x^2, -5, 5` → sampled curves as a picture replacing the spec.
 fn graf(s: &mut Session, v: &Value) -> CmdResult {
     let from_param = v.get("spec").and_then(Value::as_str).is_some_and(|x| !x.trim().is_empty());
     let (raw, replace_range) = if from_param {
@@ -570,14 +570,14 @@ fn graf(s: &mut Session, v: &Value) -> CmdResult {
         match sample(&pre, &d, &spec.var, &c.expr, spec.from, spec.to) {
             Ok(pts) if pts.iter().any(|p| p.is_some()) => series.push(pts),
             Ok(_) => return Err(err(format!("\"{}\" gav ingen punkter i intervallet", c.display))),
-            Err(e) => return Err(err(format!("Kunne ikke sample \"{}\": {e}", c.display))),
+            Err(e) => return Err(err(format!("Could not sample \"{}\": {e}", c.display))),
         }
     }
     let img = render(spec.from, spec.to, &series);
     let mut png = Vec::new();
     img.write_to(&mut std::io::Cursor::new(&mut png), image::ImageFormat::Png).map_err(|e| err(format!("Kunne ikke lave billede: {e}")))?;
     let names: Vec<&str> = spec.curves.iter().map(|c| c.display.as_str()).collect();
-    let alt = format!("Graf: {} ({} fra {} til {})", names.join(", "), spec.var, spec.from, spec.to);
+    let alt = format!("Graph: {} ({} from {} to {})", names.join(", "), spec.var, spec.from, spec.to);
     let width = v.get("width").and_then(Value::as_f64).unwrap_or(450.0) as f32;
     let data = super::insert::base64_encode(&png);
     // A selected spec (or equation at the caret) is replaced by the picture.
@@ -585,7 +585,7 @@ fn graf(s: &mut Session, v: &Value) -> CmdResult {
         s.sel = Selection { anchor: a, focus: b };
     }
     s.run("insert.picture", &json!({"data": data, "width": width, "alt": alt}))?;
-    s.status = "Graf indsat".to_string();
+    s.status = "Graph inserted".to_string();
     sel_result(s)
 }
 
@@ -669,6 +669,6 @@ mod tests {
         let before = s.doc.media.len();
         s.run("math.graf", &json!({})).unwrap();
         assert!(s.doc.media.len() > before);
-        assert!(s.status.contains("Graf"));
+        assert!(s.status.contains("Graph"));
     }
 }

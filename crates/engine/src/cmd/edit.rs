@@ -31,11 +31,7 @@ fn undo_to(s: &mut Session, v: &Value) -> CmdResult {
 /// Cut is also available for an in-equation highlight (the document
 /// selection stays collapsed while editing).
 fn has_sel_or_math(s: &Session) -> Option<&'static str> {
-    if !s.sel.is_collapsed() || s.math.as_ref().is_some_and(|m| m.anchor.is_some()) {
-        None
-    } else {
-        Some("nothing is selected")
-    }
+    if !s.sel.is_collapsed() || s.math.as_ref().is_some_and(|m| m.anchor.is_some()) { None } else { Some("nothing is selected") }
 }
 
 pub fn specs() -> Vec<CommandSpec> {
