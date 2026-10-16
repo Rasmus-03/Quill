@@ -1384,6 +1384,14 @@ fn beregn(s: &mut Session, v: &Value) -> CmdResult {
 }
 
 /// Maxima-kommando: run raw Maxima on the selection (or {"cmd"}).
+/// Security model, in two tiers:
+/// • A DOCUMENT selection is gated: check_maxima_safe rejects anything
+///   reaching outside the calculation (files, processes) — a hostile
+///   received .docx must never be executable by clicking a Math button.
+/// • The {"cmd"} variant is the DELIBERATE escape hatch: the user types
+///   raw Maxima themselves, exactly like a Maxima shell, so it runs
+///   unchecked. This asymmetry is intentional and documented here and in
+///   the command list below; revisit only with an explicit opt-in UI.
 fn maxima_cmd(s: &mut Session, v: &Value) -> CmdResult {
     if let Some(c) = v.get("cmd").and_then(Value::as_str) {
         let cmd = c.trim();
@@ -2151,6 +2159,20 @@ mod tests {
         // a received .docx must not smuggle code past it.
         select_all(&mut s, "system(\"id\")");
         let err = s.run("math.maxima", &json!({})).unwrap_err();
+        assert!(err.to_string().contains("not allowed"));
+        // Bypass attempts through the real command paths: suppressed-case
+        // and token-splitting tricks must fail like their plain forms.
+        select_all(&mut s, "SYSTEM(\"id\")");
+        let err = s.run("math.maxima", &json!({})).unwrap_err();
+        assert!(err.to_string().contains("not allowed"));
+        select_all(&mut s, "sconcat(\"sy\",\"stem\")(\"id\")");
+        let err = s.run("math.beregn", &json!({})).unwrap_err();
+        assert!(err.to_string().contains("not allowed"));
+        select_all(&mut s, "writefile(\"/tmp/x\")");
+        let err = s.run("math.maxima", &json!({})).unwrap_err();
+        assert!(err.to_string().contains("not allowed"));
+        select_all(&mut s, "LOAD(\"/tmp/x.mac\")");
+        let err = s.run("math.beregn", &json!({})).unwrap_err();
         assert!(err.to_string().contains("not allowed"));
     }
 
