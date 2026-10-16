@@ -5006,3 +5006,16 @@ fn insert_picture_takes_a_windows_metafile() {
     assert!(err.to_string().contains("WMF, EMF"), "{err}");
     let _ = std::fs::remove_dir_all(&dir);
 }
+
+/// Select All inside an equation selects its contents, still editing it (a double-click
+/// on the equation highlights everything in it the same way).
+#[test]
+fn select_all_in_an_equation_selects_the_equation() {
+    let mut s = Session::new(wordcraft_doc::Document::new());
+    run(&mut s, "insert.equation", json!({"edit": true}));
+    run(&mut s, "equation.type", json!({"text": "x+2"}));
+    run(&mut s, "select.all", json!({}));
+    let m = s.math.clone().expect("still editing the equation");
+    assert!(m.anchor.is_some(), "the equation's contents are highlighted");
+    assert!(m.anchor != Some(m.pos), "something is highlighted, not a collapsed caret");
+}

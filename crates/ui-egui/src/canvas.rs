@@ -1804,8 +1804,17 @@ fn mouse(app: &mut WordApp, ui: &Ui, resp: &egui::Response, rects: &[Rect], layo
     let Some((page, x, y)) = page_at(rects, layout, scale, p) else { return };
     let mods = ui.input(|i| i.modifiers);
     let story = app.session.sel.focus.story;
-    // Inside an equation, clicks place the caret in it (and double-clicks don't select words).
+    // Inside an equation, clicks place the caret in it; a double (or triple) click there
+    // highlights the whole equation's contents (like ⌘/Ctrl+A in it), not a word. The press
+    // at the same spot already entered the equation, so the highlight lives inside it; if
+    // that press didn't enter (Shift was down, say), nothing is selected either.
     if (resp.double_clicked() || resp.triple_clicked()) && layout.equation_hit(page, x, y, story).is_some() {
+        if app.session.math.is_some() {
+            app.canvas.math_drag = None;
+            app.canvas.unit_drag = None;
+            app.canvas.dragging = false;
+            let _ = app.run("select.all", json!({}));
+        }
         return;
     }
     // Outline view: a paragraph's symbol selects it with what is under it; a double-click
@@ -2881,6 +2890,59 @@ mod tests {
         multi_drag(&mut h, at, at, 2);
         let (s, e) = h.state().session.sel.ordered();
         assert_eq!((s, e), (Pos::body(0, 0), Pos::body(0, 6)));
+    }
+
+    /// A double-click in an equation highlights the whole equation's contents (not a word),
+    /// like Ctrl/⌘+A in it does.
+    #[test]
+    fn double_click_in_an_equation_highlights_all_of_it() {
+        use egui::{Event, PointerButton};
+        let mut a = WordApp::new(wordcraft_engine::Session::new(wordcraft_doc::Document::new()), Default::default());
+        a.run("view.commentsPane", json!({"value": false})).unwrap();
+        a.run("insert.equation", json!({"edit": true})).unwrap();
+        a.run("equation.type", json!({"text": "3+5*7/23"})).unwrap();
+        a.run("equation.exit", json!({"before": false})).unwrap();
+        let mut h = egui_kittest::Harness::builder().with_size(egui::vec2(1440.0, 900.0)).with_step_dt(1.0 / 60.0).build_ui_state(
+            |ui, app: &mut WordApp| {
+                let ctx = ui.ctx().clone();
+                app.logic(&ctx);
+                app.ui(ui);
+            },
+            a,
+        );
+        for _ in 0..6 {
+            h.step();
+        }
+        // The equation object behind the caret (the caret sits after its U+FFFC, 3 bytes).
+        let f = h.state().session.sel.focus.clone();
+        let eq = Pos { off: f.off - '\u{FFFC}'.len_utf8(), path: f.path.clone(), story: f.story };
+        let (pg, x, base, ml) = h.state_mut().session.layout().equation_geom(&eq, 0).expect("equation geometry");
+        let at = page_to_screen(h.state_mut(), pg, x + ml.width / 2.0, base - ml.ascent / 2.0).expect("on screen");
+        let button =
+            |at: Pos2, pressed: bool| Event::PointerButton { pos: at, button: PointerButton::Primary, pressed, modifiers: Default::default() };
+        h.event(Event::PointerMoved(at));
+        h.event(button(at, true));
+        h.step();
+        eprintln!("DEBUG after press1 math={:?}", h.state().session.math.as_ref().map(|m| (m.at.off, m.pos.off)));
+        h.event(button(at, false));
+        h.step();
+        eprintln!("DEBUG after release1 math={:?}", h.state().session.math.as_ref().map(|m| (m.at.off, m.pos.off)));
+        h.event(button(at, true));
+        h.step();
+        eprintln!("DEBUG after press2 math={:?}", h.state().session.math.as_ref().map(|m| (m.at.off, m.pos.off)));
+        h.event(button(at, false));
+        for _ in 0..3 {
+            h.step();
+        }
+        // The press entered the equation; the double-click selected everything in it:
+        // anchored at its start (path root) and through the equation's every unit.
+        let m = h.state().session.math.clone().expect("editing the equation");
+        assert_eq!(m.anchor.as_ref().map(|a| (a.path.len(), a.off)), Some((0, 0)), "anchored at the equation's start");
+        let end = match h.state().session.doc.para(f.story, &f.path).expect("para").object_at(eq.off) {
+            Some(wordcraft_doc::para::InlineObject::Equation { math, .. }) => wordcraft_doc::math_edit::units(&math.nodes),
+            _ => panic!("the equation is not there"),
+        };
+        assert_eq!((m.pos.path.len(), m.pos.off), (0, end), "through every unit of the equation");
     }
 
     /// #856: the left margin beside body text is Word's selection bar. A click selects the line,

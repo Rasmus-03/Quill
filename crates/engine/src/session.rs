@@ -1195,7 +1195,9 @@ impl Session {
             self.last_command = Some((id.to_string(), kept()));
         }
         // Typing, caret movement and selection outside the equation commands leave the equation.
+        // `select.all` is the exception: its own handler selects the equation's contents there.
         if self.math.is_some()
+            && id != "select.all"
             && (id.starts_with("text.") || id.starts_with("caret.") || id.starts_with("select.") || id.starts_with("edit.paste"))
             && let Some(m) = self.math.take()
         {
