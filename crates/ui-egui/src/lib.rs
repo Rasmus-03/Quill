@@ -346,6 +346,13 @@ pub struct MathVarPick {
     pub vars: Vec<String>,
 }
 
+/// Pending history choice (WordMat-style history dialog): the session's
+/// recent answers, newest first, from a `mathHistoryPicker` request.
+#[derive(Clone, Debug)]
+pub struct MathHistoryPick {
+    pub items: Vec<String>,
+}
+
 /// Pending formula choice (WordMat-style formula collection).
 #[derive(Clone, Debug)]
 pub struct FormulaGroup {
@@ -375,6 +382,8 @@ pub struct WordApp {
     /// command id plus candidate variables. Set from a `mathVarPicker`
     /// UI request; cleared on choice or cancel.
     pub math_var_pick: Option<MathVarPick>,
+    /// Pending history choice (mathHistorikPicker): recent answers.
+    pub math_history_pick: Option<MathHistoryPick>,
     /// Pending formula choice; set from a `mathFormulaPicker` request.
     pub math_formula_pick: Option<Vec<FormulaGroup>>,
     /// The Colors dialog (More Colors…), shown above any other dialog (#606).
@@ -503,6 +512,7 @@ impl WordApp {
             controls: Default::default(),
             dialog: None,
             math_var_pick: None,
+            math_history_pick: None,
             math_formula_pick: None,
             colors: None,
             restrict: Default::default(),
@@ -957,6 +967,36 @@ impl WordApp {
         }
     }
 
+    /// History dialog: the session's recent answers (newest first). A
+    /// choice inserts it at the caret via `math.inserthistorik`.
+    fn show_math_history_pick(&mut self, ctx: &egui::Context) {
+        let Some(pick) = self.math_history_pick.clone() else {
+            return;
+        };
+        let mut choice: Option<String> = None;
+        let mut cancel = false;
+        egui::Window::new("History").collapsible(false).resizable(true).anchor(egui::Align2::CENTER_CENTER, [0.0, 0.0]).show(ctx, |ui| {
+            ui.label("Recent results (newest first). Pick one to insert at the caret:");
+            egui::ScrollArea::vertical().max_height(300.0).show(ui, |ui| {
+                for item in &pick.items {
+                    if ui.button(item).clicked() {
+                        choice = Some(item.clone());
+                    }
+                }
+            });
+            if ui.button("Cancel").clicked() {
+                cancel = true;
+            }
+        });
+        if let Some(text) = choice {
+            self.math_history_pick = None;
+            let _ = self.run("math.inserthistorik", serde_json::json!({"text": text}));
+            self.status(self.session.status.clone());
+        } else if cancel {
+            self.math_history_pick = None;
+        }
+    }
+
     /// Formula collection picker (WordMat-style). A choice inserts the
     /// template as a new equation.
     fn show_math_formula_pick(&mut self, ctx: &egui::Context) {
@@ -1026,6 +1066,16 @@ impl WordApp {
                         .unwrap_or_default();
                     if !vars.is_empty() {
                         self.math_var_pick = Some(MathVarPick { command, vars });
+                    }
+                }
+                "mathHistoryPicker" => {
+                    let items: Vec<String> = req
+                        .get("items")
+                        .and_then(Value::as_array)
+                        .map(|a| a.iter().filter_map(|i| i.get("text").and_then(Value::as_str)).take(12).map(str::to_string).collect())
+                        .unwrap_or_default();
+                    if !items.is_empty() {
+                        self.math_history_pick = Some(MathHistoryPick { items });
                     }
                 }
                 "mathFormulaPicker" => {
@@ -1673,6 +1723,7 @@ impl WordApp {
         content_controls::popup(self, &ctx);
         dialogs::show(self, &ctx);
         self.show_math_var_pick(&ctx);
+        self.show_math_history_pick(&ctx);
         self.show_math_formula_pick(&ctx);
         #[cfg(not(target_arch = "wasm32"))]
         file_browser::show(self, &ctx);

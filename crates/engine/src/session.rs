@@ -346,6 +346,9 @@ pub struct Session {
     pub math_defs: Vec<String>,
     /// Last computed answer (WordMat Forrige resultat). Session-only.
     pub math_last: Option<String>,
+    /// Recent answers, newest first, that `math.historik` shows. Session
+    /// tools like `math_last`: never saved in the file, never an undo edit.
+    pub math_history: Vec<String>,
     /// Decimal results (WordMat Num) vs exact (WordMat Exact, default).
     pub math_decimal: bool,
     pub find: FindState,
@@ -609,6 +612,7 @@ impl Session {
             clip_history: Default::default(),
             math_defs: Vec::new(),
             math_last: None,
+            math_history: Vec::new(),
             math_decimal: false,
             find: FindState::default(),
             goal_x: None,
@@ -1044,6 +1048,7 @@ impl Session {
             // Like the clipboard: session tools for math commands, not an edit.
             math_defs: _,
             math_last: _,
+            math_history: _,
             math_decimal: _,
             find: _,
             goal_x: _,

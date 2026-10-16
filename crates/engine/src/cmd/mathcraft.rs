@@ -849,7 +849,8 @@ fn apply_result(s: &mut Session, target: Target, input: &str, result: &str) -> C
             if let Some(mm) = s.math.as_mut() {
                 mm.pos = wordcraft_doc::math_edit::MathPos::new(base.path.clone(), base.off + add);
             }
-            s.math_last = Some(show);
+            s.math_last = Some(show.clone());
+            push_math_history(s, &show);
             s.pending = Some(CharProps::default());
             sel_result(s)
         }
@@ -869,12 +870,14 @@ fn apply_result(s: &mut Session, target: Target, input: &str, result: &str) -> C
                 // Fresh typing after our answer starts default, not green.
                 s.pending = Some(CharProps::default());
                 s.math_last = Some(show.clone());
+                push_math_history(s, &show);
                 return sel_result(s);
             }
             let show = pretty_answer(result);
             replace_selection(s, &format!("{input} = {show}"))?;
             // Remember the answer (Forrige resultat), then paint and park caret.
             s.math_last = Some(show.clone());
+            push_math_history(s, &show);
             // Paint " = result" WordMat green, then park the caret at the end.
             // (A failed paint never fails the command: the text is already in.)
             let end = s.sel.focus.clone();
@@ -1374,6 +1377,224 @@ fn beregn(s: &mut Session, v: &Value) -> CmdResult {
         return Err(err(format!("Could not calculate: {last_err}")));
     }
     apply_result(s, target, input.trim(), &trim_float_zeros(&out.join(" or ")))
+}
+
+/// Trinvis løsning: school steps (Danish) down to the verified answer.
+/// Linear and quadratic equations only — anything else is an error
+/// pointing at Solvér. Every number the steps print IS a Maxima value
+/// (exact rationals), and the final line is always the answer of the
+/// already-verified [`real_solve`]: if the steps disagree with it, error
+/// — never wrong steps.
+const MATH_HISTORY_CAP: usize = 50;
+
+/// New answers join the running list (newest first) that `math.historik`
+/// shows. Consecutive duplicates collapse (one freshly recomputed answer
+/// is one entry), and the list is capped — a session, not an archive.
+fn push_math_history(s: &mut Session, answer: &str) {
+    if s.math_history.first().map(String::as_str) == Some(answer) {
+        return;
+    }
+    s.math_history.insert(0, answer.to_string());
+    s.math_history.truncate(MATH_HISTORY_CAP);
+}
+
+/// Negate an exact Maxima coefficient string (`3/4` → `-3/4`).
+fn neg_coeff(c: &str) -> String {
+    match c.trim() {
+        "0" => "0".to_string(),
+        t if t.starts_with('-') => t[1..].to_string(),
+        t => format!("-{t}"),
+    }
+}
+
+/// Parenthesize a substitution that we splice into a written formula when
+/// it is negative (a bare minus must not glue into a product).
+fn paren_neg(c: &str) -> String {
+    let t = c.trim();
+    if t.starts_with('-') { format!("({t})") } else { t.to_string() }
+}
+
+/// The steps text for `a⋅{var} + b = 0` (school form). `answer` is the
+/// verified display value; the final line is the one painted green.
+/// Returns (full text, final line) for the green painter.
+fn linear_steps_text(input: &str, var: &str, m: &str, k: &str, answer: &str) -> (String, String) {
+    let mut out = format!("{input}\n   Flyt medlemer: {m}⋅{var} = {k}");
+    if m.trim() != "1" {
+        out.push_str(&format!("\n   Isolér {var}: {var} = {k}/{m}"));
+    }
+    let last = format!("   {var} = {answer}");
+    out.push_str(&format!("\n{last}"));
+    (out, last)
+}
+
+/// The steps text for the quadratic form `x² + p⋅x + q = 0` (school form:
+/// divide by a, discriminant, solution formula). Same returned pair.
+/// `roots` are the verified display values; their count must match the
+/// discriminant's sign, checked by the caller.
+fn quad_steps_text(input: &str, var: &str, a: &str, p: &str, q: &str, d2: &str, roots: &[String]) -> String {
+    let pp = paren_neg(p);
+    let qq = paren_neg(q);
+    let is_zero = |x: &str| x.trim() == "0";
+    let lhs = match (is_zero(p), is_zero(q)) {
+        (false, false) => format!("{var}^2 + {pp}⋅{var} + {qq} = 0"),
+        (true, false) => format!("{var}^2 + {qq} = 0"),
+        (false, true) => format!("{var}^2 + {pp}⋅{var} = 0"),
+        (true, true) => format!("{var}^2 = 0"),
+    };
+    let sign = if d2.trim().starts_with('-') {
+        "<"
+    } else if is_zero(d2) {
+        "="
+    } else {
+        ">"
+    };
+    let mut out = format!("{input}\n   Divider med {a}: {lhs}\n   Diskriminant: d = ({pp})^2 − 4⋅({qq}) = {d2}");
+    match sign {
+        "<" => out.push_str("\n   d < 0: ingen reelle løsninger"),
+        "=" => {
+            out.push_str(&format!("\n   Dobbeltrod: {var} = −({pp})/2"));
+            if let Some(x) = roots.first() {
+                out.push_str(&format!("\n   {var} = {x}"));
+            }
+        }
+        _ => {
+            out.push_str(&format!("\n   Løsningsformlen: {var} = (−({pp}) ± √({d2}))/2"));
+            if roots.len() == 2 {
+                out.push_str(&format!("\n   {var} = {} eller {var} = {}", roots[0], roots[1]));
+            }
+        }
+    }
+    out
+}
+
+/// Show steps: coefficients (and the divided quadratic form) from ONE
+/// Maxima batch, the final answer from the verified [`real_solve`].
+fn trin(s: &mut Session, v: &Value) -> CmdResult {
+    let (input, target) = math_input(s)?;
+    let raw = input.trim();
+    // Same gate as beregn: the rewrite must never hide hostile names.
+    check_maxima_safe(raw)?;
+    if matches!(target, Target::Math) {
+        return Err(err("Show steps works on the equation in the document; leave the equation editor first".to_string()));
+    }
+    let expr = dots_ctx(raw, &def_names(s));
+    check_maxima_safe(&expr)?;
+    if is_inequality(&expr) || !expr.contains('=') {
+        return Err(err("Show steps takes one equation; use Calculate for expressions (and solve linear/quadratic equations)".to_string()));
+    }
+    let Some((lhs, rhs)) = expr.split_once('=') else {
+        return Err(err("Show steps takes one equation".to_string()));
+    };
+    let var = match pick_var(s, v, &expr) {
+        VarPick::One(v) => v,
+        VarPick::Many(vars) => return ask_var(s, "math.trin", vars),
+    };
+    // One batch: a (raw), p,q (the divided school form), d = p²−4q — plus
+    // the uncooked a/b/c for the linear branch. NONE = not solvable here.
+    let coef_cmd = format!(
+        "block([e: expand({lhs}) - ({rhs}), A, B, C], A: coeff(e, {var}, 2), B: coeff(e, {var}, 1), C: coeff(e, {var}, 0), if A=0 and B=0 then NONE else if A=0 then [0, B, C, NONE] else [A, B/A, C/A, (B/A)^2-4*(C/A)])"
+    );
+    let val = batch(&base_prelude(), &defs(s), &coef_cmd).map_err(err)?;
+    let inner = val.trim().strip_prefix('[').ok_or_else(|| err("unexpected coefficient form".to_string()))?;
+    let inner = inner.strip_suffix(']').ok_or_else(|| err("unexpected coefficient form".to_string()))?;
+    let parts = split_top(inner);
+    if parts.len() != 4 || parts[0].trim() == "NONE" {
+        return Err(err("No linear or quadratic form in this variable; use Isolate".to_string()));
+    }
+    let (a, p, q, d2) = (parts[0].trim(), parts[1].trim(), parts[2].trim(), parts[3].trim());
+    // The verified answer — steps must agree with it or not show.
+    let ans_raw = batch(&base_prelude(), &defs(s), &real_solve(&expr, &var)).map_err(err)?;
+    if a == "0" {
+        // Linear: m = coefficient of {var}, constant moved to the other side.
+        let m = p;
+        let k = neg_coeff(q);
+        let roots = answer_roots(&var, &ans_raw);
+        let Some([root]) = roots.as_deref().map(AsRef::as_ref) else {
+            return Err(err("Real solve disagrees with the linear form; use Isolate".to_string()));
+        };
+        let answer = pretty_answer(root);
+        let (steps, _last) = linear_steps_text(raw, &var, m, &k, &answer);
+        apply_steps(s, &steps, &answer)
+    } else {
+        let d_pos = !d2.starts_with('-');
+        let d_zero = d2 == "0";
+        let roots = answer_roots(&var, &ans_raw).ok_or_else(|| err("unexpected solve form".to_string()))?;
+        let expected = if d_zero {
+            1
+        } else if d_pos {
+            2
+        } else {
+            0
+        };
+        if roots.len() != expected {
+            return Err(err("Real solve disagrees with the discriminant; use Isolate".to_string()));
+        }
+        let shown: Vec<String> = roots.iter().map(|r| pretty_answer(r)).collect();
+        let answer = if shown.is_empty() { "no real solution".to_string() } else { shown.join(" eller ") };
+        let steps = quad_steps_text(raw, &var, a, p, q, d2, &shown);
+        apply_steps(s, &steps, &answer)
+    }
+}
+
+/// Split `[x = 1,x = -2]`-style solver output into right-hand sides.
+fn answer_roots(var: &str, ans: &str) -> Option<Vec<String>> {
+    if ans.trim() == "[]" {
+        return Some(Vec::new());
+    }
+    let inner = ans.trim().strip_prefix('[')?.strip_suffix(']')?;
+    let mut out = Vec::new();
+    for part in split_top(inner) {
+        let (lhs, r) = part.split_once('=')?;
+        if !lhs.trim().ends_with(var) {
+            return None;
+        }
+        out.push(r.trim().to_string());
+    }
+    Some(out)
+}
+
+/// Insert the steps as text paragraphs in place of the selection; the
+/// final line is painted compact green and joins Forrige + history.
+fn apply_steps(s: &mut Session, steps: &str, answer: &str) -> CmdResult {
+    replace_selection(s, steps)?;
+    // Paint the final line ("   x = …"): the caret parks at its end.
+    let seg = format!(" = {answer}");
+    let end = s.sel.focus.clone();
+    let start = Pos { off: end.off.saturating_sub(seg.len()), ..end.clone() };
+    s.sel = Selection { anchor: start, focus: end.clone() };
+    let _ = s.run("format.set", &json!({"props": {"color": ANSWER_GREEN_STR}}));
+    s.sel = Selection::caret(end);
+    s.math_last = Some(answer.to_string());
+    push_math_history(s, answer);
+    // Fresh typing after our answer starts default, not green.
+    s.pending = Some(CharProps::default());
+    s.status = "Steps shown".to_string();
+    sel_result(s)
+}
+
+/// Historik: ask the UI to show the session's past answers (newest first).
+fn historik(s: &mut Session, _: &Value) -> CmdResult {
+    if s.math_history.is_empty() {
+        return Err(err("No previous result; Calculate something first".to_string()));
+    }
+    let items: Vec<Value> = s.math_history.iter().take(12).map(|r| json!({ "text": r })).collect();
+    s.ui_requests.push(json!({ "open": "mathHistoryPicker", "items": items }));
+    s.status = "Pick a previous result…".to_string();
+    sel_result(s)
+}
+
+/// Insert a chosen history item (the UI passes its text) at the caret
+/// and make it the Forrige (math_last) result.
+fn historik_insat(s: &mut Session, v: &Value) -> CmdResult {
+    let t = v.get("text").and_then(Value::as_str).unwrap_or("").trim();
+    if t.is_empty() {
+        return Err(err("No history item chosen".to_string()));
+    }
+    check_maxima_safe(t)?;
+    replace_selection(s, t)?;
+    s.math_last = Some(t.to_string());
+    s.status = "Inserted result".to_string();
+    sel_result(s)
 }
 
 /// Maxima-kommando: run raw Maxima on the selection (or {"cmd"}).
@@ -1895,7 +2116,7 @@ fn undefine(s: &mut Session, v: &Value) -> CmdResult {
 
 /// The WordMat tab layout (also the migration source for old prefs).
 const LAYOUT_WORDMAT: &[(&str, &[&str])] = &[
-    ("Calculate", &["math.beregn", "math.simplify", "math.factor", "math.expand", "math.diff", "math.integrate"]),
+    ("Calculate", &["math.beregn", "math.trin", "math.simplify", "math.factor", "math.expand", "math.diff", "math.integrate"]),
     ("Solve", &["math.solve", "math.solvenum", "math.isoler", "math.solvede", "math.nyligning"]),
     ("Define", &["math.define", "math.undefine"]),
     ("Units", &["math.enhed", "math.numeric"]),
@@ -1949,6 +2170,7 @@ pub fn specs() -> Vec<CommandSpec> {
     vec![
         CommandSpec::new("math.nyligning", "New equation", "Math › Solve", nyligning).key("Alt+M").params("{}"),
         CommandSpec::new("math.beregn", "Calculate", "Math › Calculate", beregn).key("Alt+B").params("{}"),
+        CommandSpec::new("math.trin", "Show steps", "Math › Calculate", trin).params("{}"),
         CommandSpec::new("math.solve", "Solve equation", "Math › Solve", solve_plain).params(r#"{"var"?: variable, default "x"}"#),
         CommandSpec::new("math.solvenum", "Solve numeric", "Math › Solve", solvenum).params(r#"{"var"?: variable, default "x"}"#),
         CommandSpec::new("math.isoler", "Isolate", "Math › Solve", isoler).key("Alt+L").params(r#"{"var"?: variable to isolate, default "x"}"#),
@@ -1977,6 +2199,8 @@ pub fn specs() -> Vec<CommandSpec> {
         CommandSpec::new("math.maxima", "Maxima command", "Math › More", maxima_cmd)
             .params(r#"{"cmd"?: raw Maxima code (runs directly, own input only)}"#),
         CommandSpec::new("math.forrige", "Previous result", "Math › More", forrige).params("{}"),
+        CommandSpec::new("math.historik", "History", "Math › More", historik).params("{}"),
+        CommandSpec::new("math.inserthistorik", "Insert history item", "Math › More", historik_insat).params(r#"{"text": chosen previous answer}"#),
         CommandSpec::new("math.formler", "Formula collection", "Math › Formulas", formler).params("{}"),
         CommandSpec::new("math.formel", "Insert formula", "Math › Formulas", formel).params(r#"{"template": formula linear text}"#),
         CommandSpec::new("math.gem", "Save equation", "Math › Formulas", gem).params(r#"{"name"?: label}"#),
@@ -2436,6 +2660,123 @@ mod tests {
 
     // User edits the equation after an answer, then re-runs: the old
     // green answer is replaced, never stacked. Needs Maxima (ignored).
+    #[test]
+    fn steps_text_is_deterministic() {
+        // Numbers come verbatim from Maxima; sign folding is Rust-only.
+        let (steps, last) = linear_steps_text("2x+1=5", "x", "2", "-4", "2");
+        assert_eq!(steps, "2x+1=5\n   Flyt medlemer: 2⋅x = -4\n   Isolér x: x = -4/2\n   x = 2");
+        assert_eq!(last, "   x = 2");
+        // m = 1: the redundant isolate line is dropped.
+        let (steps, _) = linear_steps_text("x-3=0", "x", "1", "3", "3");
+        assert_eq!(steps, "x-3=0\n   Flyt medlemer: 1⋅x = 3\n   x = 3");
+    }
+
+    #[test]
+    fn quad_steps_text_covers_all_discriminant_signs() {
+        let two = quad_steps_text("x^2-5x+6=0", "x", "1", "-5", "6", "1", &["2".into(), "3".into()]);
+        assert!(two.contains("x^2 + (-5)⋅x + 6 = 0"), "{two}");
+        assert!(two.contains("d = ((-5))^2 − 4⋅(6) = 1"), "{two}");
+        assert!(two.contains("(−((-5)) ± √(1))/2"), "{two}");
+        assert!(two.contains("x = 2 eller x = 3"), "{two}");
+        let one = quad_steps_text("x^2+4x+4=0", "x", "1", "4", "4", "0", &["-2".into()]);
+        assert!(one.contains("Dobbeltrod: x = −(4)/2"), "{one}");
+        assert!(one.contains("x = -2"), "{one}");
+        let none = quad_steps_text("x^2+1=0", "x", "1", "0", "1", "-4", &[]);
+        assert!(none.contains("d < 0: ingen reelle løsninger"), "{none}");
+        let bare = quad_steps_text("x^2-9=0", "x", "1", "0", "-9", "36", &["3".into(), "-3".into()]);
+        assert!(bare.contains("x^2 + (-9) = 0"), "{bare}");
+    }
+
+    #[test]
+    fn answer_roots_splits_solver_output() {
+        assert_eq!(answer_roots("x", "[x = 2]"), Some(vec!["2".to_string()]));
+        assert_eq!(answer_roots("x", "[x = 2,x = -3]"), Some(vec!["2".to_string(), "-3".to_string()]));
+        assert_eq!(answer_roots("x", "[]"), Some(Vec::new()));
+        // A foreign-free variable in the answer (or a malformed form) is not ours.
+        assert_eq!(answer_roots("x", "[y = 2]"), None);
+        assert_eq!(answer_roots("x", "garbage"), None);
+    }
+
+    #[test]
+    fn history_push_dedupes_and_caps() {
+        let mut s = s();
+        push_math_history(&mut s, "8");
+        push_math_history(&mut s, "8");
+        assert_eq!(s.math_history, vec!["8".to_string()]);
+        for i in 0..(MATH_HISTORY_CAP as i32 + 10) {
+            push_math_history(&mut s, &i.to_string());
+        }
+        assert_eq!(s.math_history.len(), MATH_HISTORY_CAP);
+        assert_eq!(s.math_history.first().map(String::as_str), Some("59"));
+    }
+
+    #[test]
+    fn historik_errors_without_result() {
+        let mut s = s();
+        let err = s.run("math.historik", &json!({})).unwrap_err();
+        assert!(err.to_string().contains("No previous result"));
+    }
+
+    #[test]
+    fn historik_queues_picker_request() {
+        let mut s = s();
+        push_math_history(&mut s, "8");
+        push_math_history(&mut s, "10");
+        let _ = s.run("math.historik", &json!({}));
+        assert_eq!(s.ui_requests.len(), 1);
+        let req = &s.ui_requests[0];
+        assert!(req.get("open").and_then(Value::as_str) == Some("mathHistoryPicker"));
+        let items = req.get("items").and_then(Value::as_array).unwrap();
+        assert_eq!(items.len(), 2);
+        assert_eq!(items[0].get("text").and_then(Value::as_str), Some("10"));
+    }
+
+    #[test]
+    fn inserthistorik_puts_the_result_in_the_doc() {
+        let mut s = s();
+        run(&mut s, "text.insert", json!({"text": "5*1 ", "raw": true}));
+        run(&mut s, "caret.set", json!({"pos": {"block": 0, "off": 5}}));
+        let _ = s.run("math.inserthistorik", &json!({"text": "8"}));
+        assert_eq!(text(&s), "5*1 8");
+        assert_eq!(s.math_last.as_deref(), Some("8"));
+        let err = s.run("math.inserthistorik", &json!({"text": ""})).unwrap_err();
+        assert!(err.to_string().contains("No history item"));
+    }
+
+    #[test]
+    #[ignore]
+    fn trin_shows_linear_steps() {
+        let mut s = s();
+        select_all(&mut s, "2x+1=5");
+        run(&mut s, "math.trin", json!({}));
+        let t = text(&s);
+        assert!(t.contains("x = 2"), "got {t}");
+        assert!(t.contains("Flyt medlemer"), "got {t}");
+    }
+
+    #[test]
+    #[ignore]
+    fn trin_shows_quadratic_steps_and_both_roots() {
+        let mut s = s();
+        select_all(&mut s, "x^2-5x+6=0");
+        run(&mut s, "math.trin", json!({}));
+        let t = text(&s);
+        assert!(t.contains("d = "), "got {t}");
+        // Root order is the CAS's; both must appear on the final line.
+        assert!(t.contains("x = 2"), "got {t}");
+        assert!(t.contains("x = 3"), "got {t}");
+    }
+
+    #[test]
+    #[ignore]
+    fn trin_reports_no_real_solution_on_negative_discriminant() {
+        let mut s = s();
+        select_all(&mut s, "x^2+1=0");
+        run(&mut s, "math.trin", json!({}));
+        let t = text(&s);
+        assert!(t.contains("ingen reelle løsninger"), "got {t}");
+    }
+
     #[test]
     #[ignore]
     fn edit_then_rerun_replaces_old_answer() {
