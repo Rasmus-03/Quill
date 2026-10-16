@@ -28,6 +28,18 @@ fn maxima_bin() -> &'static str {
 /// access: engine commands must not touch fs directly). Set e.g.
 /// `MATHCRAFT_SOLVEREAL=$HOME/.local/share/mathcraft/packages/solvereal.mac`.
 /// When set, `math.isoler` loads it for real-domain solving, else plain solve().
+/// Real-domain solve with stock Maxima only (no extra files): solve,
+/// then keep the manifestly real answers. Matches SolveReal on the
+/// school set; `MATHCRAFT_SOLVEREAL` still wins when set.
+fn real_solve(eq: &str, var: &str) -> String {
+    if solvereal_path().is_some() {
+        return format!("solvereal({eq},{var})");
+    }
+    format!(
+        "block([_s: solve({eq},{var})], if _s=[] then [] else sublist(_s, lambda([_e], freeof(%i, rhs(_e)))))"
+    )
+}
+
 fn solvereal_path() -> Option<String> {
     std::env::var("MATHCRAFT_SOLVEREAL").ok().filter(|p| !p.trim().is_empty())
 }
@@ -1237,7 +1249,7 @@ fn beregn(s: &mut Session, v: &Value) -> CmdResult {
         let cmd = if is_inequality(&e) {
             format!("POLY::{e}::{var}")
         } else if e.contains('=') {
-            let inner = if solvereal_path().is_some() { format!("solvereal({e},{var})") } else { format!("solve({e},{var})") };
+            let inner = real_solve(&e, &var);
             if exact { inner } else { format!("float({inner})") }
         } else if exact {
             e
@@ -1452,10 +1464,8 @@ fn isoler(s: &mut Session, v: &Value) -> CmdResult {
         varname = var.clone();
         cmds.push(if is_inequality(&eq) {
             format!("POLY::{eq}::{var}")
-        } else if solvereal_path().is_some() {
-            format!("solvereal({eq},{var})")
         } else {
-            format!("solve({eq},{var})")
+            real_solve(&eq, &var)
         });
     }
     let pre = base_prelude();

@@ -55,11 +55,9 @@ The graph replaces the selection as a picture (PNG).
 
 - **Maxima** in PATH (`sudo pacman -S maxima` on Arch/CachyOS).
   Without it the buttons report a clean error instead of crashing.
-- **SolveReal** (optional, better real-domain solving):
-  place `solvereal.mac` in `~/.local/share/mathcraft/packages/` and point
-  `MATHCRAFT_SOLVEREAL` at it. Without it Maxima's own solve() is used.
-  (SolveReal is GPL-licensed and never ships with the app — you fetch and
-  install it yourself.)
+- Real answers are the default (solved over the reals with stock Maxima).
+  Experts may still point `MATHCRAFT_SOLVEREAL` at a `solvereal.mac` file
+  for its solver; it is GPL-licensed and never ships with the app.
 
 ## First launch
 

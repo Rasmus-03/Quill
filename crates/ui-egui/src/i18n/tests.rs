@@ -138,14 +138,14 @@ fn every_tab_and_command_is_translated() {
     let mut missing = Vec::new();
     for l in Lang::all().filter(|l| *l != Lang::EN) {
         let tabs = crate::ribbon::TABS.iter().chain(&["Table Design", "Table Layout"]).copied();
-        // The WordMat tab is a Danish-language feature (school math;
-        // tracked: needs da.tsv plus per-language math labels). Its
-        // registry strings are intentionally Danish-only.
+        // The Math tab is an English-language feature for now (school math;
+        // tracked: needs per-language math labels). Its registry strings are
+        // intentionally English-only.
         let commands = session
             .registry
             .all()
             .iter()
-            .filter(|spec| !spec.location.starts_with("WordMat"))
+            .filter(|spec| !spec.location.starts_with("Math"))
             .flat_map(|spec| std::iter::once(spec.label).chain(spec.location.split(" › ")));
         for s in tabs.chain(commands).filter(|s| !s.is_empty() && !universal(s)) {
             if !has(l, s) {
