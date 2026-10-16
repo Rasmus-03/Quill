@@ -517,13 +517,19 @@ fn render(from: f64, to: f64, curves: &[Vec<Option<(f64, f64)>>]) -> image::RgbI
     cv.vline(zx, T, T + ph, AXIS);
     cv.hline(L, L + pw, zy, AXIS);
     // Curves (segments crossing the edge are clamped; both-outside skipped).
+    // A segment jumping further than the whole y-range is a pole artifact,
+    // not a steep curve: fixed sampling connects across it otherwise.
+    let jump_max = y1 - y0;
     for (ci, curve) in curves.iter().enumerate() {
         let c = COLORS[ci % COLORS.len()];
-        let mut prev: Option<(i32, i32)> = None;
+        let mut prev: Option<(f64, f64, i32, i32)> = None;
         for p in curve {
-            let cur = p.map(|(x, y)| (mx(x), my(y)));
+            let cur = p.map(|(x, y)| (x, y, mx(x), my(y)));
             match (prev, cur) {
-                (Some((ax, ay)), Some((bx, by))) => {
+                (Some((_, ay, _, _)), Some((_, by, _, _))) if (by - ay).abs() > jump_max => {
+                    prev = cur;
+                }
+                (Some((_, _, ax, ay)), Some((_, _, bx, by))) => {
                     let inside = |x: i32, y: i32| x >= L && x <= L + pw && y >= T && y <= T + ph;
                     if inside(ax, ay) || inside(bx, by) {
                         let (ax, ay) = (ax.clamp(L, L + pw), ay.clamp(T, T + ph));
@@ -633,6 +639,16 @@ mod tests {
         assert_eq!(fmt_tick(0.0, 0.5), "0");
         assert!((nice_step(3.3) - 5.0).abs() < 1e-9);
         assert!((nice_step(0.7) - 1.0).abs() < 1e-9);
+    }
+
+    #[test]
+    fn pole_jump_is_not_drawn() {
+        // 1/x over [-1,1]: the middle segment leaps the whole range.
+        let curve: Vec<Option<(f64, f64)>> = [-1.0, -0.5, -0.01, 0.01, 0.5, 1.0].iter().map(|x| Some((*x, 1.0 / x))).collect();
+        let img = render(-1.0, 1.0, &[curve]);
+        // Middle column around x=0 must stay background white, not a blue streak.
+        let px = img.get_pixel(450, 300);
+        assert_eq!(px.0, [255, 255, 255]);
     }
 
     #[test]

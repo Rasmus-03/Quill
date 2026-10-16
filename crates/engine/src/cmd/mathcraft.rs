@@ -35,7 +35,9 @@ fn real_solve(eq: &str, var: &str) -> String {
     if solvereal_path().is_some() {
         return format!("solvereal({eq},{var})");
     }
-    format!("block([_s: solve({eq},{var})], if _s=[] then [] else sublist(_s, lambda([_e], freeof(%i, rhs(_e)))))")
+    format!(
+        "block([_s: solve({eq},{var})], _s: if _s=[] then [] else sublist(_s, lambda([_e], freeof(%i, rhs(_e)))), sublist(_s, lambda([_e2], block([_c: errcatch(ev({eq},{var}=rhs(_e2)))], _c # [] and first(_c) # false))))"
+    )
 }
 
 fn solvereal_path() -> Option<String> {
@@ -167,14 +169,14 @@ pub(crate) fn batch(prelude: &[String], defs: &[String], cmd: &str) -> Result<St
     // value is echoed again right after. Join lines only until the
     // brackets balance, so the echo never gets glued on.
     let mut full = lines[start].strip_prefix("MC>>>").unwrap_or("").trim().to_string();
-    for l in &lines[start + 1..] {
+    for (i, l) in lines[start + 1..].iter().enumerate() {
         if brackets_balanced(&full) && !full.is_empty() {
             break;
         }
-        full.push_str(l.trim());
-        if lines[start + 1..].len() > 4000 {
-            break;
+        if i >= 4000 {
+            return Err("Maxima output too large".to_string());
         }
+        full.push_str(l.trim());
     }
     if full.is_empty() {
         return Err("Maxima gav et tomt resultat".to_string());
@@ -182,10 +184,13 @@ pub(crate) fn batch(prelude: &[String], defs: &[String], cmd: &str) -> Result<St
     Ok(full)
 }
 
-/// Brackets outside `"strings"` net to zero (or negative on junk).
+/// Brackets outside `"strings"` are balanced and correctly nested
+/// (`([)]` is NOT balanced: a stack checks each closer against its opener).
 fn brackets_balanced(s: &str) -> bool {
-    let (mut depth, mut instr) = (0i32, false);
+    let mut stack: Vec<char> = Vec::new();
+    let mut instr = false;
     let mut prev = '\0';
+    let mut closed = false;
     for c in s.chars() {
         if instr {
             if c == '"' && prev != '\\' {
@@ -194,13 +199,22 @@ fn brackets_balanced(s: &str) -> bool {
         } else if c == '"' {
             instr = true;
         } else if c == '(' || c == '[' || c == '{' {
-            depth += 1;
+            stack.push(c);
         } else if c == ')' || c == ']' || c == '}' {
-            depth -= 1;
+            let open = stack.pop();
+            let want = match c {
+                ')' => '(',
+                ']' => '[',
+                _ => '{',
+            };
+            if open != Some(want) {
+                return false;
+            }
+            closed = true;
         }
         prev = c;
     }
-    !instr && depth <= 0
+    !instr && stack.is_empty() && !s.is_empty() && (closed || !s.contains(['(', '[', '{']))
 }
 
 pub(crate) fn base_prelude() -> Vec<String> {
@@ -1980,6 +1994,16 @@ mod tests {
 
     #[test]
     #[ignore]
+    fn pole_solution_is_rejected() {
+        // (x^2-1)/(x-1)=2 holds nowhere (x=1 is 0/0): no solution, not x=1.
+        let mut s = s();
+        select_all(&mut s, "(x^2-1)/(x-1)=2");
+        run(&mut s, "math.isoler", json!({"var": "x"}));
+        assert!(text(&s).contains("no real solution"), "got {}", text(&s));
+    }
+
+    #[test]
+    #[ignore]
     fn solvede_solves_first_order() {
         let mut s = s();
         select_all(&mut s, "diff(y,x)=y");
@@ -2000,9 +2024,17 @@ mod tests {
     }
 
     #[test]
+    fn brackets_reject_mismatched_types() {
+        assert!(brackets_balanced("[x = 1]"));
+        assert!(brackets_balanced("42"));
+        assert!(!brackets_balanced("([)]"));
+        assert!(!brackets_balanced("[[1,2]"));
+        assert!(!brackets_balanced(""));
+    }
+
+    #[test]
     fn brackets_balance_outside_strings() {
         assert!(brackets_balanced("[x = 1]"));
-        assert!(brackets_balanced(""));
         assert!(!brackets_balanced("[[1,2]"));
         assert!(brackets_balanced("[\"a[b\"]"));
     }
