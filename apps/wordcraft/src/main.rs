@@ -245,7 +245,7 @@ fn main() -> eframe::Result {
             "--control" => control_port = args.next().and_then(|p| p.parse().ok()),
             "--sample" => sample = true,
             "--version" => {
-                println!("wordcraft {} ({})", env!("CARGO_PKG_VERSION"), build_sha());
+                println!("quill {} ({})", env!("CARGO_PKG_VERSION"), build_sha());
                 return Ok(());
             }
             _ => files.push(a),
