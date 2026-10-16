@@ -1028,6 +1028,9 @@ fn normalize_unicode(expr: &str) -> String {
             out.push('*');
         } else if ch == '\u{00f7}' {
             out.push('/');
+        } else if ch == '\u{22c5}' {
+            // ⋅ (formula dot, typed or pasted) is our multiplication.
+            out.push('*');
         } else if ch == '\u{03c0}' {
             out.push_str("%pi");
         } else if ch == '\u{2264}' {
@@ -1479,6 +1482,15 @@ fn trin(s: &mut Session, v: &Value) -> CmdResult {
     }
     let expr = dots_ctx(raw, &def_names(s));
     check_maxima_safe(&expr)?;
+    // Pure numbers: school-math steps entirely in Rust, no Maxima involved
+    // (exact rationals, BODMAS order, common-denominator steps).
+    if !expr.chars().any(|c| c.is_ascii_alphabetic() || c == '%') {
+        match crate::cmd::arith_steps::arithmetic_steps(raw, &expr) {
+            Ok(Some((steps, answer))) => return apply_steps(s, &steps, &answer),
+            Ok(None) => {} // not stepable arithmetic: the equation diagnostics take over
+            Err(e) => return Err(e),
+        }
+    }
     if is_inequality(&expr) || !expr.contains('=') {
         return Err(err("Show steps takes one equation; use Calculate for expressions (and solve linear/quadratic equations)".to_string()));
     }
@@ -2831,6 +2843,64 @@ mod tests {
         // Idempotence: no duplicates on repeated runs.
         ensure_wordmat_tab(&mut s);
         assert_eq!(calc(&s).iter().filter(|c| *c == "math.beregn").count(), 1);
+    }
+
+    #[test]
+    fn arithmetic_steps_the_user_case() {
+        // Ren regning: skole-trin, eksakte brøker, helt uden Maxima.
+        let (steps, answer) = crate::cmd::arith_steps::arithmetic_steps("3+5⋅7/23 = 104/23", "3+5*7/23 = 104/23").unwrap().unwrap();
+        assert_eq!(answer, "104/23");
+        assert!(steps.starts_with("3+5⋅7/23 = 104/23\n"), "{steps}");
+        assert!(steps.contains("= 3+35/23"), "{steps}");
+        assert!(steps.contains("= 69/23+35/23"), "{steps}");
+        assert!(steps.ends_with("= 104/23"), "{steps}");
+    }
+
+    #[test]
+    fn arithmetic_steps_brackets_powers_decimals() {
+        let (_, a) = crate::cmd::arith_steps::arithmetic_steps("(1+2)*(3+4) = 21", "(1+2)*(3+4) = 21").unwrap().unwrap();
+        assert_eq!(a, "21");
+        let (steps, _) = crate::cmd::arith_steps::arithmetic_steps("2^3+1", "2^3+1").unwrap().unwrap();
+        assert!(steps.ends_with("= 9"), "{steps}");
+        let (steps, a) = crate::cmd::arith_steps::arithmetic_steps("2,5+1/2", "2.5+1/2").unwrap().unwrap();
+        assert_eq!(a, "3");
+        // Same denominator already: no conversion step needed.
+        assert_eq!(steps, "2,5+1/2\n   = 3");
+        // Different denominators: the common-denominator step shows.
+        let (steps, a) = crate::cmd::arith_steps::arithmetic_steps("2,5+1/3", "2.5+1/3").unwrap().unwrap();
+        assert_eq!(a, "17/6");
+        assert!(steps.contains("= 15/6+2/6"), "{steps}");
+        assert!(steps.ends_with("= 17/6"), "{steps}");
+    }
+
+    #[test]
+    fn arithmetic_steps_reject_wrong_trailing_answer() {
+        let err = crate::cmd::arith_steps::arithmetic_steps("3+5*7/23 = 999", "3+5*7/23 = 999").unwrap_err();
+        assert!(err.to_string().contains("doesn't match"), "got {err}");
+    }
+
+    #[test]
+    fn arithmetic_steps_none_for_letters() {
+        assert!(crate::cmd::arith_steps::arithmetic_steps("x+1", "x+1").unwrap().is_none());
+    }
+
+    #[test]
+    fn trin_steps_pure_arithmetic_without_maxima() {
+        let mut s = s();
+        select_all(&mut s, "3+5⋅7/23 = 104/23");
+        run(&mut s, "math.trin", json!({}));
+        let t = text(&s);
+        assert!(t.contains("= 3+35/23"), "got {t}");
+        assert!(t.contains("= 69/23+35/23"), "got {t}");
+        assert!(t.contains("= 104/23"), "got {t}");
+    }
+
+    #[test]
+    fn trin_flags_a_wrong_trailing_answer() {
+        let mut s = s();
+        select_all(&mut s, "3+5*7/23 = 999");
+        let err = s.run("math.trin", &json!({})).unwrap_err();
+        assert!(err.to_string().contains("doesn't match"), "got {err}");
     }
 
     #[test]

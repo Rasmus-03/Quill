@@ -1,6 +1,7 @@
 //! Command implementations, one module per area. Each module exposes `specs()`.
 
 pub mod accessibility;
+pub(crate) mod arith_steps;
 pub mod canvas;
 pub mod caret;
 pub mod chart;
