@@ -1,0 +1,41 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Maxima and desktop tooling
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends maxima xdg-utils
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+
+      - name: Cache cargo
+        uses: Swatinem/rust-cache@v2
+
+      - name: Format
+        run: cargo fmt --all -- --check
+
+      - name: Clippy
+        run: cargo clippy --workspace --all-targets -- -D warnings
+
+      - name: Tests (lib)
+        run: cargo test --workspace --lib
+
+      # Maxima-dependent math tests live in wordcraft-engine and are
+      # #[ignore]d by default (they spawn the CAS, so they are slow).
+      # Only the engine's ignored tests run here: the ui-egui ignored
+      # tests are benchmarks and a load-flaky i18n audit, not CI content.
+      - name: Maxima-dependent tests
+        run: cargo test -p wordcraft-engine --lib -- --ignored

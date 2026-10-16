@@ -1260,8 +1260,7 @@ impl WordApp {
             // MCP get an error.
             "ui.makeDefaultApp" => {
                 return Some(Err(
-                    "making Quill the default app needs a click in File › Options › General; scripts and agents can't change system defaults"
-                        .into(),
+                    "making Quill the default app needs a click in File › Options › General; scripts and agents can't change system defaults".into(),
                 ));
             }
             "ui.caretAnimation" => {

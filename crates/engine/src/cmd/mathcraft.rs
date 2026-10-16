@@ -191,11 +191,7 @@ fn maxima_error(stderr: &str) -> String {
         return "Maxima gave no result".to_string();
     }
     // Drop the trailing ECL debug hint line; keep the actual error text.
-    let lines: Vec<&str> = t
-        .lines()
-        .map(str::trim)
-        .filter(|l| !l.is_empty() && !l.starts_with("-- an error"))
-        .collect();
+    let lines: Vec<&str> = t.lines().map(str::trim).filter(|l| !l.is_empty() && !l.starts_with("-- an error")).collect();
     format!("Maxima error: {}", lines.join("; "))
 }
 
@@ -208,10 +204,7 @@ const OUTPUT_LINE_LIMIT: usize = 4000;
 
 fn join_output_lines(text: &str) -> Result<String, String> {
     let lines: Vec<&str> = text.lines().map(str::trim).collect();
-    let start = lines
-        .iter()
-        .position(|l| *l == "MC>>>" || l.starts_with("MC>>> "))
-        .ok_or_else(|| "Maxima produced no result".to_string())?;
+    let start = lines.iter().position(|l| *l == "MC>>>" || l.starts_with("MC>>> ")).ok_or_else(|| "Maxima produced no result".to_string())?;
     let mut full = lines[start].strip_prefix("MC>>>").unwrap_or("").trim().to_string();
     for (i, l) in lines[start + 1..].iter().enumerate() {
         if brackets_balanced(&full) && !full.is_empty() {
@@ -2135,10 +2128,7 @@ mod tests {
     fn join_reassembles_wrapped_values() {
         assert_eq!(join_output_lines("MC>>> [x = 1]").unwrap(), "[x = 1]");
         // Wrapped over two lines, echo after must not glue on.
-        assert_eq!(
-            join_output_lines("MC>>> [[1,\n2]]\n[[1,2]]").unwrap(),
-            "[[1,2]]"
-        );
+        assert_eq!(join_output_lines("MC>>> [[1,\n2]]\n[[1,2]]").unwrap(), "[[1,2]]");
         assert!(join_output_lines("nothing here").is_err());
         assert!(join_output_lines("MC>>>").is_err());
         // Never-balanced output hits the explicit limit, not silent truncation.
