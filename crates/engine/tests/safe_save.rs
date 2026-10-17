@@ -169,3 +169,23 @@ fn replacement_keeps_existing_unix_permissions() {
     saved(&path);
     assert_eq!(std::fs::metadata(&path).unwrap().permissions().mode() & 0o777, 0o600);
 }
+
+#[test]
+fn failed_save_leaves_revision_and_password_untouched() {
+    let d = Scratch::new();
+    let path = d.path("original.docx");
+    let bytes = original(&path);
+    let blocked = d.path("blocked.docx");
+    std::fs::create_dir(&blocked).unwrap();
+    let mut s = Session::new(edited());
+    s.path = Some(path.clone());
+    s.dirty = true;
+    let revision = s.doc.core.revision;
+    let modified = s.doc.core.modified.clone();
+    assert!(s.run("file.save", &json!({"path": blocked, "password": "correct horse"})).is_err());
+    assert!(s.dirty, "a failed save leaves the document unsaved");
+    assert_eq!(s.doc.core.revision, revision, "a failed save must not bump the revision");
+    assert_eq!(s.doc.core.modified, modified, "a failed save must not restamp the modified time");
+    assert!(s.password.is_none(), "a failed save must not store the password");
+    assert_eq!(std::fs::read(&path).unwrap(), bytes);
+}

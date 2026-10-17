@@ -114,6 +114,11 @@ fn run_maxima(batch_string: &str) -> Result<(String, String), String> {
 /// A received .docx can hide such code in an "equation"; clicking Beregn
 /// must never run it. `math.maxima` stays raw by explicit user choice.
 pub(crate) fn check_maxima_safe(part: &str) -> Result<(), CmdError> {
+    // Maxima reads `sy\stem` as the symbol `system`: a backslash escapes a name, and the token
+    // scan below would see `sy` and `stem` separately. No calculation needs a backslash.
+    if part.contains('\\') {
+        return Err(err("backslashes are not allowed in a calculation".to_string()));
+    }
     const BAD: &[&str] = &[
         "system",
         "writefile",
@@ -2382,6 +2387,8 @@ mod tests {
         assert!(check_maxima_safe("stringout(\"f\", x)").is_err());
         // Case-insensitive, %-prefixed too.
         assert!(check_maxima_safe("SYSTEM(\"id\")").is_err());
+        // Backslash escapes spell a denied name without the token appearing.
+        assert!(check_maxima_safe("sy\\stem(\"id\")").is_err());
     }
 
     #[test]

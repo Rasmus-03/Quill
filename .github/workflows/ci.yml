@@ -33,6 +33,10 @@ jobs:
       - name: Tests (lib)
         run: cargo test --workspace --lib
 
+      # `--lib` skips the engine's tests/ directory (save and macro regressions).
+      - name: Tests (engine integration)
+        run: cargo test -p wordcraft-engine --tests
+
       # Maxima-dependent math tests live in wordcraft-engine and are
       # #[ignore]d by default (they spawn the CAS, so they are slow).
       # Only the engine's ignored tests run here: the ui-egui ignored
