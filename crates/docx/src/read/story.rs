@@ -523,8 +523,31 @@ impl Reader<'_> {
                 let props = self.run_props_none(ctx);
                 self.read_run_child(sc, pb, k, &props, rels, &mut None, depth + 1);
             }
-            _ => {}
+            _ => self.keep_unknown_inline(pb, k, ctx),
         }
+    }
+
+    /// Keeps a main-namespace inline element this reader does not model as raw XML, so saving
+    /// does not drop it. An element that points at a relationship is logged and skipped instead:
+    /// the part it refers to is not carried along, so writing its `r:*` reference would dangle.
+    fn keep_unknown_inline(&mut self, pb: &mut PB, k: &El, ctx: &RunCtx) {
+        // Layout-only markers Word writes everywhere; nothing to keep.
+        const IGNORED: &[&str] = &["w:proofErr", "w:lastRenderedPageBreak", "w:noProof"];
+        fn has_relationship(e: &El) -> bool {
+            e.attrs.iter().any(|(n, _)| n.starts_with("r:")) || e.els().any(has_relationship)
+        }
+        // Property containers (`w:pPr`, `w:rPr`, `w:sectPr`, `w:smartTagPr`…) are read by their
+        // owners, not kept as content.
+        let is_props = k.name.ends_with("Pr") || k.name.ends_with("PrEx");
+        if !k.name.starts_with("w:") || is_props || IGNORED.contains(&k.name.as_str()) {
+            return;
+        }
+        if has_relationship(k) {
+            log::warn!("docx: <{}> refers to a relationship that is not carried over; it is dropped", k.name);
+            return;
+        }
+        let props = self.run_props_none(ctx);
+        pb.push_obj(InlineObject::Opaque { format: "docx".into(), xml: k.to_xml(), text: String::new() }, &props);
     }
 
     fn run_props(&mut self, rpr: &El, ctx: &RunCtx) -> CharProps {
