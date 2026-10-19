@@ -175,7 +175,7 @@ fn build_spec(s: &mut Session, v: &Value, raw: &str, from_param: bool) -> Result
         displays.push(e);
     }
     let probe = displays.join("+");
-    let var = match pick_var(s, v, &probe) {
+    let var = match pick_var(s, v, &probe)? {
         VarPick::One(var) => var,
         VarPick::Many(vars) => {
             if let Some(h) = hint.filter(|h| vars.iter().any(|x| x == h)) {
@@ -570,9 +570,10 @@ fn graf(s: &mut Session, v: &Value) -> CmdResult {
     };
     let pre = base_prelude();
     let d = defs(s);
+    let allowed = def_names(s);
     let mut series = Vec::new();
     for c in &spec.curves {
-        super::mathcraft::check_maxima_safe(&c.expr)?;
+        super::mathcraft::check_maxima_safe_with(&c.expr, &allowed)?;
         match sample(&pre, &d, &spec.var, &c.expr, spec.from, spec.to) {
             Ok(pts) if pts.iter().any(|p| p.is_some()) => series.push(pts),
             Ok(_) => return Err(err(format!("\"{}\" gav ingen punkter i intervallet", c.display))),

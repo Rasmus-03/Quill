@@ -6,6 +6,10 @@ use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicU64, Ordering};
 
 pub(super) fn write(path: &Path, bytes: &[u8]) -> io::Result<()> {
+    // The destination is replaced, never followed. If it is a symbolic link,
+    // the link itself is replaced and its target is left untouched: following
+    // the link here would also let a link swapped after the automation
+    // write-root check redirect the save outside that root.
     let permissions = match fs::metadata(path) {
         Ok(meta) if meta.is_file() => Some(meta.permissions()),
         Ok(_) => None,
@@ -178,5 +182,23 @@ mod tests {
         write(&path, b"Saved again.").unwrap();
         assert_eq!(fs::metadata(&path).unwrap().permissions().mode() & 0o777, 0o640);
         assert_eq!(fs::read(&path).unwrap(), b"Saved again.");
+    }
+
+    /// A save through a symlink replaces the link, not its target. This is
+    /// deliberate: following the link could escape an automation write root
+    /// after the path check.
+    #[cfg(unix)]
+    #[test]
+    fn replacing_a_symlink_leaves_its_target_untouched() {
+        use std::os::unix::fs::symlink;
+        let d = Scratch::new();
+        let target = d.0.join("target.docx");
+        let link = d.0.join("link.docx");
+        fs::write(&target, b"target bytes").unwrap();
+        symlink(&target, &link).unwrap();
+        write(&link, b"new bytes").unwrap();
+        assert!(!fs::symlink_metadata(&link).unwrap().file_type().is_symlink());
+        assert_eq!(fs::read(&link).unwrap(), b"new bytes");
+        assert_eq!(fs::read(&target).unwrap(), b"target bytes");
     }
 }

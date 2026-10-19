@@ -29,8 +29,11 @@ pub use read::read;
 pub use smart_art::smart_art_items;
 pub use write::{write, write_as};
 
-/// Largest `.xml` file read as a Word XML document.
-pub const MAX_XML_FILE: usize = 1 << 30;
+/// Largest `.xml` file read as a Word XML document. This matches the
+/// per-part limit of the zip/flat readers: a Word XML file carrying a part
+/// larger than that is invalid anyway, and refusing it before parsing keeps
+/// the third-party 1 GiB allowance from turning into an unbounded XML tree.
+pub const MAX_XML_FILE: usize = crate::package::MAX_PART as usize;
 
 /// Read a Word XML file (`.xml`): a Word XML Document (Flat OPC, the whole package in one XML
 /// file) or a Word 2003 XML Document (WordprocessingML 2003), told apart by the root element.

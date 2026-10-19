@@ -258,8 +258,13 @@ pub fn open_path_with(path: &std::path::Path, password: Option<&str>) -> Result<
     if meta.len() > 2 << 30 {
         return Err(format!("{}: file is larger than 2 GB", path.display()));
     }
-    let bytes = std::fs::read(path).map_err(|e| format!("{}: {e}", path.display()))?;
     let name = path.to_string_lossy();
+    // Refuse an oversized Word XML file before allocating it. read_xml() has
+    // the same limit, but only after the whole file has been read.
+    if ext_of(&name) == "xml" && meta.len() > wordcraft_docx::MAX_XML_FILE as u64 {
+        return Err(format!("{}: XML file is larger than {} MB", path.display(), wordcraft_docx::MAX_XML_FILE / (1024 * 1024)));
+    }
+    let bytes = std::fs::read(path).map_err(|e| format!("{}: {e}", path.display()))?;
     if matches!(ext_of(&name).as_str(), "html" | "htm" | "xhtml") {
         // Pictures referenced by a relative path load from beside the HTML file.
         let images = LocalImages::new(path.parent().unwrap_or(std::path::Path::new("")));
@@ -375,8 +380,9 @@ fn read_regular_file(path: &std::path::Path, limit: u64) -> Option<Vec<u8>> {
     Some(out)
 }
 
-/// The bytes of the file at `path`, for commands that take a path (pictures, mail-merge data).
-/// Every such read goes through here so the automation read root applies ([`crate::file_access`]).
+/// The bytes of the file at `path`, for commands that take a path.
+/// Prefer [`read_file_capped`] for new callers: this variant reads whatever
+/// size the file reports. Every read still goes through [`crate::file_access`].
 #[cfg(not(target_arch = "wasm32"))]
 pub fn read_file(path: &str) -> Result<Vec<u8>, String> {
     crate::file_access::check_read(path)?;
@@ -392,7 +398,9 @@ pub fn read_file(path: &str) -> Result<Vec<u8>, String> {
 /// anything is read (a font named by the user, which could be any size).
 #[cfg(not(target_arch = "wasm32"))]
 pub fn read_file_capped(path: &str, max: u64, what: &str) -> Result<Vec<u8>, String> {
+    use std::io::Read;
     crate::file_access::check_read(path)?;
+    // Check before opening: opening a FIFO blocks and a device may never end.
     let meta = std::fs::metadata(path).map_err(|e| format!("{path}: {e}"))?;
     if !meta.is_file() {
         return Err(format!("{path}: not a file"));
@@ -400,14 +408,30 @@ pub fn read_file_capped(path: &str, max: u64, what: &str) -> Result<Vec<u8>, Str
     if meta.len() > max {
         return Err(format!("{path}: the {what} is larger than {} MB", max >> 20));
     }
-    std::fs::read(path).map_err(|e| format!("{path}: {e}"))
+    let file = std::fs::File::open(path).map_err(|e| format!("{path}: {e}"))?;
+    let meta = file.metadata().map_err(|e| format!("{path}: {e}"))?;
+    if !meta.is_file() {
+        return Err(format!("{path}: not a file"));
+    }
+    // The length could have changed since the check; the read itself stays
+    // bounded, so a growing/replaced file cannot exhaust memory. Reserve at
+    // most 16 MiB up front rather than a whole 256 MiB allowance.
+    let reserve = meta.len().min(max).min(16 * 1024 * 1024);
+    let mut bytes = Vec::with_capacity(usize::try_from(reserve).unwrap_or(0));
+    file.take(max.saturating_add(1)).read_to_end(&mut bytes).map_err(|e| format!("{path}: {e}"))?;
+    if bytes.len() as u64 > max {
+        return Err(format!("{path}: the {what} is larger than {} MB", max >> 20));
+    }
+    Ok(bytes)
 }
 
 /// Write `bytes` to the file at `path`, inside the automation write root when there is one.
+/// The write is atomic and replaces a symlink instead of following it, so a failed export
+/// cannot leave a truncated file and a link cannot redirect the write after the root check.
 #[cfg(not(target_arch = "wasm32"))]
 pub fn write_file(path: &str, bytes: &[u8]) -> Result<(), String> {
     crate::file_access::check_write(path)?;
-    std::fs::write(path, bytes).map_err(|e| format!("{path}: {e}"))
+    safe_save::write(std::path::Path::new(path), bytes).map_err(|e| format!("{path}: {e}"))
 }
 
 #[cfg(target_arch = "wasm32")]

@@ -16,7 +16,7 @@ use quick_xml::reader::NsReader;
 use wordcraft_doc::Document;
 
 use crate::package::{ContentTypes, MAX_ENTRIES, MAX_PART, MAX_TOTAL, Package};
-use crate::xml::{self, W, esc};
+use crate::xml::{self, MAX_DEPTH, MAX_ELEMENTS, W, esc};
 use crate::{DocxError, Flavor};
 
 /// The Flat OPC package namespace.
@@ -103,6 +103,7 @@ pub(crate) fn unpack(bytes: &[u8]) -> Result<Package, DocxError> {
     let mut r = NsReader::from_reader(src);
     r.config_mut().check_end_names = true;
     let mut depth = 0usize;
+    let mut elements = 0usize;
     let mut files: BTreeMap<String, Vec<u8>> = BTreeMap::new();
     let mut types: Vec<(String, String)> = Vec::new();
     let mut total: u64 = 0;
@@ -118,6 +119,15 @@ pub(crate) fn unpack(bytes: &[u8]) -> Result<Package, DocxError> {
             Event::Start(ref e) | Event::Empty(ref e) => {
                 let empty = matches!(ev, Event::Empty(_));
                 depth += 1;
+                elements += 1;
+                if elements > MAX_ELEMENTS {
+                    return Err(DocxError::Limit("too many XML elements".into()));
+                }
+                // The inline document is three wrapper levels down, so allow
+                // the same depth as xml::parse plus the package elements.
+                if depth > MAX_DEPTH + 4 {
+                    return Err(DocxError::Limit("XML nesting too deep".into()));
+                }
                 let local = e.local_name().as_ref().to_vec();
                 match depth {
                     1 if !(in_pkg && local == b"package") => {
@@ -129,6 +139,9 @@ pub(crate) fn unpack(bytes: &[u8]) -> Result<Package, DocxError> {
                         }
                         let name = attr(e, b"name").unwrap_or_default();
                         let content_type = attr(e, b"contentType").unwrap_or_default();
+                        if name.len() > 4096 || content_type.len() > 1024 {
+                            return Err(DocxError::Limit("a Flat OPC part name or content type is too long".into()));
+                        }
                         part = Some(Part { name, content_type, data: None });
                     }
                     3 if in_pkg => {

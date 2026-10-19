@@ -214,6 +214,8 @@ pub fn parse_csv(text: &str) -> Vec<Vec<String>> {
 /// Most records and fields a recipient list keeps.
 const MAX_RECORDS: usize = 100_000;
 const MAX_FIELDS: usize = 1_000;
+/// Largest recipient data file read in one go.
+const MAX_DATA_BYTES: u64 = 256 << 20;
 
 fn cell(x: &Value) -> String {
     match x {
@@ -264,6 +266,9 @@ fn recipients(s: &mut Session, v: &Value) -> CmdResult {
             parse_csv(c)
         } else {
             let (bytes, ext) = if let Some(d) = p::str(v, "data") {
+                if d.len() > (MAX_DATA_BYTES / 3 * 4 + 4) as usize {
+                    return Err(CmdError::Failed("mail-merge data is larger than 256 MB".into()));
+                }
                 let b = super::insert::base64_decode(d.trim()).ok_or_else(|| CmdError::Params("`data` isn't valid base64".into()))?;
                 (b, p::str(v, "path").and_then(extension))
             } else if let Some(path) = p::str(v, "path") {
@@ -321,7 +326,7 @@ fn extension(path: &str) -> Option<String> {
 }
 
 fn read_file(path: &str) -> Result<Vec<u8>, CmdError> {
-    crate::io::read_file(path).map_err(CmdError::Failed)
+    crate::io::read_file_capped(path, MAX_DATA_BYTES, "mail-merge data").map_err(CmdError::Failed)
 }
 
 /// Field names and records from a table's rows: with `headers`, the first row names the fields

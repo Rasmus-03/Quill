@@ -8,6 +8,10 @@ use wordcraft_doc::{Block, Paragraph, PartKind, Path, Pos, StoryRef, Table, para
 use super::{delete_selection, sel_result, split_para, type_text};
 use crate::{CmdError, CmdResult, CommandSpec, Selection, Session, p};
 
+/// Largest picture accepted from a file or base64 data. The document stores
+/// the original bytes, so this bounds both one command and the saved file.
+pub(crate) const MAX_PICTURE_BYTES: usize = 200 << 20;
+
 pub fn specs() -> Vec<CommandSpec> {
     vec![
         CommandSpec::new("insert.pageBreak", "Page Break", "Insert › Pages", |s, _| {
@@ -185,9 +189,12 @@ pub fn base64_encode(b: &[u8]) -> String {
 
 pub(crate) fn picture(s: &mut Session, v: &Value) -> CmdResult {
     let bytes = if let Some(d) = p::str(v, "data") {
+        if d.len() > MAX_PICTURE_BYTES / 3 * 4 + 4 {
+            return Err(CmdError::Failed("image is larger than 200 MB".into()));
+        }
         base64_decode(d).ok_or_else(|| CmdError::Params("bad base64 data".into()))?
     } else if let Some(path) = p::str(v, "path") {
-        crate::io::read_file(path).map_err(CmdError::Failed)?
+        crate::io::read_file_capped(path, MAX_PICTURE_BYTES as u64, "image").map_err(CmdError::Failed)?
     } else {
         s.ui_requests.push(json!({"open": "insertPicture"}));
         return sel_result(s);
@@ -198,7 +205,7 @@ pub(crate) fn picture(s: &mut Session, v: &Value) -> CmdResult {
 /// Insert an encoded image at the selection as an inline picture, `width` points wide (default:
 /// its natural size at 96 ppi), never wider than the text column.
 fn place_picture(s: &mut Session, bytes: Vec<u8>, width: Option<f32>, alt: &str) -> CmdResult {
-    if bytes.len() > 200 << 20 {
+    if bytes.len() > MAX_PICTURE_BYTES {
         return Err(CmdError::Failed("image is larger than 200 MB".into()));
     }
     // Natural size: pixels at 96 ppi, or a metafile's own frame (WMF, EMF: #802).

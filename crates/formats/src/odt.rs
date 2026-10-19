@@ -1298,8 +1298,10 @@ fn read_entry(z: &mut zip::ZipArchive<Cursor<&[u8]>>, name: &str) -> Option<Vec<
         return None;
     }
     let mut out = Vec::new();
-    f.take(MAX_ENTRY).read_to_end(&mut out).ok()?;
-    Some(out)
+    // The declared size can lie; read one byte past the cap and refuse the
+    // entry rather than silently inflating a truncated part.
+    f.take(MAX_ENTRY + 1).read_to_end(&mut out).ok()?;
+    (out.len() as u64 <= MAX_ENTRY).then_some(out)
 }
 
 fn read_meta(xml: &[u8]) -> Meta {

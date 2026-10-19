@@ -201,12 +201,18 @@ pub fn specs() -> Vec<CommandSpec> {
         CommandSpec::new("picture.reset", "Reset Picture", "Picture Format › Adjust", reset).when(has_picture),
         CommandSpec::new("picture.change", "Change Picture", "Picture Format › Adjust", |s, v| {
             let bytes = if let Some(d) = p::str(v, "data") {
+                if d.len() > super::insert::MAX_PICTURE_BYTES / 3 * 4 + 4 {
+                    return Err(CmdError::Failed("image is larger than 200 MB".into()));
+                }
                 super::insert::base64_decode(d).ok_or_else(|| CmdError::Params("bad base64".into()))?
             } else if let Some(path) = p::str(v, "path") {
-                crate::io::read_file(path).map_err(CmdError::Failed)?
+                crate::io::read_file_capped(path, super::insert::MAX_PICTURE_BYTES as u64, "image").map_err(CmdError::Failed)?
             } else {
                 return Err(CmdError::Params("`path` or `data` required".into()));
             };
+            if bytes.len() > super::insert::MAX_PICTURE_BYTES {
+                return Err(CmdError::Failed("image is larger than 200 MB".into()));
+            }
             wordcraft_render::image_size(&bytes).ok_or_else(|| CmdError::Failed("not a supported image".into()))?;
             let key = s.doc.add_media(bytes, "png");
             with_obj(s, |o| {

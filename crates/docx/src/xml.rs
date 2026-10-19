@@ -13,8 +13,23 @@ use crate::DocxError;
 
 /// Maximum element nesting accepted by the parser.
 pub const MAX_DEPTH: usize = 256;
-/// Maximum number of elements in one part.
-pub const MAX_ELEMENTS: usize = 8_000_000;
+/// Maximum number of elements in one part. Combined with the per-part byte
+/// cap this bounds the tree the parser builds; it is far above any real
+/// WordprocessingML part (a million paragraphs is a few million elements).
+pub const MAX_ELEMENTS: usize = 4_000_000;
+/// Longest element/attribute name accepted (bytes). XML names are short;
+/// this stops a hostile part from allocating gigabytes of name strings.
+pub const MAX_NAME_BYTES: usize = 1024;
+/// Most attributes on one element.
+pub const MAX_ATTRS: usize = 4096;
+/// Longest one attribute value (bytes) and all attribute values of one
+/// element together. Normal `w:val` strings are short, but extension markup
+/// can carry large blobs (the native-ink fixtures use more than a megabyte),
+/// so these are generous while still bounding one element's allocation.
+pub const MAX_ATTR_BYTES: usize = 4 * 1024 * 1024;
+pub const MAX_ATTR_TOTAL: usize = 16 * 1024 * 1024;
+/// Most text (bytes) in one part, across text nodes and CDATA.
+pub const MAX_TEXT_BYTES: usize = 64 * 1024 * 1024;
 
 /// Known namespaces and the canonical prefix we use for them (read and write).
 pub const NAMESPACES: &[(&str, &str)] = &[
@@ -270,6 +285,7 @@ pub fn parse_ns(bytes: &[u8], extra: &[(&'static str, &str)]) -> Result<El, Docx
     let mut stack: Vec<El> = Vec::new();
     let mut root: Option<El> = None;
     let mut count = 0usize;
+    let mut text_bytes = 0usize;
     let mut buf = Vec::new();
     loop {
         buf.clear();
@@ -284,16 +300,34 @@ pub fn parse_ns(bytes: &[u8], extra: &[(&'static str, &str)]) -> Result<El, Docx
                 if count > MAX_ELEMENTS {
                     return Err(DocxError::Limit("too many XML elements".into()));
                 }
+                if e.local_name().as_ref().len() > MAX_NAME_BYTES {
+                    return Err(DocxError::Limit("XML element name is too long".into()));
+                }
                 let local = String::from_utf8_lossy(e.local_name().as_ref()).into_owned();
                 let name = match el_prefix {
                     Some(p) => format!("{p}:{local}"),
                     None => local,
                 };
                 let mut el = El { name, attrs: Vec::new(), kids: Vec::new() };
+                let mut attr_bytes = 0usize;
+                let mut attr_count = 0usize;
                 for a in e.attributes().with_checks(false) {
                     let Ok(a) = a else { continue };
                     let key = a.key;
                     let raw_key = key.as_ref();
+                    // Count namespace declarations too: they are bindings in
+                    // the resolver even though they are not stored on `El`.
+                    attr_count += 1;
+                    if attr_count > MAX_ATTRS {
+                        return Err(DocxError::Limit("too many XML attributes on one element".into()));
+                    }
+                    if raw_key.len() > MAX_NAME_BYTES || a.value.len() > MAX_ATTR_BYTES {
+                        return Err(DocxError::Limit("XML attribute is too large".into()));
+                    }
+                    attr_bytes = attr_bytes.saturating_add(a.value.len());
+                    if attr_bytes > MAX_ATTR_TOTAL {
+                        return Err(DocxError::Limit("XML attributes are too large".into()));
+                    }
                     if raw_key == b"xmlns" || raw_key.starts_with(b"xmlns:") {
                         continue;
                     }
@@ -346,15 +380,27 @@ pub fn parse_ns(bytes: &[u8], extra: &[(&'static str, &str)]) -> Result<El, Docx
                 }
             }
             Event::Text(t) => {
-                if let Some(top) = stack.last_mut() {
+                // `BytesText` derefs to its escaped bytes, so the length is
+                // known before decoding (decoded text never grows).
+                if stack.last().is_some() {
+                    if t.len() > MAX_TEXT_BYTES.saturating_sub(text_bytes) {
+                        return Err(DocxError::Limit("too much XML text".into()));
+                    }
                     let s = t.decode().map_err(|e| DocxError::Xml(e.to_string()))?;
-                    push_text(top, &s);
+                    if let Some(top) = stack.last_mut() {
+                        add_text(top, &s, &mut text_bytes)?;
+                    }
                 }
             }
             Event::CData(t) => {
-                if let Some(top) = stack.last_mut() {
+                if stack.last().is_some() {
+                    if t.len() > MAX_TEXT_BYTES.saturating_sub(text_bytes) {
+                        return Err(DocxError::Limit("too much XML text".into()));
+                    }
                     let s = String::from_utf8_lossy(&t).into_owned();
-                    push_text(top, &s);
+                    if let Some(top) = stack.last_mut() {
+                        add_text(top, &s, &mut text_bytes)?;
+                    }
                 }
             }
             Event::GeneralRef(g) => {
@@ -368,7 +414,7 @@ pub fn parse_ns(bytes: &[u8], extra: &[(&'static str, &str)]) -> Result<El, Docx
                         Err(_) => None,
                     };
                     if let Some(c) = ch {
-                        push_text(top, &c);
+                        add_text(top, &c, &mut text_bytes)?;
                     }
                 }
             }
@@ -384,6 +430,16 @@ pub fn parse_ns(bytes: &[u8], extra: &[(&'static str, &str)]) -> Result<El, Docx
         attach(&mut stack, &mut root, el);
     }
     root.ok_or_else(|| DocxError::Xml("no root element".into()))
+}
+
+/// Append text while keeping the part's total text inside [`MAX_TEXT_BYTES`].
+fn add_text(top: &mut El, s: &str, total: &mut usize) -> Result<(), DocxError> {
+    *total = total.checked_add(s.len()).ok_or_else(|| DocxError::Limit("too much XML text".into()))?;
+    if *total > MAX_TEXT_BYTES {
+        return Err(DocxError::Limit("too much XML text".into()));
+    }
+    push_text(top, s);
+    Ok(())
 }
 
 fn push_text(top: &mut El, s: &str) {
@@ -557,6 +613,29 @@ mod tests {
         }
         s.push_str("><b/></a>");
         assert!(parse(s.as_bytes()).is_err());
+    }
+
+    #[test]
+    fn oversized_element_name_is_error() {
+        let name = "a".repeat(MAX_NAME_BYTES + 1);
+        let xml = format!("<{name}/>");
+        assert!(matches!(parse(xml.as_bytes()), Err(DocxError::Limit(_))));
+    }
+
+    #[test]
+    fn oversized_attribute_is_error() {
+        let xml = format!("<a v=\"{}\"/>", "x".repeat(MAX_ATTR_BYTES + 1));
+        assert!(matches!(parse(xml.as_bytes()), Err(DocxError::Limit(_))));
+    }
+
+    #[test]
+    fn too_many_attributes_is_error() {
+        let mut xml = String::from("<a");
+        for i in 0..=MAX_ATTRS {
+            xml.push_str(&format!(" a{i}=\"x\""));
+        }
+        xml.push_str("/>");
+        assert!(matches!(parse(xml.as_bytes()), Err(DocxError::Limit(_))));
     }
 
     #[test]

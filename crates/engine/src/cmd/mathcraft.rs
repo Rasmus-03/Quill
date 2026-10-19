@@ -41,7 +41,20 @@ fn real_solve(eq: &str, var: &str) -> String {
 }
 
 fn solvereal_path() -> Option<String> {
-    std::env::var("MATHCRAFT_SOLVEREAL").ok().filter(|p| !p.trim().is_empty())
+    let raw = std::env::var("MATHCRAFT_SOLVEREAL").ok()?;
+    if raw.trim().is_empty() {
+        return None;
+    }
+    // The path is interpolated into `load("…")` (see base_prelude). A quote
+    // or a newline would end/escape the Maxima string and could turn a local
+    // configuration value into arbitrary Maxima. Backslashes are path
+    // separators on Windows; Maxima accepts forward slashes there too.
+    let path = raw.trim().replace('\\', "/");
+    if path.len() > 4096 || path.chars().any(|c| c == '"' || c.is_control()) {
+        log::warn!("ignoring MATHCRAFT_SOLVEREAL: the path contains a quote or control character");
+        return None;
+    }
+    Some(path)
 }
 
 /// Run one Maxima batch; return the value printed after the "MC>>>" anchor.
@@ -51,7 +64,18 @@ fn solvereal_path() -> Option<String> {
 /// the app; async progress + cancel is tracked follow-up work).
 const MAXIMA_TIMEOUT_S: u64 = 30;
 
-/// Run one Maxima batch string, bounded by [`MAXIMA_TIMEOUT_S`].
+/// Largest stdout/stderr accepted from one Maxima call. Maxima prints the
+/// whole expression again, so this is far above any useful answer; a hostile
+/// expression that makes it flood output must not exhaust the app's memory.
+const MAXIMA_STDOUT_BYTES: usize = 8 * 1024 * 1024;
+const MAXIMA_STDERR_BYTES: usize = 1024 * 1024;
+/// How long a killed Maxima may keep its output pipes open before the
+/// drain threads are detached. A grandchild that inherited the pipes must
+/// not make the UI wait forever.
+const MAXIMA_DRAIN_GRACE: std::time::Duration = std::time::Duration::from_secs(2);
+
+/// Run one Maxima batch string, bounded by [`MAXIMA_TIMEOUT_S`] and
+/// [`MAXIMA_STDOUT_BYTES`]/[`MAXIMA_STDERR_BYTES`].
 /// Returns (stdout, stderr): stderr carries the Maxima error text a
 /// failed batch prints before silently continuing.
 /// Desktop only: the engine also compiles for web, where processes don't exist.
@@ -64,7 +88,35 @@ fn run_maxima(batch_string: &str) -> Result<(String, String), String> {
     #[cfg(not(target_arch = "wasm32"))]
     {
         use std::io::Read;
+        use std::sync::Arc;
+        use std::sync::atomic::{AtomicBool, Ordering};
         use std::time::{Duration, Instant};
+
+        fn drain<R: Read>(pipe: Option<R>, cap: usize, overflow: &AtomicBool) -> Vec<u8> {
+            let mut v = Vec::new();
+            if let Some(p) = pipe {
+                // One byte past the cap tells us it was exceeded without
+                // reading the flood that follows.
+                let _ = p.take(cap as u64 + 1).read_to_end(&mut v);
+            }
+            if v.len() > cap {
+                overflow.store(true, Ordering::Relaxed);
+                v.truncate(cap);
+            }
+            v
+        }
+
+        /// Wait for a drain thread, but only for `grace`. If a process that
+        /// inherited the pipe is still alive, detach the thread instead of
+        /// blocking the caller forever.
+        fn join_bounded(handle: std::thread::JoinHandle<Vec<u8>>, grace: Duration) -> Vec<u8> {
+            let deadline = Instant::now() + grace;
+            while !handle.is_finished() && Instant::now() < deadline {
+                std::thread::sleep(Duration::from_millis(10));
+            }
+            if handle.is_finished() { handle.join().unwrap_or_default() } else { Vec::new() }
+        }
+
         let mut child = std::process::Command::new(maxima_bin())
             .args(["--very-quiet", &format!("--batch-string={batch_string}")])
             .stdin(std::process::Stdio::null())
@@ -74,90 +126,592 @@ fn run_maxima(batch_string: &str) -> Result<(String, String), String> {
             .map_err(|e| format!("cannot start Maxima ({} missing? install it, e.g. `sudo pacman -S maxima`): {e}", maxima_bin()))?;
         // Drain both pipes on threads so a flood of output can never
         // deadlock the wait below (pipe buffer full while we only poll).
-        let mut cap = child.stdout.take();
-        let mut cap_err = child.stderr.take();
-        let drain_err = std::thread::spawn(move || {
-            let mut v = Vec::new();
-            if let Some(o) = cap_err.as_mut() {
-                let _ = o.read_to_end(&mut v);
-            }
-            v
+        let overflow = Arc::new(AtomicBool::new(false));
+        let stderr = child.stderr.take();
+        let stdout = child.stdout.take();
+        let drain_err = std::thread::spawn({
+            let overflow = Arc::clone(&overflow);
+            move || drain(stderr, MAXIMA_STDERR_BYTES, &overflow)
         });
-        let drain = std::thread::spawn(move || {
-            let mut v = Vec::new();
-            if let Some(o) = cap.as_mut() {
-                let _ = o.read_to_end(&mut v);
-            }
-            v
+        let drain_out = std::thread::spawn({
+            let overflow = Arc::clone(&overflow);
+            move || drain(stdout, MAXIMA_STDOUT_BYTES, &overflow)
         });
         let deadline = Instant::now() + Duration::from_secs(MAXIMA_TIMEOUT_S);
         let status = loop {
-            match child.try_wait().map_err(|_| "Maxima fejlede".to_string())? {
-                Some(s) => break s,
-                None if Instant::now() > deadline => {
+            if overflow.load(Ordering::Relaxed) {
+                let _ = child.kill();
+                let _ = child.wait();
+                let _ = join_bounded(drain_out, MAXIMA_DRAIN_GRACE);
+                let _ = join_bounded(drain_err, MAXIMA_DRAIN_GRACE);
+                return Err("Maxima produced too much output; simplify the expression".to_string());
+            }
+            match child.try_wait() {
+                Ok(Some(s)) => break s,
+                Ok(None) if Instant::now() > deadline => {
                     let _ = child.kill();
                     let _ = child.wait();
+                    let _ = join_bounded(drain_out, MAXIMA_DRAIN_GRACE);
+                    let _ = join_bounded(drain_err, MAXIMA_DRAIN_GRACE);
                     return Err("Maxima did not answer within 30 seconds; simplify the expression".to_string());
                 }
-                None => std::thread::sleep(Duration::from_millis(50)),
+                Ok(None) => std::thread::sleep(Duration::from_millis(50)),
+                Err(_) => {
+                    let _ = child.kill();
+                    let _ = child.wait();
+                    let _ = join_bounded(drain_out, MAXIMA_DRAIN_GRACE);
+                    let _ = join_bounded(drain_err, MAXIMA_DRAIN_GRACE);
+                    return Err("Maxima fejlede".to_string());
+                }
             }
         };
-        let bytes = drain.join().unwrap_or_default();
+        let bytes = join_bounded(drain_out, MAXIMA_DRAIN_GRACE);
+        let err_bytes = join_bounded(drain_err, MAXIMA_DRAIN_GRACE);
+        if overflow.load(Ordering::Relaxed) {
+            return Err("Maxima produced too much output; simplify the expression".to_string());
+        }
         if !status.success() {
             return Err("Maxima fejlede".to_string());
         }
-        Ok((String::from_utf8_lossy(&bytes).into_owned(), String::from_utf8_lossy(&drain_err.join().unwrap_or_default()).into_owned()))
+        Ok((String::from_utf8_lossy(&bytes).into_owned(), String::from_utf8_lossy(&err_bytes).into_owned()))
     }
 }
 
-/// Reject Maxima that reaches outside the calculation (files, processes).
-/// A received .docx can hide such code in an "equation"; clicking Beregn
-/// must never run it. `math.maxima` stays raw by explicit user choice.
-pub(crate) fn check_maxima_safe(part: &str) -> Result<(), CmdError> {
-    // Maxima reads `sy\stem` as the symbol `system`: a backslash escapes a name, and the token
-    // scan below would see `sy` and `stem` separately. No calculation needs a backslash.
-    if part.contains('\\') {
-        return Err(err("backslashes are not allowed in a calculation".to_string()));
+/// Longest expression accepted from a document. Maxima is started once per
+/// calculation; this also keeps the `--batch-string` argument far below the
+/// operating system's argument limit.
+const MAX_MAXIMA_EXPR_BYTES: usize = 64 * 1024;
+/// Longest definition (a saved Def or `MATHCRAFT_DEFS` entry).
+const MAX_DEFINITION_BYTES: usize = 64 * 1024;
+/// Longest complete Maxima batch: prelude, all definitions and the command
+/// together. It keeps `--batch-string` well inside the operating system's
+/// argument limit even with many large saved definitions.
+const MAX_MAXIMA_BATCH_BYTES: usize = 4 * 1024 * 1024;
+/// Limits for variable/function names written into Maxima code.
+const MAX_VAR_CHARS: usize = 64;
+const MAX_DEF_ARGS: usize = 32;
+
+/// Names that must never appear in document-derived Maxima, even as bare
+/// symbols. Function calls are additionally restricted by
+/// [`SAFE_MAXIMA_FUNCTIONS`], so a new dangerous function cannot slip through
+/// merely because it is missing here.
+const DENIED_MAXIMA_NAMES: &[&str] = &[
+    "alias",
+    "appendfile",
+    "apply",
+    "apply1",
+    "apply2",
+    "applyb1",
+    "applyb2",
+    "ascii",
+    "assume",
+    "atvalue",
+    "batch",
+    "batchload",
+    "buildq",
+    "catch",
+    "charlist",
+    "close",
+    "compfile",
+    "concat",
+    "declare",
+    "defrule",
+    "demo",
+    "describe",
+    "directory",
+    "display",
+    "eval",
+    "eval_string",
+    "example",
+    "exit",
+    "file_length",
+    "file_name",
+    "file_search",
+    "file_search_lisp",
+    "file_search_maxima",
+    "filename_merge",
+    "forget",
+    "fundef",
+    "funmake",
+    "functions",
+    "get",
+    "getenv",
+    "grind",
+    "infix",
+    "intchar",
+    "kill",
+    "lambda",
+    "let",
+    "letsimp",
+    "lisp",
+    "lispdisp",
+    "listfiles",
+    "load",
+    "loadfile",
+    "local",
+    "lreduce",
+    "macroexpand",
+    "map",
+    "maplist",
+    "matchdeclare",
+    "mfuncall",
+    "nary",
+    "nofix",
+    "opena",
+    "openr",
+    "openw",
+    "outermap",
+    "parse_string",
+    "pathname",
+    "postfix",
+    "prefix",
+    "print",
+    "printf",
+    "printfile",
+    "props",
+    "put",
+    "quit",
+    "read",
+    "readline",
+    "rem",
+    "remarray",
+    "remfunction",
+    "remvalue",
+    "reset",
+    "return",
+    "rreduce",
+    "run_testsuite",
+    "save",
+    "scanmap",
+    "sconcat",
+    "setup_autoload",
+    "simplode",
+    "string",
+    "stringout",
+    "system",
+    "tellsimp",
+    "tellsimpafter",
+    "to_lisp",
+    "transcompile",
+    "translate",
+    "tree_reduce",
+    "values",
+    "verbify",
+    "with_stdout",
+    "writefile",
+    "xreduce",
+];
+
+/// Maxima functions that may appear in document-derived expressions. This is
+/// deliberately an allowlist, not a blocklist: a function not listed here is
+/// rejected even if nobody has discovered yet that it can execute code. The
+/// list is school mathematics, calculus, linear algebra and common exact/numeric
+/// helpers; a user-defined function from `Definér` is allowed by name as well.
+const SAFE_MAXIMA_FUNCTIONS: &[&str] = &[
+    "abs",
+    "acos",
+    "acosh",
+    "acot",
+    "acoth",
+    "acsc",
+    "acsch",
+    "adjoin",
+    "airy_ai",
+    "airy_bi",
+    "append",
+    "arg",
+    "asec",
+    "asech",
+    "asin",
+    "asinh",
+    "assoc_legendre_p",
+    "atan",
+    "atan2",
+    "atanh",
+    "bessel_i",
+    "bessel_j",
+    "bessel_k",
+    "bessel_y",
+    "beta",
+    "beta_incomplete",
+    "beta_incomplete_regularized",
+    "bfloat",
+    "binomial",
+    "cardinality",
+    "carg",
+    "ceiling",
+    "chebyshev_t",
+    "chebyshev_u",
+    "coeff",
+    "conjugate",
+    "cons",
+    "cos",
+    "cosh",
+    "cot",
+    "coth",
+    "csc",
+    "csch",
+    "delete",
+    "denom",
+    "desolve",
+    "determinant",
+    "diagmatrix",
+    "diff",
+    "disjoin",
+    "doublefactorial",
+    "eigenvalues",
+    "eigenvectors",
+    "elementp",
+    "eliminate",
+    "elliptic_e",
+    "elliptic_f",
+    "elliptic_k",
+    "elliptic_pi",
+    "endcons",
+    "entier",
+    "erf",
+    "erfc",
+    "erfi",
+    "exp",
+    "expand",
+    "expandlog",
+    "expandwrt",
+    "expintegral_chi",
+    "expintegral_ci",
+    "expintegral_e",
+    "expintegral_e1",
+    "expintegral_ei",
+    "expintegral_li",
+    "expintegral_shi",
+    "expintegral_si",
+    "exponentialize",
+    "factor",
+    "factorial",
+    "find_root",
+    "first",
+    "fix",
+    "flatten",
+    "float",
+    "floor",
+    "freeof",
+    "gamma",
+    "gamma_incomplete",
+    "gamma_incomplete_regularized",
+    "gcd",
+    "gen_laguerre",
+    "hankel_1",
+    "hankel_2",
+    "hermite",
+    "hipow",
+    "ic1",
+    "ic2",
+    "ident",
+    "identity",
+    "ilt",
+    "imagpart",
+    "integrate",
+    "intersection",
+    "invert",
+    "is",
+    "jacobi_cn",
+    "jacobi_dn",
+    "jacobi_p",
+    "jacobi_sn",
+    "laguerre",
+    "laplace",
+    "last",
+    "lcm",
+    "legendre_p",
+    "legendre_q",
+    "length",
+    "limit",
+    "linsolve",
+    "listp",
+    "ln",
+    "log",
+    "log_gamma",
+    "logcontract",
+    "makelist",
+    "matrix",
+    "max",
+    "maybe",
+    "min",
+    "mod",
+    "multinomial_coeff",
+    "multthru",
+    "next_prime",
+    "not",
+    "num",
+    "numberp",
+    "ode2",
+    "op",
+    "part",
+    "partfrac",
+    "polarform",
+    "polylog",
+    "powerset",
+    "prev_prime",
+    "primep",
+    "product",
+    "quad_qag",
+    "quad_qagi",
+    "quad_qagp",
+    "quad_qags",
+    "quad_qawc",
+    "quad_qawo",
+    "quad_qaws",
+    "quotient",
+    "radcan",
+    "rank",
+    "ratexpand",
+    "rationalize",
+    "ratsimp",
+    "realpart",
+    "rectform",
+    "remainder",
+    "rest",
+    "reverse",
+    "rhs",
+    "round",
+    "sec",
+    "sech",
+    "setdifference",
+    "sign",
+    "signum",
+    "sin",
+    "sinh",
+    "solve",
+    "solvereal",
+    "sort",
+    "spherical_bessel_j",
+    "spherical_bessel_y",
+    "spherical_hankel_1",
+    "spherical_hankel_2",
+    "sqrt",
+    "struve_h",
+    "struve_l",
+    "subset",
+    "subst",
+    "substinpart",
+    "substpart",
+    "sum",
+    "tan",
+    "tanh",
+    "taylor",
+    "to_poly_solve",
+    "transpose",
+    "trigexpand",
+    "trigfactorize",
+    "trigrat",
+    "trigreduce",
+    "trigsimp",
+    "truncate",
+    "union",
+    "unique",
+    "zeromatrix",
+    "zeta",
+];
+
+/// Characters that can occur in a document-derived Maxima expression before
+/// the normalisation in [`dots`]. Everything else (quotes, `;`, `$`, `?`,
+/// backslash, `|`, `:`) is a Maxima string/quoting/statement/Lisp escape and
+/// is refused outright.
+fn maxima_source_char(c: char) -> bool {
+    if c.is_whitespace() {
+        return true;
     }
-    const BAD: &[&str] = &[
-        "system",
-        "writefile",
-        "appendfile",
-        "save",
-        "load",
-        "loadfile",
-        "batch",
-        "demo",
-        "to_lisp",
-        "lisp",
-        "quit",
-        "kill",
-        "printfile",
-        "with_stdout",
-        "stringout",
-        "run_testsuite",
-        "sconcat",
-        "eval_string",
-        "compfile",
-        "openw",
-        "openr",
-        "opena",
-        "close",
-        "readline",
-    ];
-    let mut tok = String::new();
-    for c in part.chars().chain(std::iter::once(' ')) {
-        if c.is_ascii_alphanumeric() || c == '_' || c == '%' || c == '?' {
-            tok.push(c.to_ascii_lowercase());
-        } else {
-            let w = tok.trim_start_matches(['%', '?']);
-            if BAD.contains(&w) {
-                return Err(err(format!("\"{tok}\" is not allowed here (use Maxima command for raw Maxima)")));
-            }
-            tok.clear();
+    if c.is_ascii() {
+        return c.is_ascii_alphanumeric()
+            || matches!(c, '_' | '%' | '.' | ',' | '+' | '-' | '*' | '/' | '^' | '=' | '<' | '>' | '#' | '!' | '(' | ')' | '[' | ']' | '{' | '}');
+    }
+    c.is_alphabetic()
+        || c.is_numeric()
+        || matches!(
+            c,
+            '\u{2212}' // −
+                | '\u{00d7}' // ×
+                | '\u{00f7}' // ÷
+                | '\u{22c5}' // ⋅
+                | '\u{00b7}' // ·
+                | '\u{03c0}' // π
+                | '\u{2264}' // ≤
+                | '\u{2265}' // ≥
+                | '\u{2260}' // ≠
+                | '\u{221a}' // √
+                | '\u{221b}' // ∛
+                | '\u{221c}' // ∜
+                | '\u{221e}' // ∞
+                | '\u{00b0}' // °
+                | '\u{00b1}' // ±
+                | '\u{2070}'..='\u{2079}' // superscript digits
+        )
+}
+
+/// A plain variable/function name: a letter or `_`, then letters, digits or `_`.
+fn valid_ident(name: &str) -> Option<String> {
+    let name = name.trim();
+    if name.is_empty() || name.chars().count() > MAX_VAR_CHARS {
+        return None;
+    }
+    let mut chars = name.chars();
+    let first = chars.next()?;
+    if !(first.is_alphabetic() || first == '_') {
+        return None;
+    }
+    if !chars.all(|c| c.is_alphanumeric() || c == '_') {
+        return None;
+    }
+    Some(name.to_string())
+}
+
+/// A variable name that is safe to interpolate into generated Maxima code.
+/// Unlike [`valid_ident`], this also refuses known process/file/Lisp names and
+/// the internal output variables.
+pub(crate) fn check_var_name(name: &str) -> Result<String, CmdError> {
+    let name = valid_ident(name).ok_or_else(|| err("Bad variable name: use letters, digits and _ (e.g. x or x_1)".to_string()))?;
+    let lower = name.to_ascii_lowercase();
+    if DENIED_MAXIMA_NAMES.contains(&lower.as_str()) || matches!(lower.as_str(), "linel" | "display2d" | "mc_res") {
+        return Err(err(format!("\"{name}\" is not allowed as a variable name")));
+    }
+    Ok(name)
+}
+
+fn maxima_function_allowed(lower: &str, original: &str, defined: &[String]) -> bool {
+    SAFE_MAXIMA_FUNCTIONS.contains(&lower) || defined.iter().any(|d| d == original)
+}
+
+/// Reject Maxima that reaches outside the calculation (files, processes,
+/// strings, Lisp, assignment and statements). This is the check for
+/// document-derived expressions; `math.maxima` remains the explicit raw
+/// escape hatch for experts.
+#[cfg(test)]
+pub(crate) fn check_maxima_safe(part: &str) -> Result<(), CmdError> {
+    check_maxima_safe_with(part, &[])
+}
+
+/// [`check_maxima_safe`] with the names of the user's defined functions, so a
+/// document may use `f(x)` after the user defined `f(x) := …`.
+pub(crate) fn check_maxima_safe_with(part: &str, defined: &[String]) -> Result<(), CmdError> {
+    if part.len() > MAX_MAXIMA_EXPR_BYTES {
+        return Err(err(format!("The expression is longer than {MAX_MAXIMA_EXPR_BYTES} bytes")));
+    }
+    let mut i = 0;
+    while i < part.len() {
+        let Some(c) = part[i..].chars().next() else { break };
+        if c.is_whitespace() {
+            i += c.len_utf8();
+            continue;
         }
+        if !maxima_source_char(c) {
+            return Err(err(format!("\"{c}\" is not allowed in a calculation (use Maxima command for raw Maxima)")));
+        }
+        // Maxima removes block comments before tokenising, so `system/**/(…)`
+        // would otherwise hide the call from the function-name check.
+        if c == '/' && part[i + c.len_utf8()..].starts_with('*') {
+            return Err(err("Comments are not allowed in a calculation (use Maxima command for raw Maxima)".to_string()));
+        }
+        if c.is_alphabetic() || c == '_' {
+            let start = i;
+            i += c.len_utf8();
+            while i < part.len() {
+                let Some(n) = part[i..].chars().next() else { break };
+                if n.is_alphanumeric() || n == '_' {
+                    i += n.len_utf8();
+                } else {
+                    break;
+                }
+            }
+            let name = &part[start..i];
+            let lower = name.to_ascii_lowercase();
+            if DENIED_MAXIMA_NAMES.contains(&lower.as_str()) {
+                return Err(err(format!("\"{name}\" is not allowed here (use Maxima command for raw Maxima)")));
+            }
+            let mut j = i;
+            while j < part.len() {
+                let Some(n) = part[j..].chars().next() else { break };
+                if n.is_whitespace() {
+                    j += n.len_utf8();
+                } else {
+                    break;
+                }
+            }
+            if part[j..].starts_with('(') && !maxima_function_allowed(&lower, name, defined) {
+                return Err(err(format!("\"{name}\" is not allowed here (use Maxima command for raw Maxima)")));
+            }
+            continue;
+        }
+        i += c.len_utf8();
     }
     Ok(())
+}
+
+/// Validate a definition (`f(x) := x^2`, `c : 9.82`) and return its name.
+/// The left side is restricted to a plain name or a plain function head; the
+/// right side is checked with the same expression rules as document input.
+fn check_definition(stmt: &str, defined: &[String]) -> Result<String, CmdError> {
+    let stmt = stmt.trim().trim_end_matches(';').trim();
+    if stmt.is_empty() {
+        return Err(err("Empty definition".to_string()));
+    }
+    if stmt.len() > MAX_DEFINITION_BYTES {
+        return Err(err(format!("The definition is longer than {MAX_DEFINITION_BYTES} bytes")));
+    }
+    let (lhs, rhs) = if let Some(k) = stmt.find(":=") {
+        (&stmt[..k], &stmt[k + 2..])
+    } else if let Some(k) = stmt.find(':') {
+        (&stmt[..k], &stmt[k + 1..])
+    } else {
+        return Err(err("A definition needs := or :".to_string()));
+    };
+    let lhs = lhs.trim();
+    let name = if let Some(open) = lhs.find('(') {
+        if !lhs.ends_with(')') || lhs[open + 1..lhs.len() - 1].contains(['(', ')']) {
+            return Err(err("Bad definition name".to_string()));
+        }
+        let name = valid_ident(&lhs[..open]).ok_or_else(|| err("Bad definition name".to_string()))?;
+        let args = lhs[open + 1..lhs.len() - 1].trim();
+        if !args.is_empty() {
+            let parts = split_top(args);
+            if parts.len() > MAX_DEF_ARGS {
+                return Err(err(format!("A definition may take at most {MAX_DEF_ARGS} arguments")));
+            }
+            let mut seen = Vec::new();
+            for a in parts {
+                let a = valid_ident(&a).ok_or_else(|| err("Bad argument name in definition".to_string()))?;
+                if seen.contains(&a) {
+                    return Err(err(format!("Duplicate argument \"{a}\" in definition")));
+                }
+                seen.push(a);
+            }
+        }
+        name
+    } else {
+        valid_ident(lhs).ok_or_else(|| err("Bad definition name".to_string()))?
+    };
+    let lower = name.to_ascii_lowercase();
+    if DENIED_MAXIMA_NAMES.contains(&lower.as_str())
+        || SAFE_MAXIMA_FUNCTIONS.contains(&lower.as_str())
+        || matches!(lower.as_str(), "linel" | "display2d" | "mc_res")
+    {
+        return Err(err(format!("\"{name}\" is reserved and cannot be redefined")));
+    }
+    if rhs.trim().is_empty() {
+        return Err(err("The definition has no right-hand side".to_string()));
+    }
+    let mut allowed = defined.to_vec();
+    if !allowed.iter().any(|n| n == &name) {
+        allowed.push(name.clone());
+    }
+    check_maxima_safe_with(rhs.trim(), &allowed)?;
+    Ok(name)
+}
+
+/// The name on the left of a stored definition (`f` in `f(x) := …`).
+fn definition_name(stmt: &str) -> Option<String> {
+    let stmt = stmt.trim();
+    let left = stmt.split_once(":=").map(|(l, _)| l).or_else(|| stmt.split_once(':').map(|(l, _)| l))?;
+    let name = left.split('(').next().unwrap_or("").trim();
+    valid_ident(name)
 }
 
 pub(crate) fn batch(prelude: &[String], defs: &[String], cmd: &str) -> Result<String, String> {
@@ -178,6 +732,9 @@ pub(crate) fn batch(prelude: &[String], defs: &[String], cmd: &str) -> Result<St
     b.push_str("MC_RES:(");
     b.push_str(cmd.trim().trim_end_matches(';'));
     b.push_str(");print(\"MC>>>\",MC_RES);");
+    if b.len() > MAX_MAXIMA_BATCH_BYTES {
+        return Err(format!("Maxima input is longer than {} bytes", MAX_MAXIMA_BATCH_BYTES));
+    }
     let (out, stderr) = run_maxima(&b)?;
     let full = join_output_lines(&out)?;
     // A failed Maxima batch still reaches the print: MC_RES stays
@@ -358,13 +915,54 @@ pub(crate) fn err(msg: String) -> CmdError {
 
 /// Session definitions (Definér) plus MATHCRAFT_DEFS env seed
 /// (`;`-separated Maxima statements), prepended to every batch.
+///
+/// Definitions are validated again here, because `math_defs` is persisted in
+/// preferences and `MATHCRAFT_DEFS` comes from the environment: a stale or
+/// hand-edited value must not become raw Maxima in every later calculation.
+/// Invalid entries are skipped with a log line rather than executed.
 pub(crate) fn defs(s: &Session) -> Vec<String> {
-    let mut out = Vec::new();
-    if let Ok(seed) = std::env::var("MATHCRAFT_DEFS") {
-        out.extend(seed.split(';').map(str::trim).filter(|d| !d.is_empty()).map(str::to_string));
+    let seed = std::env::var("MATHCRAFT_DEFS").unwrap_or_default();
+    let mut pending: Vec<(usize, String)> = seed
+        .split(';')
+        .map(str::to_string)
+        .chain(s.math_defs.iter().cloned())
+        .enumerate()
+        .filter_map(|(i, d)| {
+            let d = d.trim().trim_end_matches(';').trim();
+            (!d.is_empty()).then(|| (i, d.to_string()))
+        })
+        .collect();
+    let mut names: Vec<String> = Vec::new();
+    let mut accepted: Vec<(usize, String)> = Vec::new();
+    // Retry in rounds: a definition may call a function declared later in
+    // the same list. Only names from definitions that fully validated are
+    // ever added to `names`, so a skipped hostile definition cannot bless
+    // its own (or a built-in) name for another definition.
+    while !pending.is_empty() {
+        let mut next = Vec::new();
+        let mut progressed = false;
+        for (i, d) in pending {
+            match check_definition(&d, &names) {
+                Ok(name) => {
+                    if !names.iter().any(|n| n == &name) {
+                        names.push(name);
+                    }
+                    accepted.push((i, d));
+                    progressed = true;
+                }
+                Err(e) => next.push((i, d, e)),
+            }
+        }
+        if !progressed {
+            for (_, _, e) in next {
+                log::warn!("ignoring unsafe math definition: {e}");
+            }
+            break;
+        }
+        pending = next.into_iter().map(|(i, d, _)| (i, d)).collect();
     }
-    out.extend(s.math_defs.iter().cloned());
-    out
+    accepted.sort_by_key(|(i, _)| *i);
+    accepted.into_iter().map(|(_, d)| d).collect()
 }
 
 /// WordMat-style variable choice: explicit {"var"} wins; else the single
@@ -375,25 +973,28 @@ pub(crate) enum VarPick {
     Many(Vec<String>),
 }
 
-pub(crate) fn pick_var(s: &Session, v: &Value, eq: &str) -> VarPick {
+pub(crate) fn pick_var(s: &Session, v: &Value, eq: &str) -> Result<VarPick, CmdError> {
     if let Some(var) = v.get("var").and_then(Value::as_str) {
         let var = var.trim();
         if !var.is_empty() {
-            return VarPick::One(var.to_string());
+            return Ok(VarPick::One(check_var_name(var)?));
         }
     }
     let probe = expand_pm(eq).into_iter().next().unwrap_or_default();
     if let Ok(r) = batch(&base_prelude(), &defs(s), &format!("listofvars({probe})")) {
         let inner = r.trim().trim_start_matches('[').trim_end_matches(']');
-        let vars: Vec<String> = inner.split(',').map(str::trim).filter(|w| !w.is_empty() && !w.starts_with('%')).map(str::to_string).collect();
+        // Only plain names are candidates. listofvars output is data from a
+        // process we started, but it still must not be pasted into generated
+        // code unchecked.
+        let vars: Vec<String> = inner.split(',').map(str::trim).filter(|w| !w.is_empty()).filter_map(|w| check_var_name(w).ok()).collect();
         if let [one] = vars.as_slice() {
-            return VarPick::One(one.clone());
+            return Ok(VarPick::One(one.clone()));
         }
         if vars.len() > 1 {
-            return VarPick::Many(vars);
+            return Ok(VarPick::Many(vars));
         }
     }
-    VarPick::One("x".to_string())
+    Ok(VarPick::One("x".to_string()))
 }
 
 /// Ask the UI variable picker (no-op headless), then stop this turn.
@@ -955,8 +1556,8 @@ fn enhed(s: &mut Session, v: &Value) -> CmdResult {
         Ok(q) => q,
         Err(e) => return Err(err(e)),
     };
-    check_maxima_safe(&qty)?;
-    check_maxima_safe(&unit_to)?;
+    check_maxima_safe_with(&qty, &def_names(s))?;
+    check_maxima_safe_with(&unit_to, &def_names(s))?;
     let (n, u) = match qty.split_once(' ') {
         Some((n, u)) => (n, u),
         None => return Err(err("no unit found".to_string())),
@@ -1277,7 +1878,7 @@ fn insert_mult(expr: &str, protected: &[String]) -> String {
 fn unary(s: &mut Session, maxima_fn: &str, what: &str) -> CmdResult {
     let (input, target) = math_input(s)?;
     let expr = dots(input.trim());
-    check_maxima_safe(&expr)?;
+    check_maxima_safe_with(&expr, &def_names(s))?;
     match batch(&base_prelude(), &defs(s), &format!("{maxima_fn}({expr})")) {
         Ok(r) => apply_result(s, target, input.trim(), &r),
         Err(e) => Err(err(format!("Could not {what}: {e}"))),
@@ -1289,7 +1890,7 @@ fn unary(s: &mut Session, maxima_fn: &str, what: &str) -> CmdResult {
 fn unary_shallow(s: &mut Session, maxima_fn: &str, what: &str) -> CmdResult {
     let (input, target) = math_input(s)?;
     let expr = dots_shallow(input.trim());
-    check_maxima_safe(&expr)?;
+    check_maxima_safe_with(&expr, &def_names(s))?;
     match batch(&base_prelude(), &defs(s), &format!("{maxima_fn}({expr})")) {
         Ok(r) => apply_result(s, target, input.trim(), &r),
         Err(e) => Err(err(format!("Could not {what}: {e}"))),
@@ -1300,7 +1901,7 @@ fn unary_shallow(s: &mut Session, maxima_fn: &str, what: &str) -> CmdResult {
 fn simplify_best(s: &mut Session, _: &Value) -> CmdResult {
     let (input, target) = math_input(s)?;
     let expr = dots(input.trim());
-    check_maxima_safe(&expr)?;
+    check_maxima_safe_with(&expr, &def_names(s))?;
     let pre = base_prelude();
     let d = defs(s);
     let mut best: Option<String> = None;
@@ -1319,10 +1920,9 @@ fn simplify_best(s: &mut Session, _: &Value) -> CmdResult {
 
 fn diff_int(s: &mut Session, v: &Value, maxima_fn: &str, what: &str) -> CmdResult {
     let (input, target) = math_input(s)?;
-    let var = v.get("var").and_then(Value::as_str).unwrap_or("x").trim();
-    let var = if var.is_empty() { "x" } else { var };
+    let var = check_var_name(v.get("var").and_then(Value::as_str).unwrap_or("x"))?;
     let expr = dots(input.trim());
-    check_maxima_safe(&expr)?;
+    check_maxima_safe_with(&expr, &def_names(s))?;
     match batch(&base_prelude(), &defs(s), &format!("{maxima_fn}({expr},{var})")) {
         Ok(r) => apply_result(s, target, input.trim(), &r),
         Err(e) => Err(err(format!("Could not {what}: {e}"))),
@@ -1332,19 +1932,20 @@ fn diff_int(s: &mut Session, v: &Value, maxima_fn: &str, what: &str) -> CmdResul
 /// Beregn: numeric value. `2+2` → `4`; `x^2=4` → floated solutions.
 fn beregn(s: &mut Session, v: &Value) -> CmdResult {
     let (input, target) = math_input(s)?;
-    // Blacklist check on the RAW text first: the Danish rewrite below
-    // splits letter runs (`system` → `s*y*s*t*e*m`) and would neuter the
-    // token check; the transform must never hide hostile names.
-    check_maxima_safe(input.trim())?;
-    let expr = split_idents(&dots_ctx(input.trim(), &def_names(s)), &def_names(s));
+    // Validate the RAW text before the Danish rewrite below splits letter
+    // runs (`system` → `s*y*s*t*e*m`), so the transform can never hide a
+    // hostile function call from the checks.
+    let allowed = def_names(s);
+    check_maxima_safe_with(input.trim(), &allowed)?;
+    let expr = split_idents(&dots_ctx(input.trim(), &allowed), &allowed);
     // Exact (default, WordMat Eksakt) evaluates as-is; decimal mode
     // (WordMat Tal) wraps everything in float().
     let exact = !s.math_decimal;
     let mut cmds = Vec::new();
     for e in expand_pm(&expr) {
-        check_maxima_safe(&e)?;
+        check_maxima_safe_with(&e, &allowed)?;
         let var = if e.contains('=') || is_inequality(&e) {
-            match pick_var(s, v, &e) {
+            match pick_var(s, v, &e)? {
                 VarPick::One(var) => var,
                 VarPick::Many(vars) => return ask_var(s, "math.beregn", vars),
             }
@@ -1480,13 +2081,14 @@ fn quad_steps_text(input: &str, var: &str, a: &str, p: &str, q: &str, d2: &str, 
 fn trin(s: &mut Session, v: &Value) -> CmdResult {
     let (input, target) = math_input(s)?;
     let raw = input.trim();
+    let allowed = def_names(s);
     // Same gate as beregn: the rewrite must never hide hostile names.
-    check_maxima_safe(raw)?;
+    check_maxima_safe_with(raw, &allowed)?;
     if matches!(target, Target::Math) {
         return Err(err("Show steps works on the equation in the document; leave the equation editor first".to_string()));
     }
-    let expr = dots_ctx(raw, &def_names(s));
-    check_maxima_safe(&expr)?;
+    let expr = dots_ctx(raw, &allowed);
+    check_maxima_safe_with(&expr, &allowed)?;
     // Pure numbers: school-math steps entirely in Rust, no Maxima involved
     // (exact rationals, BODMAS order, common-denominator steps).
     if !expr.chars().any(|c| c.is_ascii_alphabetic() || c == '%') {
@@ -1502,7 +2104,7 @@ fn trin(s: &mut Session, v: &Value) -> CmdResult {
     let Some((lhs, rhs)) = expr.split_once('=') else {
         return Err(err("Show steps takes one equation".to_string()));
     };
-    let var = match pick_var(s, v, &expr) {
+    let var = match pick_var(s, v, &expr)? {
         VarPick::One(v) => v,
         VarPick::Many(vars) => return ask_var(s, "math.trin", vars),
     };
@@ -1607,7 +2209,7 @@ fn historik_insat(s: &mut Session, v: &Value) -> CmdResult {
     if t.is_empty() {
         return Err(err("No history item chosen".to_string()));
     }
-    check_maxima_safe(t)?;
+    check_maxima_safe_with(t, &def_names(s))?;
     replace_selection(s, t)?;
     s.math_last = Some(t.to_string());
     s.status = "Inserted result".to_string();
@@ -1646,7 +2248,7 @@ fn maxima_cmd(s: &mut Session, v: &Value) -> CmdResult {
     // the user did not explicitly type. (The {"cmd"} variant above is
     // the explicit escape hatch and stays raw.)
     let expr = input.trim().to_string();
-    check_maxima_safe(&expr)?;
+    check_maxima_safe_with(&expr, &def_names(s))?;
     match batch(&base_prelude(), &defs(s), &expr) {
         Ok(r) => apply_result(s, target, input.trim(), r.trim()),
         Err(e) => Err(err(format!("Maxima-fejl: {e}"))),
@@ -1797,14 +2399,15 @@ fn decimal(s: &mut Session, _: &Value) -> CmdResult {
 fn isoler(s: &mut Session, v: &Value) -> CmdResult {
     let (input, target) = math_input(s)?;
     // Raw-text check first; see beregn (split_idents must not hide names).
-    check_maxima_safe(input.trim())?;
-    let expr = split_idents(&dots_ctx(input.trim(), &def_names(s)), &def_names(s));
+    let allowed = def_names(s);
+    check_maxima_safe_with(input.trim(), &allowed)?;
+    let expr = split_idents(&dots_ctx(input.trim(), &allowed), &allowed);
     let mut cmds = Vec::new();
     let mut varname = String::new();
     for e in expand_pm(&expr) {
-        check_maxima_safe(&e)?;
+        check_maxima_safe_with(&e, &allowed)?;
         let eq = if e.contains('=') || is_inequality(&e) { e } else { format!("{e}=0") };
-        let var = match pick_var(s, v, &eq) {
+        let var = match pick_var(s, v, &eq)? {
             VarPick::One(var) => var,
             VarPick::Many(vars) => return ask_var(s, "math.isoler", vars),
         };
@@ -1849,12 +2452,14 @@ fn poly_solve_raw(pre: &[String], defs: &[String], eq: &str, var: &str) -> Resul
 fn solve_plain(s: &mut Session, v: &Value) -> CmdResult {
     let (input, target) = math_input(s)?;
     // Raw-text check first; see beregn.
-    check_maxima_safe(input.trim())?;
-    let expr = split_idents(&dots_ctx(input.trim(), &def_names(s)), &def_names(s));
+    let allowed = def_names(s);
+    check_maxima_safe_with(input.trim(), &allowed)?;
+    let expr = split_idents(&dots_ctx(input.trim(), &allowed), &allowed);
     let mut cmds = Vec::new();
     for e in expand_pm(&expr) {
+        check_maxima_safe_with(&e, &allowed)?;
         let eq = if e.contains('=') || is_inequality(&e) { e } else { format!("{e}=0") };
-        let var = match pick_var(s, v, &eq) {
+        let var = match pick_var(s, v, &eq)? {
             VarPick::One(var) => var,
             VarPick::Many(vars) => return ask_var(s, "math.solve", vars),
         };
@@ -1888,12 +2493,14 @@ fn solve_plain(s: &mut Session, v: &Value) -> CmdResult {
 fn solvenum(s: &mut Session, v: &Value) -> CmdResult {
     let (input, target) = math_input(s)?;
     // Raw-text check first; see beregn.
-    check_maxima_safe(input.trim())?;
-    let expr = split_idents(&dots_ctx(input.trim(), &def_names(s)), &def_names(s));
+    let allowed = def_names(s);
+    check_maxima_safe_with(input.trim(), &allowed)?;
+    let expr = split_idents(&dots_ctx(input.trim(), &allowed), &allowed);
     let mut cmds = Vec::new();
     for e in expand_pm(&expr) {
+        check_maxima_safe_with(&e, &allowed)?;
         let eq = if e.contains('=') || is_inequality(&e) { e } else { format!("{e}=0") };
-        let var = match pick_var(s, v, &eq) {
+        let var = match pick_var(s, v, &eq)? {
             VarPick::One(var) => var,
             VarPick::Many(vars) => return ask_var(s, "math.solvenum", vars),
         };
@@ -1937,6 +2544,8 @@ fn ligningssystem(s: &mut Session, _: &Value) -> CmdResult {
     if raw.is_empty() {
         return Err(err("Select equations like \"x+y=3, 2x-y=0\" first".to_string()));
     }
+    let allowed = def_names(s);
+    check_maxima_safe_with(raw, &allowed)?;
     let eqs: Vec<String> = split_top(raw)
         .into_iter()
         .map(|e| {
@@ -1945,19 +2554,21 @@ fn ligningssystem(s: &mut Session, _: &Value) -> CmdResult {
         })
         .collect();
     for e in &eqs {
-        check_maxima_safe(e)?;
+        check_maxima_safe_with(e, &allowed)?;
     }
     if eqs.is_empty() {
         return Err(err("Select equations like \"x+y=3, 2x-y=0\" first".to_string()));
     }
-    // All variables across the system.
+    // All variables across the system. Only plain names are accepted: the
+    // list is interpolated into `linsolve`.
     let mut vars: Vec<String> = Vec::new();
     for e in &eqs {
         if let Ok(r) = batch(&base_prelude(), &defs(s), &format!("listofvars({e})")) {
-            for w in r.trim().trim_start_matches('[').trim_end_matches(']').split(',').map(str::trim).filter(|w| !w.is_empty() && !w.starts_with('%'))
-            {
-                if !vars.iter().any(|v| v == w) {
-                    vars.push(w.to_string());
+            for w in r.trim().trim_start_matches('[').trim_end_matches(']').split(',').map(str::trim).filter(|w| !w.is_empty()) {
+                if let Ok(w) = check_var_name(w)
+                    && !vars.iter().any(|v| v == &w)
+                {
+                    vars.push(w);
                 }
             }
         }
@@ -1976,14 +2587,19 @@ fn ligningssystem(s: &mut Session, _: &Value) -> CmdResult {
 fn graense(s: &mut Session, _: &Value) -> CmdResult {
     let (input, target) = math_input(s)?;
     let raw = input.trim();
+    let allowed = def_names(s);
     let p: Vec<String> = split_top(raw).into_iter().map(|x| dots(&x)).collect();
     let e = p.first().cloned().unwrap_or_default();
-    check_maxima_safe(&e)?;
+    check_maxima_safe_with(&e, &allowed)?;
     if e.is_empty() {
         return Err(err("Select e.g. \"sin(x)/x, x, 0\" first".to_string()));
     }
-    let v = p.get(1).cloned().unwrap_or_else(|| "x".to_string());
+    let v = check_var_name(&p.get(1).cloned().unwrap_or_else(|| "x".to_string()))?;
     let pt = p.get(2).cloned().unwrap_or_else(|| "0".to_string());
+    if pt.trim().is_empty() {
+        return Err(err("The limit point is empty; select e.g. \"sin(x)/x, x, 0\"".to_string()));
+    }
+    check_maxima_safe_with(&pt, &allowed)?;
     match batch(&base_prelude(), &defs(s), &format!("limit({e},{v},{pt})")) {
         Ok(r) => apply_result(s, target, raw, &r),
         Err(e) => Err(err(format!("Could not take limit: {e}"))),
@@ -1994,16 +2610,27 @@ fn graense(s: &mut Session, _: &Value) -> CmdResult {
 fn taylor(s: &mut Session, _: &Value) -> CmdResult {
     let (input, target) = math_input(s)?;
     let raw = input.trim();
+    let allowed = def_names(s);
     let p: Vec<String> = split_top(raw).into_iter().map(|x| dots(&x)).collect();
     let e = p.first().cloned().unwrap_or_default();
-    check_maxima_safe(&e)?;
+    check_maxima_safe_with(&e, &allowed)?;
     if e.is_empty() {
         return Err(err("Select e.g. \"exp(x), x, 0, 3\" first".to_string()));
     }
-    let v = p.get(1).cloned().unwrap_or_else(|| "x".to_string());
+    let v = check_var_name(&p.get(1).cloned().unwrap_or_else(|| "x".to_string()))?;
     let pt = p.get(2).cloned().unwrap_or_else(|| "0".to_string());
+    if pt.trim().is_empty() {
+        return Err(err("The expansion point is empty; select e.g. \"exp(x), x, 0, 3\"".to_string()));
+    }
+    check_maxima_safe_with(&pt, &allowed)?;
+    // The order is a plain non-negative integer; Maxima's taylor() would
+    // otherwise accept arbitrary code in this argument.
     let n = p.get(3).cloned().unwrap_or_else(|| "6".to_string());
-    match batch(&base_prelude(), &defs(s), &format!("taylor({e},{v},{pt},{n})")) {
+    let order: usize = n.trim().parse().map_err(|_| err("Taylor order must be a whole number".to_string()))?;
+    if order > 1000 {
+        return Err(err("Taylor order must be at most 1000".to_string()));
+    }
+    match batch(&base_prelude(), &defs(s), &format!("taylor({e},{v},{pt},{order})")) {
         Ok(r) => apply_result(s, target, raw, &r),
         Err(e) => Err(err(format!("Could not expand: {e}"))),
     }
@@ -2013,7 +2640,7 @@ fn taylor(s: &mut Session, _: &Value) -> CmdResult {
 fn stats_op(s: &mut Session, maxima_fn: &str, what: &str) -> CmdResult {
     let (input, target) = math_input(s)?;
     let expr = dots_shallow(input.trim());
-    check_maxima_safe(&expr)?;
+    check_maxima_safe_with(&expr, &def_names(s))?;
     if expr.is_empty() {
         return Err(err("Select e.g. \"[1, 2, 3, 4]\" first".to_string()));
     }
@@ -2027,12 +2654,12 @@ fn stats_op(s: &mut Session, maxima_fn: &str, what: &str) -> CmdResult {
 fn solvede(s: &mut Session, v: &Value) -> CmdResult {
     let (input, target) = math_input(s)?;
     let expr = dots(input.trim());
-    check_maxima_safe(&expr)?;
+    check_maxima_safe_with(&expr, &def_names(s))?;
     if !expr.contains("diff(") {
         return Err(err("Not a differential equation; markér f.eks. diff(y,x)=y".to_string()));
     }
-    let dep = v.get("dep").and_then(Value::as_str).unwrap_or("y");
-    let indep = v.get("indep").and_then(Value::as_str).unwrap_or("x");
+    let dep = check_var_name(v.get("dep").and_then(Value::as_str).unwrap_or("y"))?;
+    let indep = check_var_name(v.get("indep").and_then(Value::as_str).unwrap_or("x"))?;
     let quoted = expr.replacen("diff(", "'diff(", 1);
     match batch(&plain_prelude(), &defs(s), &format!("ode2({quoted},{dep},{indep})")) {
         Ok(r) => apply_result(s, target, input.trim(), &r),
@@ -2046,21 +2673,10 @@ fn nyligning(s: &mut Session, _: &Value) -> CmdResult {
 }
 
 /// Base names of session definitions (`f(x)` → `f`), protected from
-/// identifier splitting.
+/// identifier splitting. Uses the same validation as [`defs`], so a stale or
+/// hand-edited definition cannot bless a dangerous name.
 pub(crate) fn def_names(s: &Session) -> Vec<String> {
-    let mut out = Vec::new();
-    out.extend(std::env::var("MATHCRAFT_DEFS").unwrap_or_default().split(';').filter_map(|d| {
-        let name = def_lhs(d).trim().to_string();
-        (!name.is_empty()).then_some(name)
-    }));
-    for d in s.math_defs.iter() {
-        let name = def_lhs(d).trim().to_string();
-        if !name.is_empty() && !out.contains(&name) {
-            out.push(name);
-        }
-    }
-    // Strip argument lists: `f(x)` protects `f`.
-    out.into_iter().map(|n| n.split('(').next().unwrap_or("").trim().to_string()).filter(|n| !n.is_empty()).collect()
+    defs(s).iter().filter_map(|d| definition_name(d)).collect()
 }
 /// Left-hand side of a stored definition, whatever the assignment shape.
 fn def_lhs(d: &str) -> &str {
@@ -2094,17 +2710,16 @@ fn define(s: &mut Session, v: &Value) -> CmdResult {
         let name = stmt.split(":=").next().unwrap_or("").trim().to_string();
         (name, stmt)
     };
-    if name.is_empty() || !name.chars().next().is_some_and(|c| c.is_ascii_alphabetic()) {
-        return Err(err("Bad definition name".to_string()));
-    }
     // Constants (`g`) assign with `:` so uses evaluate; functions keep `:=`.
     let stmt = if !name.contains('(') {
         if let Some(k) = stmt.find(":=") { format!("{} : {}", stmt[..k].trim(), stmt[k + 2..].trim()) } else { stmt }
     } else {
         stmt
     };
-    s.math_defs.retain(|d| def_lhs(d) != name);
-    check_maxima_safe(&stmt)?;
+    // Validate before removing an existing definition: a rejected redefinition
+    // must leave the old one in place.
+    let checked = check_definition(&stmt, &def_names(s))?;
+    s.math_defs.retain(|d| definition_name(d).as_deref() != Some(checked.as_str()));
     s.math_defs.push(stmt.clone());
     s.status = format!("Defined {name}");
     sel_result(s)
@@ -2238,7 +2853,7 @@ pub fn specs() -> Vec<CommandSpec> {
         CommandSpec::new("math.middel", "Mean", "Math › Statistics", |s, _| stats_op(s, "mean", "mean")).params("{}"),
         CommandSpec::new("math.spredning", "Standard deviation", "Math › Statistics", |s, _| stats_op(s, "std", "spredning")).params("{}"),
         CommandSpec::new("math.maxima", "Maxima command", "Math › More", maxima_cmd)
-            .params(r#"{"cmd"?: raw Maxima code (runs directly, own input only)}"#),
+            .params(r#"{"cmd"?: raw Maxima code; runs directly with the user's local privileges and is NOT sandboxed — never pass untrusted text}"#),
         CommandSpec::new("math.forrige", "Previous result", "Math › More", forrige).params("{}"),
         CommandSpec::new("math.historik", "History", "Math › More", historik).params("{}"),
         CommandSpec::new("math.inserthistorik", "Insert history item", "Math › More", historik_insat).params(r#"{"text": chosen previous answer}"#),
@@ -2253,7 +2868,7 @@ pub fn specs() -> Vec<CommandSpec> {
 fn unary_tex(s: &mut Session, _: &Value) -> CmdResult {
     let (input, target) = math_input(s)?;
     let expr = dots(input.trim());
-    check_maxima_safe(&expr)?;
+    check_maxima_safe_with(&expr, &def_names(s))?;
     // tex() prints $$..$$ directly instead of returning it.
     let mut b = String::from("linel:10000;display2d:false;");
     b.push_str("tex(");
@@ -2381,14 +2996,120 @@ mod tests {
     fn unsafe_maxima_is_rejected() {
         assert!(check_maxima_safe("x^2+sin(x)").is_ok());
         assert!(check_maxima_safe("diff(y,x)=y").is_ok());
+        assert!(check_maxima_safe("2,5*x + √9 + π + x²").is_ok());
         assert!(check_maxima_safe("loadfile(\"/tmp/x.mac\")").is_err());
         assert!(check_maxima_safe("system(\"id\")").is_err());
         assert!(check_maxima_safe("sconcat(\"sy\",\"stem\")").is_err());
         assert!(check_maxima_safe("stringout(\"f\", x)").is_err());
         // Case-insensitive, %-prefixed too.
         assert!(check_maxima_safe("SYSTEM(\"id\")").is_err());
-        // Backslash escapes spell a denied name without the token appearing.
+        // A backslash escapes a name in Maxima (`sy\stem` spells `system`).
         assert!(check_maxima_safe("sy\\stem(\"id\")").is_err());
+        // Confirmed blocklist bypasses: apply + concat / ev + concat.
+        assert!(check_maxima_safe("apply(concat(\"sy\",\"stem\"),[\"touch /tmp/opencode/pwned\"])").is_err());
+        assert!(check_maxima_safe("ev(concat(\"s\",\"ystem\")(\"touch /tmp/opencode/pwned\"))").is_err());
+        assert!(check_maxima_safe("xreduce(system,[\"touch /tmp/opencode/pwned\"])").is_err());
+        // Maxima strips block comments before tokenising.
+        assert!(check_maxima_safe("system/**/(\"touch /tmp/opencode/pwned\")").is_err());
+        // Statement, assignment, Lisp and string escapes.
+        for evil in ["x; system(\"id\")", "x : 1", "x$", "?system(\"id\")", "\"id\"", "'diff(x,x)"] {
+            assert!(check_maxima_safe(evil).is_err(), "{evil}");
+        }
+        // A function the user explicitly defined is allowed; anything else is not.
+        let defined = vec!["f".to_string()];
+        assert!(check_maxima_safe_with("f(x)+sin(x)", &defined).is_ok());
+        assert!(check_maxima_safe_with("g(x)", &defined).is_err());
+    }
+
+    #[test]
+    fn definitions_are_validated() {
+        assert_eq!(check_definition("f(x) := x^2", &[]).unwrap(), "f");
+        assert_eq!(check_definition("g : 9.82", &[]).unwrap(), "g");
+        assert_eq!(check_definition("f(x,y) := x+y", &[]).unwrap(), "f");
+        assert!(check_definition("f(x) := system(\"id\")", &[]).is_err());
+        assert!(check_definition("f(x) := apply(concat(\"sy\",\"stem\"),[\"id\"])", &[]).is_err());
+        assert!(check_definition("f(x) := x^2; system(\"id\")", &[]).is_err());
+        assert!(check_definition("f(x) := \"id\"", &[]).is_err());
+        assert!(check_definition("f(x) := g(x)", &[]).is_err());
+        assert!(check_definition("f(x) := g(x)", &["g".to_string()]).is_ok());
+        assert!(check_definition("linel : 80", &[]).is_err());
+        assert!(check_definition("sin(x) := x", &[]).is_err());
+        assert!(check_definition("f(x,x) := x", &[]).is_err());
+        assert!(check_definition("f(x) := ", &[]).is_err());
+        assert!(check_definition("f(x) := x^2", &[]).is_ok());
+    }
+
+    #[test]
+    fn variable_names_cannot_inject_code() {
+        assert!(check_var_name("x").is_ok());
+        assert!(check_var_name("x_1").is_ok());
+        for evil in ["x), system(\"id\")", "x;system(\"id\")", "x y", "x^2", "system", "", "x,y"] {
+            assert!(check_var_name(evil).is_err(), "{evil}");
+        }
+    }
+
+    #[test]
+    fn hostile_document_math_never_reaches_maxima() {
+        let pwned = std::env::temp_dir().join(format!("wordcraft-maxima-regression-{}", std::process::id()));
+        let path = pwned.to_string_lossy();
+        let mut s = s();
+        for evil in [
+            format!("apply(concat(\"sy\",\"stem\"),[\"touch {path}\"])"),
+            format!("ev(concat(\"s\",\"ystem\")(\"touch {path}\"))"),
+            format!("system/**/(\"touch {path}\")"),
+        ] {
+            for command in ["math.beregn", "math.maxima"] {
+                select_all(&mut s, &evil);
+                let err = s.run(command, &json!({})).unwrap_err();
+                assert!(err.to_string().contains("not allowed"), "{command} on {evil}: {err}");
+            }
+        }
+        assert!(!pwned.exists(), "a document expression executed a shell command");
+    }
+
+    #[test]
+    fn definitions_resolve_dependencies_regardless_of_order() {
+        let mut s = s();
+        s.math_defs = vec!["zz_order_a(x) := zz_order_b(x)+1".to_string(), "zz_order_b(x) := x^2".to_string()];
+        let d = defs(&s);
+        assert!(d.iter().any(|x| x.contains("zz_order_a")), "got {d:?}");
+        assert!(d.iter().any(|x| x.contains("zz_order_b")), "got {d:?}");
+    }
+
+    #[test]
+    fn a_skipped_definition_cannot_bless_its_name() {
+        let mut s = s();
+        s.math_defs = vec!["zz_hostile_test_fn(x) := system(\"id\")".to_string(), "zz_hostile_test_use(x) := zz_hostile_test_fn(x)".to_string()];
+        let d = defs(&s);
+        assert!(!d.iter().any(|x| x.contains("zz_hostile_test")), "a skipped definition blessed its name: {d:?}");
+    }
+
+    #[test]
+    fn hostile_definition_keeps_the_old_one() {
+        let mut s = s();
+        run(&mut s, "math.define", json!({"name": "f(x)", "value": "x^2"}));
+        assert_eq!(s.math_defs.len(), 1);
+        let err = s.run("math.define", &json!({"name": "f(x)", "value": "system(\"id\")"})).unwrap_err();
+        assert!(err.to_string().contains("not allowed"), "{err}");
+        assert_eq!(s.math_defs, vec!["f(x) := x^2".to_string()]);
+    }
+
+    #[test]
+    fn hostile_graph_variable_is_rejected_without_maxima() {
+        let mut s = s();
+        let err = s.run("math.graf", &json!({"spec": "x^2, -5, 5", "var": "x), system(\"touch /tmp/opencode/pwned\")"})).unwrap_err();
+        assert!(err.to_string().contains("variable"), "{err}");
+    }
+
+    #[test]
+    fn hostile_limit_and_taylor_arguments_are_rejected_without_maxima() {
+        let mut s = s();
+        select_all(&mut s, "sin(x)/x, x), system(\"id\"), 0");
+        let err = s.run("math.graense", &json!({})).unwrap_err();
+        assert!(err.to_string().contains("not allowed") || err.to_string().contains("variable"), "{err}");
+        select_all(&mut s, "exp(x), x, 0, 1+1");
+        let err = s.run("math.taylor", &json!({})).unwrap_err();
+        assert!(err.to_string().contains("whole number"), "{err}");
     }
 
     #[test]
