@@ -12,16 +12,31 @@ zip, XML and encryption readers:
 - DOCX packages: at most 20,000 zip entries, 256 MiB per decompressed part and 512 MiB
   in total; ODT and spreadsheet parts have their own per-entry and total caps;
 - a 256 MiB cap on a Word XML file, checked before the whole file is read;
-- at most 256 levels of XML nesting and 4,000,000 elements per part;
-- element/attribute-name length, attribute-count, attribute-size and total-text limits;
+- at most 256 levels of XML nesting and 4,000,000 elements per part (each Flat OPC part
+  gets its own element budget);
+- element/attribute-name length, attribute-count, attribute-size and total-text limits,
+  counted in the escaped form the writer emits so that a part the reader accepts can
+  always be saved and read back;
 - decompression is read through a bounded reader, so a lying zip size cannot expand
-  without bound; a part that inflates past its cap is refused, not silently truncated.
+  without bound; a part that inflates past its cap is refused, not silently truncated;
+- a picture entry that lies about its size, or a document whose pictures pass the total
+  cap, fails the import with the entry named — a picture is never silently left out;
+- kept markup that the writer cannot write back fails the save instead of being dropped
+  silently;
+- part names and relationship targets are validated on the way in and again on the way
+  out: a name that is not package-relative, or that contains `\`, a drive prefix (`C:`),
+  a control character or a `.`/`..` segment, is skipped on read and refused on write, so
+  a hostile package cannot plant a name that an extractor would read as a path.
 
 A malformed or hostile document must produce an error, never execute code and never
 panic the reader. Math expressions that come from a document selection are checked
 against a lexical rule set and an allowlist of Maxima functions before they reach
-Maxima. Unknown functions, strings, assignment, statements, Lisp escapes, comments and
-file/process functions are rejected.
+Maxima. Validation runs before any Maxima process is started, including the variable
+probe used by Plot graph (`listofvars`): the graph spec is checked before it is
+interpolated into the call, and `pick_var` independently refuses an unvalidated probe.
+The function allowlist is reviewed for purity before a name is added. Unknown functions,
+strings, assignment, statements, Lisp escapes, comments and file/process functions are
+rejected.
 
 ## Deliberate escape hatches
 
@@ -44,6 +59,27 @@ whole process in an OS sandbox or container with no access to secrets or the res
 filesystem. The expression allowlist reduces the attack surface; it is not a substitute
 for process isolation.
 
+## Control channel
+
+The loopback control server requires the window's key on every request and accepts at
+most 64 simultaneous connections; connections past the limit receive an error line and
+are closed, so a local client cannot make the app spawn threads without bound. The key
+file is written mode 0600 and removed when the window closes.
+
+## Maxima process limits
+
+Maxima runs as a separate, short-lived process. Each call is killed after 30 seconds and
+its stdout and stderr are capped at 8 MiB and 1 MiB. On Unix it is started through
+`sh -c 'ulimit -v <KiB> 2>/dev/null || true; exec "$0" "$@"'` with a 2 GiB address-space
+cap; the Maxima binary and its arguments are passed as argv, never interpolated into the
+shell script. If `ulimit -v` is unavailable the call still runs. Windows has no
+address-space cap. These limits contain accidental or hostile resource use — a CPU-bound
+expression can still occupy Maxima until the 30 s timeout — but they are not a sandbox.
+
+Batches up to 8 KiB are passed with `--batch-string`; larger batches (up to the 4 MiB
+hard cap) are written to Maxima's stdin, so the cap is enforced by WordCraft rather than
+by the operating system's argument-length limit.
+
 ## Files and saves
 
 - Document saves and exported PNG/PDF files are written to a sibling temporary file and
@@ -51,6 +87,10 @@ for process isolation.
 - The destination is replaced, not followed: if it is a symbolic link, the link is
   replaced and its target is left untouched. This prevents a link swapped after the
   automation write-root check from redirecting the save.
+- A save to an existing destination that is neither a regular file nor a symbolic link
+  (a FIFO, a device, a socket) is written through in place after confirming the opened
+  object is still that special file; only regular files, symlinks and new paths get the
+  temporary-file-and-rename replacement.
 - Automation read/write roots are resolved with `..` and symlinks before access. A
   check-then-open race remains possible for a local attacker who can write the
   directory between the check and the open; that is the documented automation

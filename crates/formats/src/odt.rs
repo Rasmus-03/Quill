@@ -928,7 +928,7 @@ struct TableB {
 
 struct Body<'a> {
     styles: &'a Styles,
-    zip: &'a mut dyn FnMut(&str) -> Option<Vec<u8>>,
+    zip: &'a mut dyn FnMut(&str) -> Result<Option<Vec<u8>>, String>,
     containers: Vec<Vec<FBlock>>,
     fmt: Vec<Fmt>,
     para: Option<Para>,
@@ -945,6 +945,8 @@ struct Body<'a> {
     depth: usize,
     frame: Option<(Option<f32>, Option<f32>, Option<Vec<u8>>, String)>,
     in_desc: bool,
+    /// A picture read error (an entry over the cap): the parse fails instead of dropping it.
+    error: Option<String>,
 }
 
 impl Body<'_> {
@@ -1198,7 +1200,16 @@ impl Body<'_> {
                     && fr.2.is_none()
                 {
                     let path = href.trim_start_matches("./");
-                    fr.2 = (self.zip)(path);
+                    match (self.zip)(path) {
+                        Ok(data) => fr.2 = data,
+                        // A picture that is present but over the cap is not left out silently:
+                        // the error is surfaced by `parse` at the end (see `Body::error`).
+                        Err(e) => {
+                            if self.error.is_none() {
+                                self.error = Some(e);
+                            }
+                        }
+                    }
                 }
             }
             "desc" | "title" if self.frame.is_some() => self.in_desc = true,
@@ -1292,16 +1303,27 @@ impl Body<'_> {
     }
 }
 
-fn read_entry(z: &mut zip::ZipArchive<Cursor<&[u8]>>, name: &str) -> Option<Vec<u8>> {
-    let f = z.by_name(name).ok()?;
+/// `name`'s bytes, or `None` when the package has no such entry. An entry that declares a size
+/// past the cap, or inflates past it, is an error: leaving it out silently would open the
+/// document without content it names (SECURITY.md: a part past its cap is refused, not silently
+/// truncated).
+fn read_entry(z: &mut zip::ZipArchive<Cursor<&[u8]>>, name: &str) -> Result<Option<Vec<u8>>, String> {
+    let f = match z.by_name(name) {
+        Ok(f) => f,
+        Err(zip::result::ZipError::FileNotFound) => return Ok(None),
+        Err(e) => return Err(format!("ODT: {name}: {e}")),
+    };
     if f.size() > MAX_ENTRY {
-        return None;
+        return Err(format!("ODT: {name} declares {} bytes, larger than the {MAX_ENTRY}-byte cap", f.size()));
     }
     let mut out = Vec::new();
     // The declared size can lie; read one byte past the cap and refuse the
     // entry rather than silently inflating a truncated part.
-    f.take(MAX_ENTRY + 1).read_to_end(&mut out).ok()?;
-    (out.len() as u64 <= MAX_ENTRY).then_some(out)
+    f.take(MAX_ENTRY + 1).read_to_end(&mut out).map_err(|e| format!("ODT: {name}: {e}"))?;
+    if out.len() as u64 > MAX_ENTRY {
+        return Err(format!("ODT: {name} inflates past the {MAX_ENTRY}-byte cap"));
+    }
+    Ok(Some(out))
 }
 
 fn read_meta(xml: &[u8]) -> Meta {
@@ -1332,25 +1354,34 @@ fn read_meta(xml: &[u8]) -> Meta {
 
 /// Parse an `.odt` package into the flow model.
 pub fn parse(bytes: &[u8]) -> Result<Flow, String> {
+    parse_limited(bytes, MAX_ENTRY)
+}
+
+/// [`parse`] with the cap on the total bytes of pictures read from the package as a parameter
+/// (tests use a small one); some parts are always capped at [`MAX_ENTRY`].
+fn parse_limited(bytes: &[u8], max_images: u64) -> Result<Flow, String> {
     let mut z = zip::ZipArchive::new(Cursor::new(bytes)).map_err(|e| format!("ODT: not a valid package ({e})"))?;
-    if let Some(mt) = read_entry(&mut z, "mimetype") {
+    if let Some(mt) = read_entry(&mut z, "mimetype")? {
         let mt = String::from_utf8_lossy(&mt);
         if !mt.trim().starts_with("application/vnd.oasis.opendocument.text") {
             return Err(format!("ODT: not a text document ({})", mt.trim()));
         }
     }
-    let content = read_entry(&mut z, "content.xml").ok_or("ODT: content.xml is missing")?;
+    let content = read_entry(&mut z, "content.xml")?.ok_or("ODT: content.xml is missing")?;
     let mut styles = Styles::default();
-    if let Some(s) = read_entry(&mut z, "styles.xml") {
+    if let Some(s) = read_entry(&mut z, "styles.xml")? {
         styles.read(&s, false);
     }
     styles.read(&content, true);
-    let meta = read_entry(&mut z, "meta.xml").map(|m| read_meta(&m)).unwrap_or_default();
+    let meta = read_entry(&mut z, "meta.xml")?.map(|m| read_meta(&m)).unwrap_or_default();
     let mut total = 0u64;
-    let mut fetch = |path: &str| -> Option<Vec<u8>> {
-        let d = read_entry(&mut z, path)?;
-        total += d.len() as u64;
-        (total <= MAX_ENTRY).then_some(d)
+    let mut fetch = |path: &str| -> Result<Option<Vec<u8>>, String> {
+        let Some(d) = read_entry(&mut z, path)? else { return Ok(None) };
+        total = total.saturating_add(d.len() as u64);
+        if total > max_images {
+            return Err(format!("ODT: the document's pictures pass the {max_images}-byte cap"));
+        }
+        Ok(Some(d))
     };
     let mut body = Body {
         styles: &styles,
@@ -1369,6 +1400,7 @@ pub fn parse(bytes: &[u8]) -> Result<Flow, String> {
         depth: 0,
         frame: None,
         in_desc: false,
+        error: None,
     };
     events(&content, |ev| match ev {
         Ev::Start(q, a) => {
@@ -1388,6 +1420,10 @@ pub fn parse(bytes: &[u8]) -> Result<Flow, String> {
         Ev::Text(t) => body.text(&t),
     });
     body.end_para();
+    // A picture that was present but over its cap has no silent path out of the reader.
+    if let Some(e) = body.error.take() {
+        return Err(e);
+    }
     while body.containers.len() > 1 {
         let c = body.containers.pop().unwrap_or_default();
         body.container().extend(c);
@@ -1408,7 +1444,7 @@ pub fn parse(bytes: &[u8]) -> Result<Flow, String> {
 pub fn import(bytes: &[u8]) -> Result<Document, String> {
     let mut doc = model::to_doc(&parse(bytes)?);
     if let Ok(mut z) = zip::ZipArchive::new(Cursor::new(bytes))
-        && let Some(s) = read_entry(&mut z, "styles.xml")
+        && let Ok(Some(s)) = read_entry(&mut z, "styles.xml")
     {
         apply_page_layout(&s, &mut doc.last_section);
     }
@@ -1594,5 +1630,75 @@ mod tests {
         let Some(FBlock::Table(t)) = f.blocks.iter().find(|b| matches!(b, FBlock::Table(_))) else { panic!("no table") };
         let row: Vec<_> = t.rows[0].iter().map(|c| (c.text(), c.shading)).collect();
         assert_eq!(row, vec![("Red".to_string(), Some(Rgb(255, 0, 0))), ("Plain".to_string(), None)]);
+    }
+
+    fn image_frame(href: &str) -> String {
+        format!(r#"<draw:frame svg:width="1in" svg:height="1in"><draw:image xlink:href="{href}"/></draw:frame>"#)
+    }
+
+    fn image_content(frames: &str) -> String {
+        format!(
+            r#"<office:document-content {NS_T} xmlns:draw="urn:oasis:names:tc:opendocument:xmlns:drawing:1.0" xmlns:svg="urn:oasis:names:tc:opendocument:xmlns:svg-compatible:1.0" xmlns:xlink="http://www.w3.org/1999/xlink"><office:body><office:text><text:p>{frames}</text:p></office:text></office:body></office:document-content>"#
+        )
+    }
+
+    /// A package with `content.xml` and the given picture entries.
+    fn package_with_images(content: &str, images: &[(&str, &[u8])]) -> Vec<u8> {
+        let mut z = zip::ZipWriter::new(Cursor::new(Vec::new()));
+        let o = zip::write::SimpleFileOptions::default().compression_method(zip::CompressionMethod::Stored);
+        z.start_file("mimetype", o).unwrap();
+        z.write_all(b"application/vnd.oasis.opendocument.text").unwrap();
+        z.start_file("content.xml", o).unwrap();
+        z.write_all(content.as_bytes()).unwrap();
+        for (name, data) in images {
+            z.start_file((*name).to_string(), o).unwrap();
+            z.write_all(data).unwrap();
+        }
+        z.finish().unwrap().into_inner()
+    }
+
+    /// Patch the declared uncompressed size of entry `name` (central directory and local header),
+    /// for a zip entry whose data doesn't match its declaration.
+    fn patch_declared_size(z: &mut [u8], name: &str, size: u32) {
+        let mut patched = 0;
+        for sig in [[0x50u8, 0x4B, 0x01, 0x02], [0x50, 0x4B, 0x03, 0x04]] {
+            let central = sig[2] == 1;
+            let mut from = 0;
+            while let Some(pos) = z[from..].windows(4).position(|w| w == sig) {
+                let pos = from + pos;
+                let name_at = pos + if central { 46 } else { 30 };
+                if z.get(name_at..name_at + name.len()) == Some(name.as_bytes()) {
+                    let off = pos + if central { 24 } else { 22 };
+                    z[off..off + 4].copy_from_slice(&size.to_le_bytes());
+                    patched += 1;
+                }
+                from = pos + 4;
+            }
+        }
+        assert_eq!(patched, 2, "patched both headers of {name}");
+    }
+
+    /// A picture entry that declares a size past the cap is refused, never silently left out.
+    #[test]
+    fn an_image_entry_lying_about_its_size_is_an_error() {
+        const PNG: &[u8] = &[0x89, b'P', b'N', b'G', 0x0D, 0x0A, 0x1A, 0x0A];
+        let mut pkg = package_with_images(&image_content(&image_frame("Pictures/1.png")), &[("Pictures/1.png", PNG)]);
+        patch_declared_size(&mut pkg, "Pictures/1.png", 0xFFFF_FFF0);
+        let err = parse(&pkg).unwrap_err();
+        assert!(err.contains("Pictures/1.png"), "{err}");
+    }
+
+    /// Pictures past the total cap are refused too (the cap is a parameter here to keep the test
+    /// small; the shipped cap is `MAX_ENTRY`).
+    #[test]
+    fn images_past_the_total_cap_are_an_error() {
+        const PNG: &[u8] = &[0x89, b'P', b'N', b'G', 0x0D, 0x0A, 0x1A, 0x0A];
+        let content = image_content(&format!("{}{}", image_frame("Pictures/1.png"), image_frame("Pictures/2.png")));
+        let pkg = package_with_images(&content, &[("Pictures/1.png", PNG), ("Pictures/2.png", PNG)]);
+        let err = parse_limited(&pkg, 12).unwrap_err();
+        assert!(err.contains("pictures"), "{err}");
+        let ok = parse_limited(&pkg, 100).unwrap();
+        let ps = paras(&ok);
+        assert!(ps[0].inlines.iter().any(|i| matches!(i, Inline::Image(_))));
     }
 }

@@ -42,6 +42,57 @@ fn saved(path: &Path) {
     assert_eq!(io::open_path(path).unwrap().plain_text(StoryRef::Body), edited().plain_text(StoryRef::Body));
 }
 
+#[cfg(unix)]
+fn mkfifo(path: &Path) {
+    let status = std::process::Command::new("mkfifo").arg(path).status().unwrap();
+    assert!(status.success(), "mkfifo failed");
+}
+
+/// A thread reading everything from `path` (used with a FIFO, whose writer blocks until a
+/// reader opens it).
+#[cfg(unix)]
+fn read_all_from(path: &Path) -> std::thread::JoinHandle<Vec<u8>> {
+    let path = path.to_path_buf();
+    std::thread::spawn(move || {
+        use std::io::Read;
+        let mut f = std::fs::File::open(&path).unwrap();
+        let mut out = Vec::new();
+        f.read_to_end(&mut out).unwrap();
+        out
+    })
+}
+
+/// A FIFO destination is written through, not replaced by a regular file: an export to a pipe
+/// some process is reading keeps working (and the path is still a pipe afterwards).
+#[cfg(unix)]
+#[test]
+fn an_export_to_a_fifo_is_written_through() {
+    use std::os::unix::fs::FileTypeExt;
+    let d = Scratch::new();
+    let path = d.path("export.txt");
+    mkfifo(&path);
+    let reader = read_all_from(&path);
+    io::write_file(&path.to_string_lossy(), b"exported bytes").unwrap();
+    assert_eq!(reader.join().unwrap(), b"exported bytes");
+    assert!(std::fs::symlink_metadata(&path).unwrap().file_type().is_fifo(), "the path is still a pipe");
+}
+
+/// The same for a document save: the document's bytes reach the FIFO's reader.
+#[cfg(unix)]
+#[test]
+fn saving_a_document_to_a_fifo_writes_the_document_through_it() {
+    use std::os::unix::fs::FileTypeExt;
+    let d = Scratch::new();
+    let path = d.path("contract.docx");
+    mkfifo(&path);
+    let reader = read_all_from(&path);
+    io::save_path(&path, &edited()).unwrap();
+    let bytes = reader.join().unwrap();
+    let doc = io::open_bytes("contract.docx", &bytes).unwrap();
+    assert_eq!(doc.plain_text(StoryRef::Body), edited().plain_text(StoryRef::Body));
+    assert!(std::fs::symlink_metadata(&path).unwrap().file_type().is_fifo(), "the path is still a pipe");
+}
+
 #[test]
 fn an_existing_temporary_file_is_not_overwritten_or_removed() {
     let d = Scratch::new();

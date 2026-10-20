@@ -13,6 +13,35 @@ pub const MAX_TOTAL: u64 = 512 * 1024 * 1024;
 /// Most zip entries we look at.
 pub const MAX_ENTRIES: usize = 20_000;
 
+/// Longest part name we accept (the Flat OPC reader uses the same limit).
+const MAX_PART_NAME: usize = 4096;
+
+/// Is `name` a valid OPC part name? Package-relative and `/`-separated, with no empty, `.` or
+/// `..` segment (also with surrounding spaces, which an extractor on Windows strips from the
+/// name), no `\` or control characters (a Windows path separator or a name an extractor cannot
+/// represent) and no drive prefix (`C:…`, absolute on Windows). A colon elsewhere is an ordinary
+/// part-name character Word itself uses (`word/sig:legacy.bin`), so it stays. Hostile packages
+/// use such a name to escape the package folder when the file is extracted, so the name is
+/// checked on the way in and again on the way out.
+pub fn part_name_ok(name: &str) -> bool {
+    if name.is_empty() || name.len() > MAX_PART_NAME || name.starts_with('/') || has_drive_prefix(name) {
+        return false;
+    }
+    if name.bytes().any(|b| b < 0x20 || b == 0x7F || b == b'\\') {
+        return false;
+    }
+    name.split('/').all(|seg| {
+        let t = seg.trim();
+        !t.is_empty() && t != "." && t != ".."
+    })
+}
+
+/// Does `name` start with a Windows drive (`C:`, `c:…`)? Such a name is an absolute path on
+/// Windows, not a package-relative one.
+fn has_drive_prefix(name: &str) -> bool {
+    matches!(name.as_bytes(), [c, b':', ..] if c.is_ascii_alphabetic())
+}
+
 /// Relationship type suffixes (after `.../relationships/`).
 pub mod rt {
     pub const OFFICE_DOC: &str = "http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument";
@@ -164,6 +193,12 @@ impl Package {
                 continue;
             }
             let name = f.name().trim_start_matches('/').to_string();
+            // A name a Windows extractor would read as a path (`..\evil`, `C:evil`, `..`) is
+            // not a part of any package: drop the entry before it can be carried into a save.
+            if !part_name_ok(&name) {
+                log::warn!("docx: skipping zip entry with an invalid part name {name:?}");
+                continue;
+            }
             if f.size() > max_part {
                 return Err(DocxError::Limit(format!("part {name} declares {} bytes", f.size())));
             }
@@ -334,6 +369,11 @@ pub fn zip_entries(entries: &[(String, Vec<u8>)]) -> Result<Vec<u8>, DocxError> 
     let opts = zip::write::SimpleFileOptions::default().compression_method(zip::CompressionMethod::Deflated).compression_level(Some(6));
     let stored = zip::write::SimpleFileOptions::default().compression_method(zip::CompressionMethod::Stored);
     for (name, bytes) in entries {
+        // Defense in depth: no writer path should ever produce this, but a hostile part name
+        // must not reach the zip (an extractor on Windows would read it as a path).
+        if !part_name_ok(name) {
+            return Err(DocxError::Limit(format!("invalid part name {name:?}")));
+        }
         // Already-compressed media gain nothing from deflate.
         let lower = name.to_ascii_lowercase();
         let o = if [".png", ".jpg", ".jpeg", ".gif", ".webp"].iter().any(|e| lower.ends_with(e)) { stored } else { opts };
@@ -388,6 +428,56 @@ mod tests {
         assert_eq!(resolve("word", "/word/styles.xml"), "word/styles.xml");
         assert_eq!(resolve("", "word/document.xml"), "word/document.xml");
         assert_eq!(resolve("word", "../../../x"), "x");
+    }
+
+    #[test]
+    fn part_names_are_validated() {
+        for ok in [
+            "word/document.xml",
+            "customXml/item1.xml",
+            "[Content_Types].xml",
+            "word/media/a b.png",
+            "a-b.c",
+            "x/é.png",
+            "a/..b/c",
+            "a/b.xml",
+            // A colon after the first segment is not a drive and not a traversal: Word writes
+            // part names like this, and the writer keeps them relative (`./sig:legacy.bin`).
+            "word/sig:legacy.bin",
+            "sig:legacy.bin",
+        ] {
+            assert!(part_name_ok(ok), "{ok}");
+        }
+        for bad in [
+            "",
+            "/word/document.xml",
+            "..",
+            " .. ",
+            "..\\evil.bin",
+            "..\\x",
+            "word/..\\evil.bin",
+            "word/../evil.bin",
+            "a\\b",
+            "a/..",
+            "a/../b",
+            "a/./b",
+            "a/ .. /b",
+            "a/.. /b",
+            "a//b",
+            "a/",
+            // A drive prefix is absolute on Windows, whether or not more follows.
+            "C:x",
+            "c:evil",
+            "C:/x",
+            "c:\\x",
+            "C:evil",
+            "a:b",
+            "a\u{1}b",
+            "a\u{7F}b",
+        ] {
+            assert!(!part_name_ok(bad), "{bad:?}");
+        }
+        assert!(!part_name_ok(&"a".repeat(4097)));
     }
 
     #[test]

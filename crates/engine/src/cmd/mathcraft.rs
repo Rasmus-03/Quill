@@ -74,6 +74,22 @@ const MAXIMA_STDERR_BYTES: usize = 1024 * 1024;
 /// not make the UI wait forever.
 const MAXIMA_DRAIN_GRACE: std::time::Duration = std::time::Duration::from_secs(2);
 
+/// Batches up to this size are passed as `--batch-string`; larger ones are
+/// written to Maxima's standard input. Linux caps one argv element at
+/// 128 KiB (`MAX_ARG_STRLEN`) and Windows the whole command line at ~32 KiB,
+/// both far below [`MAX_MAXIMA_BATCH_BYTES`]; stdin has no such limit. The
+/// threshold stays well clear of Windows' limit even if argument escaping
+/// doubles it.
+const MAXIMA_ARGV_BATCH_BYTES: usize = 8 * 1024;
+
+/// Address-space cap (KiB) for Maxima on Unix: a careless or hostile
+/// expression (`2^2^40`) must hit a controlled allocation failure instead of
+/// taking the machine down before [`MAXIMA_TIMEOUT_S`] fires. Applied with
+/// `ulimit -v` from `sh`; `pre_exec`/setrlimit would need `unsafe`, which the
+/// workspace forbids. Generous for school calculations.
+#[cfg(all(unix, not(target_arch = "wasm32")))]
+const MAXIMA_MEMORY_LIMIT_KIB: u64 = 2 * 1024 * 1024;
+
 /// Run one Maxima batch string, bounded by [`MAXIMA_TIMEOUT_S`] and
 /// [`MAXIMA_STDOUT_BYTES`]/[`MAXIMA_STDERR_BYTES`].
 /// Returns (stdout, stderr): stderr carries the Maxima error text a
@@ -117,13 +133,53 @@ fn run_maxima(batch_string: &str) -> Result<(String, String), String> {
             if handle.is_finished() { handle.join().unwrap_or_default() } else { Vec::new() }
         }
 
-        let mut child = std::process::Command::new(maxima_bin())
-            .args(["--very-quiet", &format!("--batch-string={batch_string}")])
-            .stdin(std::process::Stdio::null())
+        /// The Maxima process, with a memory cap on Unix. `sh` runs the
+        /// constant script with the binary as `$0` and every argument as
+        /// `$@`: no user text is ever interpreted by the shell, and a
+        /// platform without `ulimit -v` simply ignores the failure and runs.
+        fn maxima_command() -> std::process::Command {
+            #[cfg(unix)]
+            {
+                let mut c = std::process::Command::new("sh");
+                c.arg("-c").arg(format!("ulimit -v {MAXIMA_MEMORY_LIMIT_KIB} 2>/dev/null || true; exec \"$0\" \"$@\"")).arg(maxima_bin());
+                c
+            }
+            #[cfg(not(unix))]
+            {
+                std::process::Command::new(maxima_bin())
+            }
+        }
+
+        // Long batches bypass the command line entirely: E2BIG (Linux at
+        // 128 KiB per argv element, Windows at ~32 KiB total) would
+        // otherwise be mistaken for "Maxima is not installed".
+        let use_stdin = batch_string.len() > MAXIMA_ARGV_BATCH_BYTES;
+        let mut command = maxima_command();
+        command.arg("--very-quiet");
+        if !use_stdin {
+            command.arg(format!("--batch-string={batch_string}"));
+        }
+        let mut child = command
+            .stdin(if use_stdin { std::process::Stdio::piped() } else { std::process::Stdio::null() })
             .stdout(std::process::Stdio::piped())
             .stderr(std::process::Stdio::piped())
             .spawn()
             .map_err(|e| format!("cannot start Maxima ({} missing? install it, e.g. `sudo pacman -S maxima`): {e}", maxima_bin()))?;
+        // Feed the batch on its own thread: the wait loop below must stay
+        // free to enforce the timeout even if Maxima never reads stdin.
+        if use_stdin {
+            let Some(mut stdin) = child.stdin.take() else {
+                let _ = child.kill();
+                let _ = child.wait();
+                return Err("Maxima fejlede".to_string());
+            };
+            let data = batch_string.to_owned();
+            std::thread::spawn(move || {
+                use std::io::Write;
+                let _ = stdin.write_all(data.as_bytes());
+                let _ = stdin.flush();
+            });
+        }
         // Drain both pipes on threads so a flood of output can never
         // deadlock the wait below (pipe buffer full while we only poll).
         let overflow = Arc::new(AtomicBool::new(false));
@@ -171,6 +227,11 @@ fn run_maxima(batch_string: &str) -> Result<(String, String), String> {
             return Err("Maxima produced too much output; simplify the expression".to_string());
         }
         if !status.success() {
+            // 127 is the shell's "command not found": with the Unix `sh`
+            // wrapper Maxima itself can no longer fail at spawn().
+            if status.code() == Some(127) {
+                return Err(format!("cannot start Maxima ({} missing? install it, e.g. `sudo pacman -S maxima`)", maxima_bin()));
+            }
             return Err("Maxima fejlede".to_string());
         }
         Ok((String::from_utf8_lossy(&bytes).into_owned(), String::from_utf8_lossy(&err_bytes).into_owned()))
@@ -178,14 +239,15 @@ fn run_maxima(batch_string: &str) -> Result<(String, String), String> {
 }
 
 /// Longest expression accepted from a document. Maxima is started once per
-/// calculation; this also keeps the `--batch-string` argument far below the
-/// operating system's argument limit.
+/// calculation; this bounds the parse work and the input size (a batch larger
+/// than [`MAXIMA_ARGV_BATCH_BYTES`] is fed over stdin, not argv).
 const MAX_MAXIMA_EXPR_BYTES: usize = 64 * 1024;
 /// Longest definition (a saved Def or `MATHCRAFT_DEFS` entry).
 const MAX_DEFINITION_BYTES: usize = 64 * 1024;
 /// Longest complete Maxima batch: prelude, all definitions and the command
-/// together. It keeps `--batch-string` well inside the operating system's
-/// argument limit even with many large saved definitions.
+/// together. Checked before any process starts; large batches travel over
+/// stdin, so this cap does not depend on the operating system's argument
+/// limit.
 const MAX_MAXIMA_BATCH_BYTES: usize = 4 * 1024 * 1024;
 /// Limits for variable/function names written into Maxima code.
 const MAX_VAR_CHARS: usize = 64;
@@ -315,6 +377,7 @@ const SAFE_MAXIMA_FUNCTIONS: &[&str] = &[
     "acoth",
     "acsc",
     "acsch",
+    "addrow",
     "adjoin",
     "airy_ai",
     "airy_bi",
@@ -328,6 +391,7 @@ const SAFE_MAXIMA_FUNCTIONS: &[&str] = &[
     "atan",
     "atan2",
     "atanh",
+    "augcoefmatrix",
     "bessel_i",
     "bessel_j",
     "bessel_k",
@@ -340,9 +404,12 @@ const SAFE_MAXIMA_FUNCTIONS: &[&str] = &[
     "cardinality",
     "carg",
     "ceiling",
+    "charpoly",
     "chebyshev_t",
     "chebyshev_u",
     "coeff",
+    "coefmatrix",
+    "col",
     "conjugate",
     "cons",
     "cos",
@@ -369,6 +436,7 @@ const SAFE_MAXIMA_FUNCTIONS: &[&str] = &[
     "elliptic_pi",
     "endcons",
     "entier",
+    "equal",
     "erf",
     "erfc",
     "erfi",
@@ -385,6 +453,7 @@ const SAFE_MAXIMA_FUNCTIONS: &[&str] = &[
     "expintegral_shi",
     "expintegral_si",
     "exponentialize",
+    "expt",
     "factor",
     "factorial",
     "find_root",
@@ -432,10 +501,13 @@ const SAFE_MAXIMA_FUNCTIONS: &[&str] = &[
     "log_gamma",
     "logcontract",
     "makelist",
+    "mat_trace",
     "matrix",
+    "matrix_size",
     "max",
     "maybe",
     "min",
+    "minor",
     "mod",
     "multinomial_coeff",
     "multthru",
@@ -473,6 +545,9 @@ const SAFE_MAXIMA_FUNCTIONS: &[&str] = &[
     "reverse",
     "rhs",
     "round",
+    "row",
+    "rowop",
+    "rowswap",
     "sec",
     "sech",
     "setdifference",
@@ -490,6 +565,7 @@ const SAFE_MAXIMA_FUNCTIONS: &[&str] = &[
     "sqrt",
     "struve_h",
     "struve_l",
+    "submatrix",
     "subset",
     "subst",
     "substinpart",
@@ -981,6 +1057,16 @@ pub(crate) fn pick_var(s: &Session, v: &Value, eq: &str) -> Result<VarPick, CmdE
         }
     }
     let probe = expand_pm(eq).into_iter().next().unwrap_or_default();
+    // The probe is interpolated into `listofvars(...)` below, so it must be
+    // gated before the batch starts. All current callers validate the
+    // equation themselves, but the check happens *after* this call (and
+    // math.graf used to pass a display string no one had checked yet), so
+    // nothing unvalidated may reach Maxima from here. On failure fall
+    // through to the default: the caller's own validation then rejects the
+    // expression with the proper user-facing error.
+    if check_maxima_safe_with(&probe, &def_names(s)).is_err() {
+        return Ok(VarPick::One("x".to_string()));
+    }
     if let Ok(r) = batch(&base_prelude(), &defs(s), &format!("listofvars({probe})")) {
         let inner = r.trim().trim_start_matches('[').trim_end_matches(']');
         // Only plain names are candidates. listofvars output is data from a
@@ -1762,13 +1848,31 @@ fn dots_shallow(expr: &str) -> String {
 
 /// Split letter runs into single-letter factors (`ac` → `a*c`),
 /// school-math style. Protected words (functions, `pi`, user definitions)
-/// stay whole. Only for the solve path — elsewhere symbols are kept.
+/// stay whole, including names with `_` or digits (`matrix_size`, `f_1`).
+/// Only for the solve path — elsewhere symbols are kept.
 fn split_idents(expr: &str, protected: &[String]) -> String {
     let mut out = String::with_capacity(expr.len() + 4);
     let mut i = 0;
     let c: Vec<char> = expr.chars().collect();
     while i < c.len() {
         if c[i].is_ascii_alphabetic() {
+            // Check the whole identifier before splitting the leading letter
+            // run: allowlisted functions such as `matrix_size` and
+            // `to_poly_solve` contain `_`/digits, and user definitions may too.
+            let mut end = i;
+            while end < c.len() && (c[end].is_ascii_alphanumeric() || c[end] == '_') {
+                end += 1;
+            }
+            let ident: String = c[i..end].iter().collect();
+            if is_func(&ident) || protected.iter().any(|p| p == &ident) {
+                if ident == "pi" {
+                    out.push_str("%pi");
+                } else {
+                    out.push_str(&ident);
+                }
+                i = end;
+                continue;
+            }
             let mut j = i;
             while j < c.len() && c[j].is_ascii_alphabetic() {
                 j += 1;
@@ -1793,43 +1897,14 @@ fn split_idents(expr: &str, protected: &[String]) -> String {
     }
     out
 }
-/// Known Maxima functions: never split `name(` with a `*`.
+/// Known Maxima names that must stay whole: allowlisted functions, `pi`,
+/// and the legacy names below. Also used by [`insert_mult`].
 fn is_func(name: &str) -> bool {
-    matches!(
-        name,
-        "sin"
-            | "cos"
-            | "tan"
-            | "asin"
-            | "acos"
-            | "atan"
-            | "sinh"
-            | "cosh"
-            | "tanh"
-            | "log"
-            | "ln"
-            | "sqrt"
-            | "exp"
-            | "abs"
-            | "floor"
-            | "ceil"
-            | "round"
-            | "min"
-            | "max"
-            | "diff"
-            | "integrate"
-            | "factor"
-            | "expand"
-            | "solve"
-            | "float"
-            | "ratsimp"
-            | "trigsimp"
-            | "radcan"
-            | "ode2"
-            | "nsolve"
-            | "solvereal"
-            | "pi"
-    )
+    // The allowlist is authoritative (and Maxima names are case-insensitive),
+    // so a newly allowlisted function cannot silently be split here again.
+    // The explicit names are not in that list: `pi` is a constant, while
+    // `ceil`/`nsolve` predate the allowlist and are kept for compatibility.
+    matches!(name, "ceil" | "nsolve" | "pi") || SAFE_MAXIMA_FUNCTIONS.iter().any(|f| f.eq_ignore_ascii_case(name))
 }
 
 fn insert_mult(expr: &str, protected: &[String]) -> String {
@@ -1854,14 +1929,26 @@ fn insert_mult(expr: &str, protected: &[String]) -> String {
                 let is_exp = (nx == 'e' || nx == 'E')
                     && c.get(i + 2).is_some_and(|d| d.is_ascii_digit() || *d == '+' || *d == '-')
                     && head.chars().all(|d| d.is_ascii_digit());
-                if !is_exp {
+                // `atan2(`/`ode2(`/a user's `f1(` end in a digit but are
+                // function calls, not a number times a parenthesised
+                // expression. `2(x+1)` still multiplies.
+                let named_call = nx == '(' && {
+                    let mut j = i;
+                    while j > 0 && (c[j - 1].is_ascii_alphanumeric() || c[j - 1] == '_') {
+                        j -= 1;
+                    }
+                    let ident: String = c[j..=i].iter().collect();
+                    is_func(&ident) || protected.iter().any(|p| p == &ident)
+                };
+                if !is_exp && !named_call {
                     out.push('*');
                 }
             } else if letter_then_paren {
                 // `sin(` and multi-letter names stay; a lone letter
-                // before `(` (and not user-defined) gains `*`.
+                // before `(` (and not user-defined) gains `*`. Scan the
+                // whole identifier, so `bessel_j(` is one name, not `j(`.
                 let mut j = i;
-                while j > 0 && c[j - 1].is_ascii_alphabetic() {
+                while j > 0 && (c[j - 1].is_ascii_alphanumeric() || c[j - 1] == '_') {
                     j -= 1;
                 }
                 let name: String = c[j..=i].iter().collect();
@@ -2953,6 +3040,41 @@ mod tests {
         // Full pipeline (dots zuerst): digit-letter via insert_mult.
         assert_eq!(split_idents(&dots("4ac"), &p), "4*a*c");
     }
+
+    #[test]
+    fn split_idents_keeps_allowlisted_function_names_whole() {
+        let p: Vec<String> = vec![];
+        // Regression: both names used to split into single letters, turning
+        // a refused matrix expression into a silently wrong product.
+        assert_eq!(split_idents("submatrix(matrix([1,2],[3,4]),1,1)", &p), "submatrix(matrix([1,2],[3,4]),1,1)");
+        // Underscored allowlist names are identifiers, not letter runs.
+        assert_eq!(split_idents("matrix_size(matrix([1,2]))", &p), "matrix_size(matrix([1,2]))");
+        assert_eq!(split_idents("to_poly_solve(x=1,x)", &p), "to_poly_solve(x=1,x)");
+        // Existing `x_1` variables stay intact via the letter-run fallback.
+        assert_eq!(split_idents("x_1+ac", &p), "x_1+a*c");
+        assert_eq!(
+            split_idents("addrow(rowswap(rowop(matrix([1,2]),1,1,1),1,1),[3,4])", &p),
+            "addrow(rowswap(rowop(matrix([1,2]),1,1,1),1,1),[3,4])"
+        );
+        // User definitions may contain `_`/digits too.
+        let defs = vec!["my_func".to_string(), "f_1".to_string()];
+        assert_eq!(split_idents("my_func(f_1(xy))", &defs), "my_func(f_1(x*y))");
+        // Ordinary products still split, and `pi` still becomes `%pi`.
+        assert_eq!(split_idents("ac+xy+2pi", &p), "a*c+x*y+2%pi");
+    }
+    #[test]
+    fn dots_keeps_digit_ending_function_names_whole() {
+        // `atan2`/`ode2` are allowlisted, `f1` is user-defined: none may gain
+        // a `*` between the final digit and its argument list.
+        assert_eq!(dots("atan2(1,1)"), "atan2(1,1)");
+        assert_eq!(dots("ode2(y,x)"), "ode2(y,x)");
+        assert_eq!(dots_ctx("f1(2)", &["f1".to_string()]), "f1(2)");
+        // Names ending in `_` + letter are one identifier too.
+        assert_eq!(dots("bessel_j(0,1)"), "bessel_j(0,1)");
+        // Ordinary implicit multiplication is unchanged.
+        assert_eq!(dots("2(x+1)"), "2*(x+1)");
+        assert_eq!(dots("x2(y)"), "x2*(y)");
+    }
     #[test]
     fn dots_keeps_argument_commas() {
         assert_eq!(dots_ctx("diff(y,x)=y", &[]), "diff(y,x)=y");
@@ -3001,8 +3123,10 @@ mod tests {
         assert!(check_maxima_safe("system(\"id\")").is_err());
         assert!(check_maxima_safe("sconcat(\"sy\",\"stem\")").is_err());
         assert!(check_maxima_safe("stringout(\"f\", x)").is_err());
-        // Case-insensitive, %-prefixed too.
+        // Case-insensitive, %-prefixed too (`%system` is the same name to
+        // Maxima's tokenizer after the `%` prefix).
         assert!(check_maxima_safe("SYSTEM(\"id\")").is_err());
+        assert!(check_maxima_safe("%system(\"id\")").is_err());
         // A backslash escapes a name in Maxima (`sy\stem` spells `system`).
         assert!(check_maxima_safe("sy\\stem(\"id\")").is_err());
         // Confirmed blocklist bypasses: apply + concat / ev + concat.
@@ -3019,6 +3143,26 @@ mod tests {
         let defined = vec!["f".to_string()];
         assert!(check_maxima_safe_with("f(x)+sin(x)", &defined).is_ok());
         assert!(check_maxima_safe_with("g(x)", &defined).is_err());
+        // School matrix algebra and calculus helpers (once over-rejected):
+        // all are pure functions of their arguments.
+        for ok in [
+            "submatrix(matrix([1,2],[3,4]), 1, 1)",
+            "row(matrix([1,2],[3,4]), 1)",
+            "col(matrix([1,2],[3,4]), 2)",
+            "matrix_size(matrix([1,2],[3,4]))",
+            "minor(matrix([1,2],[3,4]), 1, 2)",
+            "charpoly(matrix([1,2],[3,4]), x)",
+            "expt(2, 10)",
+            "equal(x, 2)",
+            "addrow(matrix([1,2]), [3,4])",
+            "rowswap(matrix([1,2],[3,4]), 1, 2)",
+            "rowop(matrix([1,2],[3,4]), 1, 2, 2)",
+            "coefmatrix([a*x+b*y, a*x-b*y], [x,y])",
+            "augcoefmatrix([a*x+b*y-c, a*x-b*y-d], [x,y])",
+            "mat_trace(matrix([1,2],[3,4]))",
+        ] {
+            assert!(check_maxima_safe(ok).is_ok(), "{ok} must be allowed");
+        }
     }
 
     #[test]
@@ -3058,7 +3202,7 @@ mod tests {
             format!("ev(concat(\"s\",\"ystem\")(\"touch {path}\"))"),
             format!("system/**/(\"touch {path}\")"),
         ] {
-            for command in ["math.beregn", "math.maxima"] {
+            for command in ["math.beregn", "math.graf", "math.maxima"] {
                 select_all(&mut s, &evil);
                 let err = s.run(command, &json!({})).unwrap_err();
                 assert!(err.to_string().contains("not allowed"), "{command} on {evil}: {err}");
@@ -3095,10 +3239,39 @@ mod tests {
     }
 
     #[test]
+    fn pick_var_gates_the_probe_before_maxima() {
+        // Second layer of the math.graf fix: even if a future caller skips
+        // its own validation, pick_var must not run listofvars() on raw
+        // text. With Maxima installed this also proves no shell side effect.
+        let pwned = std::env::temp_dir().join(format!("wordcraft-maxima-pickvar-regression-{}", std::process::id()));
+        let path = pwned.to_string_lossy();
+        let s = s();
+        let eq = format!("x),system(\"touch {path}\"),(x");
+        match pick_var(&s, &json!({}), &eq).unwrap() {
+            VarPick::One(v) => assert_eq!(v, "x", "a hostile probe must fall back to the default"),
+            VarPick::Many(v) => panic!("a hostile probe must not yield variables: {v:?}"),
+        }
+        assert!(!pwned.exists(), "pick_var executed a shell command");
+    }
+
+    #[test]
     fn hostile_graph_variable_is_rejected_without_maxima() {
         let mut s = s();
         let err = s.run("math.graf", &json!({"spec": "x^2, -5, 5", "var": "x), system(\"touch /tmp/opencode/pwned\")"})).unwrap_err();
         assert!(err.to_string().contains("variable"), "{err}");
+        // The spec itself is interpolated into listofvars() by pick_var
+        // (mathgraf's probe), before the per-curve check in graf(): it must
+        // be rejected there, with no shell side effect, in both the
+        // {"spec"} and the marked-selection path.
+        let pwned = std::env::temp_dir().join(format!("wordcraft-maxima-graph-regression-{}", std::process::id()));
+        let path = pwned.to_string_lossy();
+        let spec = format!("x),system(\"touch {path}\"),(x");
+        let err = s.run("math.graf", &json!({"spec": spec})).unwrap_err();
+        assert!(err.to_string().contains("not allowed"), "{err}");
+        select_all(&mut s, &spec);
+        let err = s.run("math.graf", &json!({})).unwrap_err();
+        assert!(err.to_string().contains("not allowed"), "{err}");
+        assert!(!pwned.exists(), "the graph spec executed a shell command");
     }
 
     #[test]
@@ -3174,6 +3347,55 @@ mod tests {
         select_all(&mut s, "1/0");
         let err = s.run("math.beregn", &json!({})).unwrap_err();
         assert!(err.to_string().contains("Maxima"), "got {err}");
+    }
+
+    #[test]
+    fn batch_over_the_hard_limit_is_a_clear_error() {
+        // Checked before any process starts, so this needs no Maxima.
+        let cmd = "1".repeat(MAX_MAXIMA_BATCH_BYTES);
+        let err = batch(&[], &[], &cmd).unwrap_err();
+        assert!(err.contains("longer than"), "{err}");
+    }
+
+    #[test]
+    #[ignore]
+    fn huge_batch_over_the_arg_limit_runs() {
+        // Two near-limit definitions push the batch past Linux's 128 KiB
+        // MAX_ARG_STRLEN (and far past the Windows command line limit):
+        // the transport must hand it to Maxima via stdin instead of
+        // failing with E2BIG, which used to read as "Maxima is missing".
+        let body = format!("x{}", " + 1".repeat(16_380));
+        let mut s = s();
+        s.math_defs = vec![format!("zz_big_a(x) := {body}"), format!("zz_big_b(x) := {body}")];
+        let d = defs(&s);
+        assert_eq!(d.len(), 2, "definitions must still validate");
+        let total: usize = d.iter().map(|x| x.len() + 1).sum();
+        assert!(total > 128 * 1024 - 200, "the test batch must cross the argv limit: {total} bytes");
+        let r = batch(&base_prelude(), &d, "zz_big_a(1)+zz_big_b(1)").unwrap();
+        assert_eq!(r.trim(), "32762");
+    }
+
+    #[test]
+    #[cfg(unix)]
+    #[ignore]
+    fn memory_hungry_expression_fails_fast() {
+        // ulimit -v must turn `2^2^40` into a quick, contained failure
+        // instead of an OOM kill (or a 30 s hang) of the test machine.
+        // Skip where the shell cannot cap the address space.
+        let capped =
+            std::process::Command::new("sh").args(["-c", &format!("ulimit -v {MAXIMA_MEMORY_LIMIT_KIB}")]).status().is_ok_and(|s| s.success());
+        if !capped {
+            eprintln!("skipping: this shell has no working `ulimit -v`");
+            return;
+        }
+        let started = std::time::Instant::now();
+        let err = batch(&base_prelude(), &[], "2^2^40").unwrap_err();
+        let took = started.elapsed();
+        // The 30 s timeout is only the fallback: a capped Maxima gives up
+        // much earlier. ECL prints the memory error on stdout, so it can
+        // surface as "Maxima gave no result" rather than an error line.
+        assert!(took < std::time::Duration::from_secs(29), "took {took:?}: {err}");
+        assert!(err.to_lowercase().contains("memory") || err.contains("Maxima error") || err.contains("gave no result"), "{err}");
     }
 
     #[test]
@@ -3385,6 +3607,46 @@ mod tests {
         select_all(&mut s, "matrix([1,2],[3,4])");
         run(&mut s, "math.determinant", json!({}));
         assert!(text(&s).contains("-2"));
+    }
+
+    #[test]
+    #[ignore]
+    fn allowlisted_matrix_functions_compute_through_beregn() {
+        // End-to-end regression for split_idents: these used to be split into
+        // single-letter products (e.g. `s*u*b*m*a*t*r*i*x(...)`).
+        let cases = [
+            // Maxima's submatrix(rows..., M, cols...) removes rows/columns.
+            // The exact expression from the report keeps `submatrix` and
+            // `matrix` whole; in Maxima 5.50.0 its argument order removes
+            // both, hence the empty result. The documented order followed by
+            // indexing gives the requested element value 1.
+            ("submatrix(matrix([1,2],[3,4]),1,1)", "matrix([],[])"),
+            ("submatrix(2,matrix([1,2],[3,4]),2)[1,1]", "1"),
+            ("submatrix(1,matrix([1,2],[3,4]),1)", "matrix([4])"),
+            ("addrow(matrix([1,2]),[3,4])", "matrix([1,2],[3,4])"),
+            ("rowswap(matrix([1,2],[3,4]),1,2)", "matrix([3,4],[1,2])"),
+            ("rowop(matrix([1,2],[3,4]),1,2,2)", "matrix([-5,-6],[3,4])"),
+            ("coefmatrix([a*x+b*y,a*x-b*y],[x,y])", "matrix([a,b],[a,-b])"),
+            ("augcoefmatrix([a*x+b*y-c,a*x-b*y-d],[x,y])", "matrix([a,b,-c],[a,-b,-d])"),
+            ("mat_trace(matrix([1,2],[3,4]))", "5"),
+        ];
+        for (input, result) in cases {
+            let mut s = s();
+            select_all(&mut s, input);
+            run(&mut s, "math.beregn", json!({}));
+            assert_eq!(text(&s), format!("{input} = {result}"));
+        }
+    }
+
+    #[test]
+    #[ignore]
+    fn digit_ending_allowlisted_function_computes_through_beregn() {
+        // Regression for insert_mult: `atan2` ends in a digit but is a name,
+        // not a number followed by a parenthesised factor.
+        let mut s = s();
+        select_all(&mut s, "atan2(1,1)");
+        run(&mut s, "math.beregn", json!({}));
+        assert_eq!(text(&s), "atan2(1,1) = π/4");
     }
 
     #[test]

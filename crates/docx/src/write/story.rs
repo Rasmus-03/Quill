@@ -746,8 +746,24 @@ impl Writer<'_> {
                 self.rev_close(w, props);
             }
             InlineObject::Opaque { format, xml, text } => {
-                if format == "docx" && crate::xml::parse(xml.as_bytes()).is_ok() {
-                    w.raw(xml);
+                if format == "docx" {
+                    match crate::xml::parse(xml.as_bytes()) {
+                        Ok(_) => w.raw(xml),
+                        // A kept element this writer can't parse back is written as its text
+                        // when it has some; with no text to fall back on the element would
+                        // vanish, so the save fails instead (see `Writer::opaque_loss`).
+                        Err(e) if text.is_empty() => {
+                            self.opaque_loss.get_or_insert_with(|| format!("cannot write back a kept element ({e}); saving would drop it"));
+                        }
+                        Err(_) => {
+                            self.rev_open(w, props);
+                            w.open("w:r", &[]);
+                            self.rpr(w, props);
+                            w.leaf("w:t", &[("xml:space", "preserve")], text);
+                            w.close("w:r");
+                            self.rev_close(w, props);
+                        }
+                    }
                 } else if !text.is_empty() {
                     self.rev_open(w, props);
                     w.open("w:r", &[]);

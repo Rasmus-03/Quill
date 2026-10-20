@@ -321,14 +321,18 @@ pub fn parse_ns(bytes: &[u8], extra: &[(&'static str, &str)]) -> Result<El, Docx
                     if attr_count > MAX_ATTRS {
                         return Err(DocxError::Limit("too many XML attributes on one element".into()));
                     }
+                    // Cheap raw guard before decoding; the decoded value is checked below
+                    // by the length the writer would emit.
                     if raw_key.len() > MAX_NAME_BYTES || a.value.len() > MAX_ATTR_BYTES {
                         return Err(DocxError::Limit("XML attribute is too large".into()));
                     }
-                    attr_bytes = attr_bytes.saturating_add(a.value.len());
-                    if attr_bytes > MAX_ATTR_TOTAL {
-                        return Err(DocxError::Limit("XML attributes are too large".into()));
-                    }
                     if raw_key == b"xmlns" || raw_key.starts_with(b"xmlns:") {
+                        // Namespace declarations are resolved away and never written back,
+                        // so their raw size is what matters.
+                        attr_bytes = attr_bytes.saturating_add(a.value.len());
+                        if attr_bytes > MAX_ATTR_TOTAL {
+                            return Err(DocxError::Limit("XML attributes are too large".into()));
+                        }
                         continue;
                     }
                     let (ares, alocal) = r.resolver_mut().resolve_attribute(key);
@@ -363,6 +367,17 @@ pub fn parse_ns(bytes: &[u8], extra: &[(&'static str, &str)]) -> Result<El, Docx
                     } else {
                         val
                     };
+                    // Count the escaped form the writer emits (quotes, `<`, `&`, ...): the
+                    // reader and the writer must agree, or a document the reader accepts can
+                    // be saved into XML it refuses to open again.
+                    let escaped = esc_len(&val);
+                    if escaped > MAX_ATTR_BYTES {
+                        return Err(DocxError::Limit("XML attribute is too large".into()));
+                    }
+                    attr_bytes = attr_bytes.saturating_add(escaped);
+                    if attr_bytes > MAX_ATTR_TOTAL {
+                        return Err(DocxError::Limit("XML attributes are too large".into()));
+                    }
                     el.attrs.push((aname, val));
                 }
                 if matches!(ev, Event::Start(_)) {
@@ -380,12 +395,12 @@ pub fn parse_ns(bytes: &[u8], extra: &[(&'static str, &str)]) -> Result<El, Docx
                 }
             }
             Event::Text(t) => {
-                // `BytesText` derefs to its escaped bytes, so the length is
-                // known before decoding (decoded text never grows).
+                // The text is kept decoded but written back escaped (`esc`),
+                // which can grow it to six bytes per character. Count the
+                // escaped length so that every part the reader accepts can be
+                // written out again (a CDATA section of `<` used to read fine
+                // and then fail to reopen after saving).
                 if stack.last().is_some() {
-                    if t.len() > MAX_TEXT_BYTES.saturating_sub(text_bytes) {
-                        return Err(DocxError::Limit("too much XML text".into()));
-                    }
                     let s = t.decode().map_err(|e| DocxError::Xml(e.to_string()))?;
                     if let Some(top) = stack.last_mut() {
                         add_text(top, &s, &mut text_bytes)?;
@@ -394,9 +409,6 @@ pub fn parse_ns(bytes: &[u8], extra: &[(&'static str, &str)]) -> Result<El, Docx
             }
             Event::CData(t) => {
                 if stack.last().is_some() {
-                    if t.len() > MAX_TEXT_BYTES.saturating_sub(text_bytes) {
-                        return Err(DocxError::Limit("too much XML text".into()));
-                    }
                     let s = String::from_utf8_lossy(&t).into_owned();
                     if let Some(top) = stack.last_mut() {
                         add_text(top, &s, &mut text_bytes)?;
@@ -432,9 +444,11 @@ pub fn parse_ns(bytes: &[u8], extra: &[(&'static str, &str)]) -> Result<El, Docx
     root.ok_or_else(|| DocxError::Xml("no root element".into()))
 }
 
-/// Append text while keeping the part's total text inside [`MAX_TEXT_BYTES`].
+/// Append text while keeping the part's total *escaped* text inside [`MAX_TEXT_BYTES`]. The
+/// writer escapes what the reader keeps, so the escaped length is what a part may hold.
 fn add_text(top: &mut El, s: &str, total: &mut usize) -> Result<(), DocxError> {
-    *total = total.checked_add(s.len()).ok_or_else(|| DocxError::Limit("too much XML text".into()))?;
+    let escaped = esc_len(s);
+    *total = total.checked_add(escaped).ok_or_else(|| DocxError::Limit("too much XML text".into()))?;
     if *total > MAX_TEXT_BYTES {
         return Err(DocxError::Limit("too much XML text".into()));
     }
@@ -484,6 +498,22 @@ pub fn esc(s: &str) -> String {
         }
     }
     o
+}
+
+/// The length [`esc`] would produce for `s`, without building it. Exact, so the reader and the
+/// writer agree on what fits: a part may hold as much *escaped* text as [`MAX_TEXT_BYTES`].
+fn esc_len(s: &str) -> usize {
+    s.chars()
+        .map(|c| match c {
+            '&' => 5,
+            '<' | '>' => 4,
+            '"' | '\'' => 6,
+            '\t' => 4,
+            '\n' | '\r' => 5,
+            c if xml_char_ok(c) => c.len_utf8(),
+            _ => 0,
+        })
+        .sum()
 }
 
 /// A string-building XML writer.
@@ -649,5 +679,43 @@ mod tests {
     #[test]
     fn escapes() {
         assert_eq!(esc("a<b&\"\u{1}"), "a&lt;b&amp;&quot;");
+    }
+
+    #[test]
+    fn escaped_text_length_bounds_what_can_be_written() {
+        // The length helper is exact: it matches the escaped output.
+        let sample = "a<&>\"'\t\n\r\u{1}\u{7F}é😀";
+        assert_eq!(esc_len(sample), esc(sample).len());
+        assert_eq!(esc_len(""), 0);
+        // Text whose escaped form is exactly the limit is kept — the writer
+        // then produces exactly `MAX_TEXT_BYTES` bytes of XML text.
+        let at_cap = "<".repeat(MAX_TEXT_BYTES / 4);
+        assert_eq!(esc_len(&at_cap), MAX_TEXT_BYTES);
+        let mut el = El { name: "w:t".into(), attrs: Vec::new(), kids: Vec::new() };
+        let mut total = 0;
+        add_text(&mut el, &at_cap, &mut total).unwrap();
+        assert_eq!(total, MAX_TEXT_BYTES);
+        // One escapable byte more is refused, so nothing readable can turn
+        // into a part the writer cannot write back.
+        assert!(matches!(add_text(&mut el, "<", &mut total), Err(DocxError::Limit(_))));
+        // A CDATA section of `<` counts its escaped length, not its raw one.
+        let cdata = format!("<a><b><![CDATA[{}]]></b></a>", "<".repeat(100));
+        let parsed = parse(cdata.as_bytes()).unwrap();
+        let b = parsed.child("b").unwrap();
+        assert_eq!(b.text(), "<".repeat(100));
+    }
+
+    #[test]
+    fn attribute_values_are_bounded_by_their_escaped_length() {
+        // A raw value can be short and still escape past the cap: `'` costs six bytes.
+        let over = "'".repeat(MAX_ATTR_BYTES / 4);
+        assert!(matches!(parse(format!("<a x=\"{over}\"/>").as_bytes()), Err(DocxError::Limit(_))));
+        // Under the cap in escaped form the value is kept, and the writer's output parses
+        // again with the same value.
+        let ok = "'".repeat(1_000);
+        let el = parse(format!("<a x=\"{ok}\"/>").as_bytes()).unwrap();
+        assert_eq!(el.attr("x"), Some(ok.as_str()));
+        let again = parse(el.to_xml().as_bytes()).unwrap();
+        assert_eq!(again.attr("x"), Some(ok.as_str()));
     }
 }

@@ -6,6 +6,35 @@ use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicU64, Ordering};
 
 pub(super) fn write(path: &Path, bytes: &[u8]) -> io::Result<()> {
+    // A destination that exists and is neither a regular file nor a symbolic link (a FIFO, a
+    // device, a socket) is written through, the way `fs::write` always wrote it: replacing it
+    // with a regular file would change what the path is (a pipe some process is reading, a
+    // device). Only regular files, symlinks and new destinations get the atomic replacement.
+    if let Ok(meta) = fs::symlink_metadata(path)
+        && !meta.file_type().is_file()
+        && !meta.file_type().is_symlink()
+    {
+        // Open first and check that the opened object is the special file we inspected: if
+        // the path was swapped for a symlink or a regular file between the check and the
+        // open, the save is refused instead of following it.
+        let mut file = OpenOptions::new().write(true).open(path)?;
+        let opened = file.metadata()?;
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::MetadataExt;
+            if opened.dev() != meta.dev() || opened.ino() != meta.ino() {
+                return Err(io::Error::other("save destination changed while opening it"));
+            }
+        }
+        #[cfg(not(unix))]
+        {
+            if opened.file_type().is_file() {
+                return Err(io::Error::other("save destination changed while opening it"));
+            }
+        }
+        file.write_all(bytes)?;
+        return Ok(());
+    }
     // The destination is replaced, never followed. If it is a symbolic link,
     // the link itself is replaced and its target is left untouched: following
     // the link here would also let a link swapped after the automation

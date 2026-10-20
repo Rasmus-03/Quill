@@ -9,6 +9,7 @@ use std::io::{BufRead, BufReader, Read, Write};
 use std::net::{TcpListener, TcpStream};
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
+use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::mpsc::{Receiver, Sender, channel};
 use std::time::{Duration, Instant};
 
@@ -20,6 +21,11 @@ const MAX_LINE: usize = 1 << 20;
 
 /// A connection that sends no authorised request in this time is closed.
 const FIRST_REQUEST: Duration = Duration::from_secs(30);
+
+/// Serving threads one control server runs at once. The channel is loopback-only and one client
+/// at a time is the norm, so a burst of connections is refused instead of spawning threads
+/// without bound.
+const MAX_CONNECTIONS: usize = 64;
 
 /// The key file of a running control server; [`KeyFile::remove`] it when the window closes.
 pub struct KeyFile(PathBuf);
@@ -103,13 +109,50 @@ fn keys_match(given: &str, key: &str) -> bool {
     !b.is_empty() && a.len() == b.len() && a.iter().zip(b).fold(0u8, |acc, (x, y)| acc | (x ^ y)) == 0
 }
 
+/// One connection's slot in its server's connection budget; the slot is released when the
+/// serving thread ends, however it ends.
+struct ConnGuard(Arc<AtomicUsize>);
+
+impl ConnGuard {
+    /// Take a slot, or `None` when the server is at capacity.
+    fn take(live: &Arc<AtomicUsize>, max: usize) -> Option<Self> {
+        live.fetch_update(Ordering::SeqCst, Ordering::SeqCst, |n| (n < max).then_some(n + 1)).ok()?;
+        Some(ConnGuard(live.clone()))
+    }
+}
+
+impl Drop for ConnGuard {
+    fn drop(&mut self) {
+        self.0.fetch_sub(1, Ordering::SeqCst);
+    }
+}
+
 fn serve_on(listener: TcpListener, ctx: egui::Context, key: String, first: Duration) -> Receiver<ControlRequest> {
+    serve_limited(listener, ctx, key, first, MAX_CONNECTIONS)
+}
+
+/// `serve_on` with an explicit connection cap, so tests can exercise the limit without holding
+/// [`MAX_CONNECTIONS`] sockets.
+fn serve_limited(listener: TcpListener, ctx: egui::Context, key: String, first: Duration, max: usize) -> Receiver<ControlRequest> {
     let (tx, rx) = channel::<ControlRequest>();
     let key: Arc<str> = key.into();
+    let live = Arc::new(AtomicUsize::new(0));
     std::thread::spawn(move || {
         for stream in listener.incoming().flatten() {
+            let Some(guard) = ConnGuard::take(&live, max) else {
+                // Answer and close rather than queue the connection: the client learns why.
+                let mut refused = stream;
+                let _ = writeln!(refused, "{}", json!({"ok": false, "error": "too many connections"}));
+                continue;
+            };
             let (tx, ctx, key) = (tx.clone(), ctx.clone(), key.clone());
-            std::thread::spawn(move || serve(stream, tx, ctx, &key, first));
+            let spawned = std::thread::Builder::new().name("wordcraft-control".into()).spawn(move || {
+                let _guard = guard;
+                serve(stream, tx, ctx, &key, first);
+            });
+            if let Err(e) = spawned {
+                log::error!("control server could not start a connection thread: {e}");
+            }
         }
     });
     rx
@@ -397,6 +440,52 @@ mod tests {
         busy.send(r#"{"id":2,"method":"document.inspect"}"#);
         answer(&rx);
         assert_eq!(busy.recv()["ok"], true);
+    }
+
+    #[test]
+    fn connections_past_the_cap_are_refused_and_a_freed_slot_is_served() {
+        const CAP: usize = 4;
+        let listener = TcpListener::bind(("127.0.0.1", 0)).unwrap();
+        let port = listener.local_addr().unwrap().port();
+        let _rx = serve_limited(listener, egui::Context::default(), KEY.to_string(), Duration::from_secs(120), CAP);
+        let auth = format!(r#"{{"id":1,"method":"auth","key":"{KEY}"}}"#);
+        let mut held = Vec::new();
+        let mut refused = 0;
+        for _ in 0..CAP + 3 {
+            let mut c = Conn::open(port);
+            // The server writes the refusal before the client sends anything; an accepted
+            // connection stays silent. One short read tells the two apart without racing the
+            // refusal's close (which would turn its line into a reset). A silent read is
+            // classified by the auth answer: only `ok: true` proves the connection was admitted
+            // (a refusal that arrived late, or a socket already closed, does not).
+            c.1.set_read_timeout(Some(Duration::from_millis(500))).unwrap();
+            let first = c.recv();
+            if !first.is_null() {
+                assert_eq!(first["error"], "too many connections", "{first}");
+                refused += 1;
+                continue;
+            }
+            c.1.set_read_timeout(Some(Duration::from_secs(5))).unwrap();
+            if c.call(&auth)["ok"] == json!(true) {
+                held.push(c);
+            } else {
+                refused += 1;
+            }
+        }
+        assert_eq!(held.len(), CAP, "the cap admits exactly {CAP} live connections");
+        assert_eq!(refused, 3, "connections past the cap are refused");
+        // Give one slot back: the accept loop is still alive and serves the next client.
+        held.pop();
+        let mut r = json!(null);
+        for _ in 0..50 {
+            let mut c = Conn::open(port);
+            r = c.call(&auth);
+            if r["ok"] == json!(true) {
+                break;
+            }
+            std::thread::sleep(Duration::from_millis(20));
+        }
+        assert_eq!(r["ok"], json!(true), "a freed slot should serve a client: {r}");
     }
 
     #[test]

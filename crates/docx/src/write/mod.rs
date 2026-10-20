@@ -13,7 +13,7 @@ use wordcraft_doc::numbering::{Level, LevelSuffix};
 use wordcraft_doc::styles::{Style, StyleKind};
 use wordcraft_doc::{Blocks, Document, PartKind};
 
-use crate::package::{MAX_VBA_RELATED, VBA_PROJECT_PART, VBA_RELATED, rt, zip_entries};
+use crate::package::{MAX_VBA_RELATED, VBA_PROJECT_PART, VBA_RELATED, part_name_ok, rt, zip_entries};
 use crate::xml::{self, W};
 use crate::{DocxError, Flavor};
 
@@ -106,6 +106,8 @@ pub(crate) struct Writer<'d> {
     /// Linked text boxes: part id → (`wps:txbx`/`wps:linkedTxbx` id, seq; 0 for the box holding
     /// the text).
     txbx_links: HashMap<u32, (u32, u32)>,
+    /// Kept markup that can't be written back: saving fails instead of dropping it silently.
+    opaque_loss: Option<String>,
 }
 
 const CT_WML: &str = "application/vnd.openxmlformats-officedocument.wordprocessingml.";
@@ -164,6 +166,7 @@ pub(crate) fn write_parts(doc: &Document, flavor: Flavor) -> Result<Vec<(String,
             .enumerate()
             .flat_map(|(n, c)| c.iter().enumerate().map(move |(seq, id)| (*id, (n as u32 + 1, seq as u32))))
             .collect(),
+        opaque_loss: None,
     };
     wr.assign_media();
     wr.embeds.reserve_media(wr.media_files.values());
@@ -401,6 +404,11 @@ pub(crate) fn write_parts(doc: &Document, flavor: Flavor) -> Result<Vec<(String,
                 let mut f = line.split('\t');
                 let (Some(kind), Some(path), Some(ct), None) = (f.next(), f.next(), f.next(), f.next()) else { continue };
                 let Some(target) = path.strip_prefix("word/").filter(|t| !t.is_empty()) else { continue };
+                // A hostile manifest may name any path; only valid OPC names are written.
+                if !part_name_ok(path) {
+                    log::warn!("docx: skipping VBA-related part with an invalid name {path:?}");
+                    continue;
+                }
                 let Some(bytes) = doc.passthrough.get(path) else { continue };
                 let ours = written.iter().any(|w| w.eq_ignore_ascii_case(path));
                 // Never shadow a part this writer produces (a hostile relationship may point at one).
@@ -482,13 +490,20 @@ pub(crate) fn write_parts(doc: &Document, flavor: Flavor) -> Result<Vec<(String,
     }
     w.close("Types");
     entries.insert(0, ("[Content_Types].xml".into(), w.into_bytes()));
+    // Kept markup that couldn't be parsed back is a save error, never a silent drop.
+    if let Some(e) = wr.opaque_loss {
+        return Err(DocxError::Xml(e));
+    }
     Ok(entries)
 }
 
 fn push_part(entries: &mut Vec<(String, Vec<u8>)>, overrides: &mut Vec<(String, String)>, path: &str, bytes: Vec<u8>, ct: &str, rels: PartRels) {
     if !rels.is_empty() {
+        // A part at the package root (`store.xml`) keeps its rels in `_rels/store.xml.rels`;
+        // only a part inside a folder puts them in the folder's `_rels` (see `Package::rels`).
         let (dir, file) = path.rsplit_once('/').unwrap_or(("", path));
-        entries.push((format!("{dir}/_rels/{file}.rels"), rels.xml()));
+        let rels_path = if dir.is_empty() { format!("_rels/{file}.rels") } else { format!("{dir}/_rels/{file}.rels") };
+        entries.push((rels_path, rels.xml()));
     }
     entries.push((path.to_string(), bytes));
     overrides.push((format!("/{path}"), ct.to_string()));

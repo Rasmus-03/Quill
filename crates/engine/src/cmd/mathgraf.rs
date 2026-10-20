@@ -5,7 +5,10 @@
 
 use serde_json::{Value, json};
 
-use super::mathcraft::{Target, VarPick, ask_var, base_prelude, batch, def_names, defs, dots_ctx, err, math_input, pick_var, split_top, unbigfloat};
+use super::mathcraft::{
+    Target, VarPick, ask_var, base_prelude, batch, check_maxima_safe_with, def_names, defs, dots_ctx, err, math_input, pick_var, split_top,
+    unbigfloat,
+};
 
 use super::sel_result;
 use crate::{CmdError, CmdResult, CommandSpec, Selection, Session};
@@ -175,6 +178,10 @@ fn build_spec(s: &mut Session, v: &Value, raw: &str, from_param: bool) -> Result
         displays.push(e);
     }
     let probe = displays.join("+");
+    // `pick_var` runs `listofvars(probe)` before `graf` checks each curve:
+    // gate the probe here so a hostile spec (`x),system("…"),(x`) is
+    // rejected before any Maxima process starts, not caught inside it.
+    check_maxima_safe_with(&probe, &def_names(s))?;
     let var = match pick_var(s, v, &probe)? {
         VarPick::One(var) => var,
         VarPick::Many(vars) => {

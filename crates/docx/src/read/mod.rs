@@ -25,7 +25,9 @@ use wordcraft_doc::styles::{Style, StyleKind, StyleSheet, TableStyleParts};
 use wordcraft_doc::{Block, Blocks, Comment, Document, InlineObject, Paragraph, PartKind, Revision, RevisionKind, para_block};
 
 use crate::DocxError;
-use crate::package::{ContentTypes, EMBEDDED_PARTS, EmbeddedManifest, MAX_VBA_RELATED, Package, Rels, VBA_PROJECT_PART, VBA_RELATED, rel_is, rt};
+use crate::package::{
+    ContentTypes, EMBEDDED_PARTS, EmbeddedManifest, MAX_VBA_RELATED, Package, Rels, VBA_PROJECT_PART, VBA_RELATED, part_name_ok, rel_is, rt,
+};
 use crate::units::{flag, int, on_off, tw, u32_of};
 use crate::xml::El;
 pub(crate) use props::PropCtx;
@@ -531,6 +533,7 @@ impl Reader<'_> {
             let path = path.as_str();
             let ct = types.of(path).unwrap_or("application/octet-stream");
             let usable = path.strip_prefix("word/").is_some_and(|t| !t.is_empty())
+                && part_name_ok(path)
                 && !path.to_ascii_lowercase().ends_with(".rels")
                 && !path.eq_ignore_ascii_case(project)
                 && !path.eq_ignore_ascii_case(VBA_PROJECT_PART)

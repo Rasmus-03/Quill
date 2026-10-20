@@ -14,7 +14,8 @@ use wordcraft_doc::para::Float;
 
 use super::PartRels;
 use crate::package::{
-    CUSTOM_XML_ROOTS, EMBEDDED_PARTS, EmbeddedManifest, MAX_EMBEDDED_PARTS, MAX_EMBEDDED_RELS, VBA_PROJECT_PART, VBA_RELATED, rel_is, relative, rt,
+    CUSTOM_XML_ROOTS, EMBEDDED_PARTS, EmbeddedManifest, MAX_EMBEDDED_PARTS, MAX_EMBEDDED_RELS, VBA_PROJECT_PART, VBA_RELATED, part_name_ok, rel_is,
+    relative, rt,
 };
 use crate::units::{MAX_LEN_PT, emu, int};
 use crate::xml::{self, El, MAX_DEPTH};
@@ -117,13 +118,18 @@ impl<'d> EmbedWriter<'d> {
     }
 
     /// A free part name for (a copy of) `orig`: `orig` itself if free, else `stem_N.ext`.
-    fn alloc(&mut self, orig: &str) -> String {
+    /// `None` when `orig` isn't a valid part name (hostile input that must not be written).
+    fn alloc(&mut self, orig: &str) -> Option<String> {
+        if !part_name_ok(orig) {
+            log::warn!("docx: refusing to write the invalid part name {orig:?}");
+            return None;
+        }
         // Suffixes cannot escape reserved directories or a .rels extension. Such a kept
         // part needs a different base name, otherwise every candidate would be reserved.
         let orig = if Self::reserved(&orig.to_ascii_lowercase()) { "word/embeddings/part.xml" } else { orig };
         let lower = orig.to_ascii_lowercase();
         if !Self::reserved(&lower) && self.taken.insert(lower) {
-            return orig.to_string();
+            return Some(orig.to_string());
         }
         let file_at = orig.rfind('/').map_or(0, |i| i + 1);
         let (stem, ext) = match orig.rfind('.').filter(|i| *i > file_at) {
@@ -136,7 +142,7 @@ impl<'d> EmbedWriter<'d> {
             let name = format!("{stem}_{n}{ext}");
             let lower = name.to_ascii_lowercase();
             if !Self::reserved(&lower) && self.taken.insert(lower) {
-                return name;
+                return Some(name);
             }
         }
     }
@@ -223,7 +229,7 @@ impl<'d> EmbedWriter<'d> {
         if !self.available(root) {
             return None;
         }
-        let name = self.alloc(root);
+        let name = self.alloc(root)?;
         memo.insert(root.to_string(), name.clone());
         let mut todo = vec![root.to_string()];
         while let Some(orig) = todo.pop() {
@@ -238,7 +244,7 @@ impl<'d> EmbedWriter<'d> {
                 let target = match memo.get(&r.target) {
                     Some(t) => t.clone(),
                     None if self.available(&r.target) => {
-                        let t = self.alloc(&r.target);
+                        let Some(t) = self.alloc(&r.target) else { continue };
                         memo.insert(r.target.clone(), t.clone());
                         todo.push(r.target.clone());
                         t

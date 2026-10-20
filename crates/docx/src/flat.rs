@@ -15,7 +15,7 @@ use quick_xml::name::ResolveResult;
 use quick_xml::reader::NsReader;
 use wordcraft_doc::Document;
 
-use crate::package::{ContentTypes, MAX_ENTRIES, MAX_PART, MAX_TOTAL, Package};
+use crate::package::{ContentTypes, MAX_ENTRIES, MAX_PART, MAX_TOTAL, Package, part_name_ok};
 use crate::xml::{self, MAX_DEPTH, MAX_ELEMENTS, W, esc};
 use crate::{DocxError, Flavor};
 
@@ -95,15 +95,28 @@ struct Part {
 /// Longest base64 text of one part (the size limit, encoded; whitespace isn't kept).
 const MAX_BASE64: u64 = (MAX_PART / 3 + 1) * 4;
 
+/// The three package wrapper levels above the inline document: `pkg:package`, `pkg:part` and
+/// the part's `pkg:xmlData`/`pkg:binaryData`.
+const PKG_WRAPPERS: usize = 3;
+
 /// Unpack a Flat OPC file into its parts, with a `[Content_Types].xml` made from the parts'
 /// content types (unless the file carries one).
 pub(crate) fn unpack(bytes: &[u8]) -> Result<Package, DocxError> {
+    unpack_limited(bytes, MAX_ELEMENTS)
+}
+
+/// [`unpack`] with the element cap as a parameter (tests exercise it with a small one).
+fn unpack_limited(bytes: &[u8], max_elements: usize) -> Result<Package, DocxError> {
     let text = utf8_text(bytes);
     let src: &[u8] = text.as_ref();
     let mut r = NsReader::from_reader(src);
     r.config_mut().check_end_names = true;
     let mut depth = 0usize;
+    // Elements of the part being read, reset for each part, so a package of many small parts
+    // is not refused as if its parts were one (the cap matches `xml::parse`'s). Elements above
+    // the parts have their own count.
     let mut elements = 0usize;
+    let mut pkg_elements = 0usize;
     let mut files: BTreeMap<String, Vec<u8>> = BTreeMap::new();
     let mut types: Vec<(String, String)> = Vec::new();
     let mut total: u64 = 0;
@@ -119,21 +132,36 @@ pub(crate) fn unpack(bytes: &[u8]) -> Result<Package, DocxError> {
             Event::Start(ref e) | Event::Empty(ref e) => {
                 let empty = matches!(ev, Event::Empty(_));
                 depth += 1;
-                elements += 1;
-                if elements > MAX_ELEMENTS {
-                    return Err(DocxError::Limit("too many XML elements".into()));
+                let local = e.local_name().as_ref().to_vec();
+                // A `pkg:part` starts a fresh element budget for its own markup; the wrapper is
+                // package structure, not part content (see `PKG_WRAPPERS`).
+                let part_start = depth == 2 && in_pkg && local == b"part";
+                if depth == 1 {
+                    pkg_elements += 1;
+                    if pkg_elements > max_elements {
+                        return Err(DocxError::Limit("too many XML elements".into()));
+                    }
+                } else if part_start {
+                    elements = 0;
+                } else if depth == PKG_WRAPPERS && in_pkg && (local == b"xmlData" || local == b"binaryData") {
+                    // The wrapper carrying the part's markup is package structure; only the
+                    // part's own elements count against its budget.
+                } else {
+                    elements += 1;
+                    if elements > max_elements {
+                        return Err(DocxError::Limit("too many XML elements".into()));
+                    }
                 }
-                // The inline document is three wrapper levels down, so allow
-                // the same depth as xml::parse plus the package elements.
-                if depth > MAX_DEPTH + 4 {
+                // The inline document is `PKG_WRAPPERS` levels down, so allow
+                // the same depth as xml::parse plus the package wrappers.
+                if depth > MAX_DEPTH + PKG_WRAPPERS {
                     return Err(DocxError::Limit("XML nesting too deep".into()));
                 }
-                let local = e.local_name().as_ref().to_vec();
                 match depth {
                     1 if !(in_pkg && local == b"package") => {
                         return Err(DocxError::NotWord("the root element isn't a Flat OPC pkg:package".into()));
                     }
-                    2 if in_pkg && local == b"part" => {
+                    2 if part_start => {
                         if files.len() + usize::from(part.is_some()) >= MAX_ENTRIES {
                             return Err(DocxError::Limit(format!("more than {MAX_ENTRIES} parts")));
                         }
@@ -251,6 +279,9 @@ fn store(
     if name.is_empty() || files.contains_key(name) {
         return Ok(());
     }
+    if !part_name_ok(name) {
+        return Err(DocxError::Limit(format!("invalid part name {name:?}")));
+    }
     let len = bytes.len() as u64;
     if len > MAX_PART {
         return Err(DocxError::Limit(format!("part {name} is larger than the size limit")));
@@ -340,6 +371,13 @@ fn root_tag_start(frag: &[u8]) -> Option<usize> {
 /// Write `doc` as a Word XML Document (Flat OPC).
 pub fn write(doc: &Document) -> Result<Vec<u8>, DocxError> {
     let parts = crate::write::write_parts(doc, Flavor::Document)?;
+    write_flat(&parts)
+}
+
+/// Write package parts as a Word XML Document (Flat OPC). Part names are checked again here: a
+/// name an extractor would read as a path outside the package must not be written even if a
+/// package writer should ever let one through.
+fn write_flat(parts: &[(String, Vec<u8>)]) -> Result<Vec<u8>, DocxError> {
     let types = parts
         .iter()
         .find(|(n, _)| n == "[Content_Types].xml")
@@ -347,9 +385,12 @@ pub fn write(doc: &Document) -> Result<Vec<u8>, DocxError> {
         .unwrap_or_default();
     let mut s = String::from("<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\n<?mso-application progid=\"Word.Document\"?>\n");
     s.push_str(&format!("<pkg:package xmlns:pkg=\"{PKG_NS}\">"));
-    for (name, bytes) in &parts {
+    for (name, bytes) in parts {
         if name == "[Content_Types].xml" {
             continue;
+        }
+        if !part_name_ok(name) {
+            return Err(DocxError::Limit(format!("invalid part name {name:?}")));
         }
         let ct = types.of(name).unwrap_or("application/octet-stream");
         s.push_str(&format!("<pkg:part pkg:name=\"/{}\" pkg:contentType=\"{}\"", esc(name), esc(ct)));
@@ -420,5 +461,48 @@ mod tests {
         let own = b"<w:document xmlns:w=\"urn:own\"/>";
         assert_eq!(with_scope(own, &scope), own.to_vec());
         assert_eq!(with_scope(b"no element", &scope), b"no element".to_vec());
+    }
+
+    fn package_of(parts: &str) -> Vec<u8> {
+        format!("<pkg:package xmlns:pkg=\"{PKG_NS}\">{parts}</pkg:package>").into_bytes()
+    }
+
+    fn xml_part(name: &str, body: &str) -> String {
+        format!("<pkg:part pkg:name=\"/{name}\" pkg:contentType=\"application/xml\"><pkg:xmlData>{body}</pkg:xmlData></pkg:part>")
+    }
+
+    #[test]
+    fn the_element_cap_is_per_part() {
+        // The part's own markup is `<a><b/></a>`: only `a` and `b` count; the
+        // `pkg:xmlData` wrapper is package structure, not part content.
+        let pkg = package_of(&format!("{}{}", xml_part("a.xml", "<a><b/></a>"), xml_part("b.xml", "<a><b/></a>")));
+        assert!(unpack_limited(&pkg, 2).is_ok(), "each part may use the whole budget");
+        assert!(matches!(unpack_limited(&pkg, 1), Err(DocxError::Limit(_))), "the wrapper does not spend part budget");
+        let over = package_of(&xml_part("a.xml", "<a><b/><c/></a>"));
+        assert!(matches!(unpack_limited(&over, 2), Err(DocxError::Limit(_))), "one part over the cap is refused");
+        // Sanity: with the real cap, both parts unpack as usual.
+        let p = unpack_limited(&pkg, MAX_ELEMENTS).unwrap();
+        assert_eq!(p.get("a.xml"), Some(b"<a><b/></a>".as_slice()));
+        assert_eq!(p.get("b.xml"), Some(b"<a><b/></a>".as_slice()));
+    }
+
+    #[test]
+    fn inline_documents_may_nest_as_in_xml_parse() {
+        let nested = |n: usize| format!("{}x{}", "<a>".repeat(n), "</a>".repeat(n));
+        // The inline document starts `PKG_WRAPPERS` levels down, so n open elements reach
+        // depth n + 4: `MAX_DEPTH` of them are exactly what `xml::parse` allows.
+        assert!(unpack_limited(&package_of(&xml_part("deep.xml", &nested(MAX_DEPTH))), MAX_ELEMENTS).is_ok());
+        assert!(matches!(unpack_limited(&package_of(&xml_part("deep.xml", &nested(MAX_DEPTH + 1))), MAX_ELEMENTS), Err(DocxError::Limit(_))));
+    }
+
+    #[test]
+    fn a_flat_export_refuses_an_invalid_part_name() {
+        for bad in ["C:evil.bin", "/word/document.xml", "word/../evil.bin", r"word/..\evil.bin", "a\u{7F}b"] {
+            let parts = vec![(bad.to_string(), b"payload".to_vec())];
+            assert!(matches!(write_flat(&parts), Err(DocxError::Limit(_))), "written: {bad:?}");
+        }
+        // An ordinary part still exports, root level included.
+        let ok = write_flat(&[("store.xml".to_string(), b"<store/>".to_vec())]).unwrap();
+        assert!(String::from_utf8(ok).unwrap().contains(r#"pkg:name="/store.xml""#));
     }
 }

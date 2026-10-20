@@ -15,7 +15,7 @@ use wordcraft_doc::graphic::{Embedded, EmbeddedRef};
 
 use super::Reader;
 use crate::package::{
-    CUSTOM_XML_ROOTS, ContentTypes, MAX_EMBEDDED_PARTS, MAX_EMBEDDED_RELS, MAX_EMBEDDED_XML, Rel, Rels, manifest_field_ok, rel_is, rt,
+    CUSTOM_XML_ROOTS, ContentTypes, MAX_EMBEDDED_PARTS, MAX_EMBEDDED_RELS, MAX_EMBEDDED_XML, Rel, Rels, manifest_field_ok, part_name_ok, rel_is, rt,
 };
 use crate::xml::{El, MAX_DEPTH, NAMESPACES, esc};
 
@@ -110,7 +110,12 @@ impl Reader<'_> {
     /// Keep one part's bytes and content type (not its relationships).
     fn keep_part(&mut self, part: &str) -> bool {
         let lower = part.to_ascii_lowercase();
-        if !manifest_field_ok(part) || lower.ends_with(".rels") || lower == "[content_types].xml" || part.eq_ignore_ascii_case(&self.main) {
+        if !manifest_field_ok(part)
+            || !part_name_ok(part)
+            || lower.ends_with(".rels")
+            || lower == "[content_types].xml"
+            || part.eq_ignore_ascii_case(&self.main)
+        {
             log::warn!("docx: not carrying part {part:?} for an embedded object");
             return false;
         }
