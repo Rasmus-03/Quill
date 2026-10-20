@@ -1370,6 +1370,7 @@ pub fn show(app: &mut WordApp, ctx: &egui::Context) {
         Dialog::Layout(d) => d.title(),
     };
     let id = egui::Id::new(("dialog", title));
+    let paste_special = matches!(d, Dialog::PasteSpecial { .. });
     let shown = place_dialog(ctx, id, egui::Window::new(tl!(title)).id(id).collapsible(false).resizable(false)).open(&mut open).show(ctx, |ui| {
         ui.set_min_width(340.0);
         close = body(app, ui, &mut d);
@@ -1380,6 +1381,10 @@ pub fn show(app: &mut WordApp, ctx: &egui::Context) {
     if open && !close {
         app.dialog = Some(d);
     } else {
+        // Closing Paste Special with the window's X also puts the original paste back.
+        if paste_special && !close {
+            crate::paste_options::restore(app);
+        }
         app.canvas.want_focus = true;
     }
 }
@@ -2302,10 +2307,21 @@ fn body(app: &mut WordApp, ui: &mut Ui, d: &mut Dialog) -> bool {
                 ui.label(egui::RichText::new(tl!(hint)).weak());
             }
             let (ok, cancel) = buttons(ui, tl!("OK"));
-            if ok && let Some(f) = formats.get(*choice) {
-                let mut params = payload.clone();
-                params["as"] = json!(f);
-                let _ = app.run("edit.pasteSpecial", params);
+            if ok {
+                if let Some(f) = formats.get(*choice) {
+                    let mut params = payload.clone();
+                    params["as"] = json!(f);
+                    if app.run("edit.pasteSpecial", params).is_err() {
+                        crate::paste_options::restore(app);
+                    } else {
+                        app.canvas.paste_options_restore = None;
+                    }
+                } else {
+                    crate::paste_options::restore(app);
+                }
+            }
+            if cancel {
+                crate::paste_options::restore(app);
             }
             ok || cancel
         }

@@ -17,14 +17,12 @@ use std::sync::atomic::Ordering;
 use skrifa::MetadataProvider;
 use skrifa::raw::FileRef;
 
-use super::{FontBytes, FontDb, enumerate_faces, make_face};
+use super::{FontBytes, FontDb, MAX_FACES_PER_FILE, enumerate_faces, make_face};
 
 /// Largest font file accepted (as given: TTF, OTF, TTC, WOFF or WOFF2).
 pub const MAX_FONT_FILE_BYTES: usize = 50 << 20;
 /// Largest font a WOFF/WOFF2 file may unwrap to.
 const MAX_DECODED_BYTES: usize = 128 << 20;
-/// Most faces one file may add (collections, variable fonts' named instances).
-const MAX_FACES_PER_FILE: usize = 256;
 /// Most user fonts at once.
 const MAX_USER_FONTS: usize = 1000;
 /// File extensions [`FontDb::load_user_fonts`] reads (fonts are stored unwrapped).

@@ -26,7 +26,19 @@ zip, XML and encryption readers:
 - part names and relationship targets are validated on the way in and again on the way
   out: a name that is not package-relative, or that contains `\`, a drive prefix (`C:`),
   a control character or a `.`/`..` segment, is skipped on read and refused on write, so
-  a hostile package cannot plant a name that an extractor would read as a path.
+  a hostile package cannot plant a name that an extractor would read as a path;
+- binary `.doc` streams are capped at 1 GiB each and 1.5 GiB together. The piece table is
+  checked against the bytes it can actually address, and text that would materialise more
+  than 8 million characters is refused, so a small table cannot alias one run hundreds of
+  millions of times;
+- embedded pictures are measured from their headers before decoding: at most 40 million
+  pixels per picture, 100 million per PDF export, and 40 million for the on-screen cache.
+  Page rasters are capped at 40 million pixels, shrinking uniformly rather than distorting
+  the page;
+- font collections may add at most 256 faces per file, and proofing dictionaries have
+  caps on `TRY`/`REP` tables, affix rules and generated forms;
+- Zotero conversion calls cap and deduplicate field and placeholder ids before scanning
+  the document.
 
 A malformed or hostile document must produce an error, never execute code and never
 panic the reader. Math expressions that come from a document selection are checked

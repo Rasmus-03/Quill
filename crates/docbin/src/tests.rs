@@ -1543,6 +1543,28 @@ fn piece_claiming_far_more_text_than_stored_is_skipped() {
 }
 
 #[test]
+fn repeated_pieces_cannot_expand_one_run_into_a_memory_bomb() {
+    // 100k pieces each claim 100 CPs, all pointing at the same 100 stored bytes. The old cap
+    // (100M claimed CPs) accepted this, and the walk would emit 10M characters — and layout
+    // one cluster per character.
+    const PIECES: usize = 100_000;
+    const SPAN: u32 = 100;
+    let cps: Vec<u32> = (0..=PIECES as u32).map(|i| i * SPAN).collect();
+    let fcs = vec![(2 * TEXT_FC) | 0x4000_0000; PIECES];
+    let mut text = vec![b'x'; SPAN as usize - 1];
+    text.push(b'\r');
+    let f = raw_piece_doc(&cps, &fcs, &text, PIECES as u32 * SPAN);
+    assert!(matches!(read(&f), Err(super::DocbinError::Limit(_))));
+}
+
+#[test]
+fn stream_total_budget_rejects_three_large_streams() {
+    let mib = 1 << 20;
+    assert!(super::check_stream_total([600 * mib, 600 * mib, 0]).is_ok());
+    assert!(matches!(super::check_stream_total([600 * mib, 600 * mib, 400 * mib]), Err(super::DocbinError::Limit(_))));
+}
+
+#[test]
 fn walk_stops_at_the_last_piece() {
     // The FIB claims 100M characters but the piece table ends at CP 3.
     let fc = (2 * TEXT_FC) | 0x4000_0000;

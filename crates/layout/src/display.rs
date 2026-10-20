@@ -967,7 +967,7 @@ fn lines(
                     out.push(Draw::Figure { alt: alt.clone(), kind: graphic.kind, draws })
                 }
                 Some(InlineObject::Equation { .. }) => {
-                    if let Some((_, ml)) = pl.maths.iter().find(|(k, _)| *k == oi) {
+                    if let Some((_, ml)) = pl.maths.binary_search_by_key(&oi, |(k, _)| *k).ok().and_then(|i| pl.maths.get(i)) {
                         equation(&ml.items, cx, base, alpha, opts.placeholders, out);
                     }
                 }

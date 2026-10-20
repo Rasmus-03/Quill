@@ -14,7 +14,11 @@ pub mod html;
 pub mod latex;
 pub mod markdown;
 pub mod model;
+pub mod obsidian;
 pub mod odt;
+/// PDF Reflow, desktop only (the text reflows; on the web, files open through the browser).
+#[cfg(not(target_arch = "wasm32"))]
+pub mod pdf;
 pub mod rtf;
 pub mod sheet;
 pub mod txt;
@@ -22,18 +26,21 @@ pub mod txt;
 use wordcraft_doc::Document;
 
 /// Extensions this crate handles.
-pub const EXTENSIONS: &[&str] = &["txt", "text", "md", "markdown", "html", "htm", "xhtml", "rtf", "odt", "tex", "latex", "ltx"];
+pub const EXTENSIONS: &[&str] = &["txt", "text", "md", "markdown", "html", "htm", "xhtml", "rtf", "odt", "tex", "latex", "ltx", "pdf"];
 
 /// Import `bytes` in the format named by `ext` (no dot, any case). `None` = not our format.
 pub fn import(ext: &str, bytes: &[u8]) -> Option<Result<Document, String>> {
     let ext = ext.trim_start_matches('.').to_ascii_lowercase();
     let r = match ext.as_str() {
         "txt" | "text" => Ok(txt::import(bytes)),
-        "md" | "markdown" => Ok(markdown::import(&txt::decode(bytes))),
+        "md" | "markdown" => Ok(obsidian::import_bytes(bytes)),
         "html" | "htm" | "xhtml" => Ok(html::import(&html::decode(bytes))),
         "rtf" => rtf::import(bytes),
         "odt" => odt::import(bytes),
         "tex" | "latex" | "ltx" => Ok(latex::import(bytes)),
+        // Desktop only: PDF Reflow (open a PDF as an editable document).
+        #[cfg(not(target_arch = "wasm32"))]
+        "pdf" => pdf::import(bytes),
         _ => return None,
     };
     Some(r.map(|mut d| {
@@ -47,7 +54,7 @@ pub fn export(ext: &str, doc: &Document) -> Option<Result<Vec<u8>, String>> {
     let ext = ext.trim_start_matches('.').to_ascii_lowercase();
     Some(match ext.as_str() {
         "txt" | "text" => Ok(txt::export(doc)),
-        "md" | "markdown" => Ok(markdown::export(doc).into_bytes()),
+        "md" | "markdown" => Ok(obsidian::export(doc).into_bytes()),
         "html" | "htm" | "xhtml" => Ok(html::export(doc).into_bytes()),
         "rtf" => Ok(rtf::export(doc).into_bytes()),
         "odt" => odt::export(doc),

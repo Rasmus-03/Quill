@@ -55,6 +55,10 @@ use wordcraft_metafile::{Picture, PlacedItem};
 const MAX_SIDE: f32 = 14_400.0;
 /// Largest picture side we embed (pixels).
 const MAX_IMAGE_SIDE: u32 = 30_000;
+/// Most pixels in one embedded picture. Checked from the header, before decoding.
+const MAX_IMAGE_PIXELS: u64 = 40_000_000;
+/// Most raster pixels decoded across one export (all pictures together).
+const MAX_TOTAL_IMAGE_PIXELS: u64 = 100_000_000;
 
 #[derive(Debug, Clone, PartialEq, thiserror::Error)]
 pub enum PdfError {
@@ -152,6 +156,7 @@ fn write(doc: &Document, lay: &DocLayout, opts: &PdfOptions, pages: &[usize], ou
         outlined,
         cmaps: HashMap::new(),
         images: HashMap::new(),
+        image_pixels: 0,
         vectors: HashMap::new(),
         tags: Vec::new(),
         tag_index: HashMap::new(),
@@ -517,6 +522,8 @@ struct Exporter<'a> {
     outlined: &'a HashSet<u32>,
     cmaps: HashMap<u32, Arc<HashMap<u32, char>>>,
     images: HashMap<String, Option<Image>>,
+    /// Pixels decoded for `images` so far, against [`MAX_TOTAL_IMAGE_PIXELS`].
+    image_pixels: u64,
     /// Parsed metafiles by media key (`None`: not readable).
     vectors: HashMap<String, Option<Arc<Vector>>>,
     tags: Vec<TagEntry>,
@@ -597,9 +604,19 @@ impl Exporter<'_> {
         if let Some(i) = self.images.get(key) {
             return i.clone();
         }
-        let img = self.doc.media.get(key).and_then(load_image);
+        let data = self.doc.media.get(key).cloned();
+        let img = data.and_then(|data| {
+            let (_, w, h) = image_header(data.as_slice())?;
+            let area = u64::from(w) * u64::from(h);
+            if self.image_pixels.saturating_add(area) > MAX_TOTAL_IMAGE_PIXELS {
+                return None;
+            }
+            let img = load_image(&data)?;
+            self.image_pixels = self.image_pixels.saturating_add(area);
+            Some(img)
+        });
         if img.is_none() {
-            log::warn!("PDF: picture `{key}` could not be decoded");
+            log::warn!("PDF: picture `{key}` could not be decoded within the image budget");
         }
         self.images.insert(key.to_string(), img.clone());
         img
@@ -1481,13 +1498,29 @@ fn path_from(b: &kurbo::BezPath) -> Option<Path> {
     pb.finish()
 }
 
+/// A picture's format and dimensions, read from the header without decoding pixels. None when
+/// the format is unknown or the picture would exceed [`MAX_IMAGE_SIDE`] / [`MAX_IMAGE_PIXELS`].
+fn image_header(data: &[u8]) -> Option<(image::ImageFormat, u32, u32)> {
+    let fmt = image::guess_format(data).ok()?;
+    let (w, h) = image::ImageReader::with_format(std::io::Cursor::new(data), fmt).into_dimensions().ok()?;
+    if w == 0 || h == 0 || w > MAX_IMAGE_SIDE || h > MAX_IMAGE_SIDE || u64::from(w) * u64::from(h) > MAX_IMAGE_PIXELS {
+        return None;
+    }
+    Some((fmt, w, h))
+}
+
 /// Decode a picture for embedding (validated with the `image` crate first, so a broken file
 /// can't fail the whole export).
 fn load_image(data: &Arc<Vec<u8>>) -> Option<Image> {
-    let fmt = image::guess_format(data).ok()?;
-    let dec = image::load_from_memory_with_format(data, fmt).ok()?;
-    let (w, h) = (dec.width(), dec.height());
-    if w == 0 || h == 0 || w > MAX_IMAGE_SIDE || h > MAX_IMAGE_SIDE {
+    let (fmt, w, h) = image_header(data.as_slice())?;
+    let mut limits = image::Limits::default();
+    limits.max_image_width = Some(MAX_IMAGE_SIDE);
+    limits.max_image_height = Some(MAX_IMAGE_SIDE);
+    limits.max_alloc = Some(512 << 20);
+    let mut reader = image::ImageReader::with_format(std::io::Cursor::new(data.as_slice()), fmt);
+    reader.limits(limits);
+    let dec = reader.decode().ok()?;
+    if (dec.width(), dec.height()) != (w, h) {
         return None;
     }
     if fmt == image::ImageFormat::Jpeg && matches!(dec.color(), image::ColorType::L8 | image::ColorType::Rgb8) {

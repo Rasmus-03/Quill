@@ -55,6 +55,8 @@ list (author, source, license) is in ATTRIBUTION.md.
 - All UI icons are drawn in code (crates/ui-egui/src/icons.rs) and are original work, MIT OR Apache-2.0.
 
 Rust dependencies (egui, eframe, vello_cpu, skrifa, harfrust, krilla, quick-xml, zip, image, …)
-are permissively licensed (MIT/Apache-2.0/BSD/ISC/Zlib) and fetched through crates.io.
+are permissively licensed (MIT/Apache-2.0/BSD/ISC/Zlib) and fetched through crates.io. PDF
+Reflow reads PDFs with pdf-extract (MIT, lopdf/adobe-cmap-parser/encoding_rs/euclid underneath)
+and lopdf (the same tree) for the pictures' XObjects and content streams.
 
 No Microsoft, Adobe, Avid or Autodesk icons, images, templates or artwork are included.

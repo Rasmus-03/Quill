@@ -124,7 +124,7 @@ fn parent_style(k: Kind) -> &'static str {
         Kind::Heading(_) => "Heading_20_6",
         Kind::Title => "Title",
         Kind::Quote => "Quotations",
-        Kind::Code => "Preformatted_20_Text",
+        Kind::Code | Kind::Raw => "Preformatted_20_Text",
         Kind::Normal | Kind::Rule => "Standard",
     }
 }
@@ -992,7 +992,7 @@ impl Body<'_> {
     fn end_para(&mut self) {
         let Some(mut p) = self.para.take() else { return };
         self.fmt.pop();
-        if p.kind != Kind::Code {
+        if !matches!(p.kind, Kind::Code | Kind::Raw) {
             p.trim();
         }
         if p.kind == Kind::Rule && !p.is_empty() {

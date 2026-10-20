@@ -327,11 +327,12 @@ pub struct ParaLayout {
     pub bidi_levels: Vec<u8>,
     /// Width of the drop cap letter itself (without the gap to the text).
     pub drop_cap_w: f32,
-    /// Laid-out equations by object index.
+    /// Laid-out equations by object index, in object order.
     pub maths: Vec<(usize, Arc<crate::math::MathLayout>)>,
     /// Ruby (Phonetic Guide) text over base-text clusters, in cluster order.
     pub rubies: Vec<RubyLayout>,
-    /// Display equations (on lines of their own): cluster index and justification.
+    /// Display equations (on lines of their own): cluster index and justification, in cluster
+    /// order (looked up with binary search while breaking lines).
     pub displays: Vec<(usize, wordcraft_doc::math::MathJc)>,
     /// Byte ranges of the text laid out as nothing ([`left_out`]): hidden text that is not shown,
     /// tracked deletions in the final text. Resolved as laid out, table formatting included.
@@ -1711,8 +1712,8 @@ fn break_lines(pl: &mut ParaLayout, env: &ParaEnv, mark_style: u16, level: Optio
                 }
                 _ => {}
             }
-            // A display equation sits on a line of its own.
-            let is_display = pl.displays.iter().any(|(ci, _)| *ci == j);
+            // A display equation sits on a line of its own. `displays` is in cluster order.
+            let is_display = pl.displays.binary_search_by_key(&j, |(ci, _)| *ci).is_ok();
             if is_display && (c0..j).any(|k| pl.clusters.get(k).is_some_and(|c| c.kind != ClKind::Marker)) {
                 end = LineEnd::Wrap;
                 break;
@@ -1861,7 +1862,9 @@ fn break_lines(pl: &mut ParaLayout, env: &ParaEnv, mark_style: u16, level: Optio
                 // A picture sits on the baseline of its run: the line keeps that font's ascent
                 // and descent, and grows above the baseline to fit a taller picture.
                 let (a, d) = if matches!(c.kind, ClKind::Object(_)) && c.obj_h > 0.0 {
-                    if pl.maths.iter().any(|(k, _)| c.kind == ClKind::Object(*k)) {
+                    if let ClKind::Object(k) = c.kind
+                        && pl.maths.binary_search_by_key(&k, |(mk, _)| *mk).is_ok()
+                    {
                         // An equation is text: its ascent and descent count like the text's.
                         (c.obj_h, c.obj_d)
                     } else {
@@ -1926,7 +1929,7 @@ fn break_lines(pl: &mut ParaLayout, env: &ParaEnv, mark_style: u16, level: Optio
         let slack = right_edge - content_end;
         let last_tab = (c0..c1).rev().find(|k| pl.clusters.get(*k).is_some_and(|c| c.kind == ClKind::Tab));
         let align_from = last_tab.map(|k| k + 1).unwrap_or(c0);
-        let display = pl.displays.iter().find(|(ci, _)| *ci >= c0 && *ci < c1).map(|d| d.1);
+        let display = pl.displays.get(pl.displays.partition_point(|(ci, _)| *ci < c0)).filter(|d| d.0 < c1).map(|d| d.1);
         let shift = match (display, rp.align) {
             (Some(MathJc::Left), _) => 0.0,
             (Some(MathJc::Right), _) => slack,

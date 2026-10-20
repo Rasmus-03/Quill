@@ -159,6 +159,10 @@ fn load_prefs(app: &mut WordApp) {
         && let Some(ui) = UiState::from_json(&bytes)
     {
         app.apply_prefs(ui);
+        // Reopen the last vault so its notes are in the Navigation pane at start-up.
+        if app.session.prefs.vault_root.is_some() {
+            let _ = app.run("vault.scan", serde_json::json!({}));
+        }
     }
 }
 
@@ -214,6 +218,7 @@ fn services(file_dialog: file_dialogs::Hook, ctx: &egui::Context) -> Services {
         clipboard_html: Some(Box::new(clipboard::html)),
         clipboard_rtf: Some(Box::new(clipboard::rtf)),
         clipboard_formats: Some(Box::new(clipboard::formats)),
+        pick_folder: Some(Box::new(|| rfd::FileDialog::new().pick_folder().map(|p| p.to_string_lossy().into_owned()))),
         ..Default::default()
     }
 }

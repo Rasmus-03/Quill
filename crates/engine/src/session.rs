@@ -417,6 +417,8 @@ pub struct Session {
     pub read_aloud: crate::speech::ReadAloud,
     /// Preferences the front end saves between runs.
     pub prefs: Prefs,
+    /// The Obsidian vault open in this session (the root is also in [`Prefs::vault_root`]).
+    pub vault: crate::vault::Vault,
     /// The system region (#838): the paper a new blank document starts on, the default
     /// measurement unit and the decimal separator. The front end sets it from the platform (the
     /// browser's locale on the web); headless sessions keep `en-US`. A region the user chose
@@ -524,6 +526,16 @@ pub struct Prefs {
     /// Decimal results (WordMat Tal) vs exact (WordMat Eksakt, default).
     #[serde(default)]
     pub math_decimal: bool,
+    /// The folder last opened as an Obsidian vault.
+    #[serde(default)]
+    pub vault_root: Option<std::path::PathBuf>,
+    /// Folder inside the vault for images written next to a note.
+    #[serde(default = "default_vault_attachments")]
+    pub vault_attachments: String,
+}
+
+fn default_vault_attachments() -> String {
+    "attachments".to_string()
 }
 
 impl Default for Prefs {
@@ -547,6 +559,8 @@ impl Default for Prefs {
             saved_equations: Vec::new(),
             math_defs: Vec::new(),
             math_decimal: false,
+            vault_root: None,
+            vault_attachments: default_vault_attachments(),
         }
     }
 }
@@ -646,6 +660,7 @@ impl Session {
             math_normal_text: false,
             also_selected: Vec::new(),
             prefs: Prefs::default(),
+            vault: Default::default(),
             system_region: Default::default(),
             keymap: crate::KeyMap::default(),
             ribbon: crate::RibbonLayout::default(),
@@ -1079,6 +1094,8 @@ impl Session {
             document_id: _,
             read_aloud: _,
             prefs: _,
+            // The open vault, like the file path: host wiring, not an edit.
+            vault: _,
             system_region: _,
             keymap: _,
             ribbon: _,

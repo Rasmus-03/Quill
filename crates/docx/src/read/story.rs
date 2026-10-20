@@ -1066,11 +1066,34 @@ impl Reader<'_> {
         }
     }
 
+    /// The frame for a picture whose declared extent is unreadably small. Some PDF→Word
+    /// converters write ~1 pt extents whatever the picture file says (#812); the picture is then
+    /// there but invisible. A frame that small is replaced by the picture's own pixel size at
+    /// 96 ppi — only when that is several times larger, so a real small icon keeps its size.
+    fn settle_frame(&self, media: &str, w: f32, h: f32) -> (f32, f32) {
+        const MIN_FRAME_PT: f32 = 4.0;
+        let frame = w.max(h);
+        if frame > MIN_FRAME_PT || frame <= 0.0 {
+            return (w, h);
+        }
+        let Some((pw, ph)) = self.doc.media.get(media).and_then(|b| super::img_size::pix_size(b)) else { return (w, h) };
+        let (nw, nh) = (pw as f32 * 0.75, ph as f32 * 0.75); // pixels at 96 ppi
+        let natural = nw.max(nh);
+        if natural < frame * 4.0 {
+            return (w, h);
+        }
+        // Keep the shape; a picture larger than the model's own limit is scaled down, not bigger.
+        let k = (crate::units::MAX_LEN_PT / natural).min(1.0);
+        log::debug!("docx: picture frame of {frame} pt replaced with the picture's natural {nw}x{nh} pt");
+        (nw * k, nh * k)
+    }
+
     /// A picture: the first `a:blip` in `pic` and its crop.
     fn read_pic(&mut self, pic: &El, rels: &Rels, w: f32, h: f32, alt: String, mut float: Float) -> Option<InlineObject> {
         let blip = pic.find("a:blip")?;
         float.set_spin(xfrm_spin(pic.find("pic:spPr")));
         let media = blip.attr("r:embed").and_then(|id| self.media_for(rels, id))?;
+        let (w, h) = self.settle_frame(&media, w, h);
         let mut crop = [0.0f32; 4];
         if let Some(sr) = pic.find("a:srcRect") {
             for (i, n) in ["l", "t", "r", "b"].iter().enumerate() {

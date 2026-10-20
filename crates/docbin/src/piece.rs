@@ -142,6 +142,23 @@ impl PieceTable {
         self.cps.last().copied().unwrap_or(0)
     }
 
+    /// Upper bound on the characters a walk over this table can emit: each piece's CP span
+    /// clamped to the bytes that actually exist in `word`. A hostile table can name hundreds of
+    /// millions of CPs that all point at the same small text; the walk really emits every one of
+    /// them, so this sum — not [`Self::cp_end`] — is the work and memory bound.
+    pub(crate) fn readable_cps(&self, word: &[u8]) -> u64 {
+        let word_len = word.len() as u64;
+        self.pieces.iter().enumerate().fold(0u64, |sum, (i, p)| {
+            let start = self.cps.get(i).copied().unwrap_or(0);
+            let end = self.cps.get(i + 1).copied().unwrap_or(start);
+            let span = u64::from(end.saturating_sub(start));
+            let at = if p.compressed { u64::from(p.fc / 2) } else { u64::from(p.fc) };
+            let bytes_per_char = if p.compressed { 1 } else { 2 };
+            let available = word_len.saturating_sub(at) / bytes_per_char;
+            sum.saturating_add(span.min(available))
+        })
+    }
+
     /// The character stored at `cp` (control characters included) and how many CPs it
     /// covers (2 for a surrogate pair), found by binary search over the pieces.
     /// `Err(next)` when there is no readable character at `cp` (a gap between pieces, an

@@ -668,7 +668,7 @@ impl DocLayout {
                 if c.start != pos.off {
                     continue;
                 }
-                let ml = para.maths.iter().find(|(o, _)| *o == oi)?.1.clone();
+                let ml = para.maths.get(para.maths.binary_search_by_key(&oi, |(o, _)| *o).ok()?)?.1.clone();
                 let cx = l.cl_left(k)?;
                 let base = y + (l.baseline - first.top);
                 return Some((pi, x + cx, base, ml));
@@ -686,7 +686,8 @@ impl DocLayout {
             for k in line.c0..line.c1 {
                 let Some(c) = l.para.clusters.get(k) else { continue };
                 let crate::para::ClKind::Object(oi) = c.kind else { continue };
-                let Some((_, ml)) = l.para.maths.iter().find(|(o, _)| *o == oi) else { continue };
+                let Ok(i) = l.para.maths.binary_search_by_key(&oi, |(o, _)| *o) else { continue };
+                let Some((_, ml)) = l.para.maths.get(i) else { continue };
                 let x0 = l.x + line.cl_left(k).unwrap_or(0.0);
                 let pad = 2.0;
                 if x < x0 - pad || x > x0 + ml.width + pad || y < base - ml.ascent - pad || y > base + ml.descent + pad {

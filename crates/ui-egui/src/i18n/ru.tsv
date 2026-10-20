@@ -2474,3 +2474,19 @@ preview	Title	Пример
 	Level 7	Уровень 7
 	Level 8	Уровень 8
 	Level 9	Уровень 9
+	Paste Options	Параметры вставки
+	Keep Source Formatting	Сохранить исходное форматирование
+	Open Vault…	Открыть хранилище…
+	Vault	Хранилище
+	Search notes	Поиск заметок
+	Save this document to the vault as	Сохранить этот документ в хранилище как
+	Save to Vault	Сохранить в хранилище
+	Saved {path}	Сохранено: {path}
+	Open an Obsidian vault folder to search its notes and save into it.	Откройте папку хранилища Obsidian, чтобы искать по заметкам и сохранять в неё.
+	{n} notes	Заметок: {n}
+	Note.md	Заметка.md
+	Choose Folder	Выбрать папку
+	Choose	Выбрать
+	Open Vault	Открыть хранилище
+	Refresh Vault	Обновить хранилище
+	Search Vault	Поиск в хранилище

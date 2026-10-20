@@ -1298,6 +1298,7 @@ fn para_html(p: &Para) -> String {
         Kind::Heading(n) => format!("<h{n}{attrs}>{body}</h{n}>", n = n.clamp(1, 6)),
         Kind::Title => format!("<h1{attrs}>{body}</h1>"),
         Kind::Rule => "<hr>".to_string(),
+        Kind::Raw => format!("<pre{attrs}>{body}</pre>"),
         _ if body.is_empty() => format!("<p{attrs}>&nbsp;</p>"),
         _ => format!("<p{attrs}>{body}</p>"),
     }

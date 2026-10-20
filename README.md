@@ -2,7 +2,8 @@
 
 Free word processing with Danish mathematics built in.
 
-Quill is a Word-compatible writing app (.docx in and out) with a **WordMat tab** for
+Quill is a Word-compatible writing app (.docx in and out, and PDFs open as
+editable documents) with a **WordMat tab** for
 mathematics: calculate, solve equations, units, matrices, plots — with answers in green
 right inside the equation.
 

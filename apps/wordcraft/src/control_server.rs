@@ -116,7 +116,7 @@ struct ConnGuard(Arc<AtomicUsize>);
 impl ConnGuard {
     /// Take a slot, or `None` when the server is at capacity.
     fn take(live: &Arc<AtomicUsize>, max: usize) -> Option<Self> {
-        live.fetch_update(Ordering::SeqCst, Ordering::SeqCst, |n| (n < max).then_some(n + 1)).ok()?;
+        live.try_update(Ordering::SeqCst, Ordering::SeqCst, |n| (n < max).then_some(n + 1)).ok()?;
         Some(ConnGuard(live.clone()))
     }
 }

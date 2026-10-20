@@ -225,7 +225,7 @@ impl Writer {
                 out.push_str(&format!("\\sb240\\sa80\\keepn\\b\\fs{}", (sz * 2.0) as i32));
             }
             Kind::Title => out.push_str("\\sa80\\fs56"),
-            Kind::Normal => {}
+            Kind::Normal | Kind::Raw => {}
         }
         if let (Some(li), Some((n, label))) = (p.list, &ls) {
             let lv = li.level.min(8);

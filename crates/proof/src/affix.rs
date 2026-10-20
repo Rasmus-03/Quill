@@ -28,6 +28,17 @@ use crate::patterns::{FxHasher, FxMap};
 const MAGIC: &str = "WCAFF1";
 /// Longest word (in bytes) looked up; longer input is never a dictionary word.
 pub const MAX_WORD_BYTES: usize = 120;
+/// Most `TRY` letters kept from a dictionary (real tables have well under a hundred).
+const MAX_TRY_CHARS: usize = 256;
+/// Most `REP` entries and the longest side of one, so suggestions can't be swamped by a table.
+const MAX_REP_ENTRIES: usize = 10_000;
+const MAX_REP_CHARS: usize = 256;
+/// Most prefix/suffix rules a dictionary may define; far above real Hunspell tables.
+const MAX_AFFIX_RULES: usize = 20_000;
+/// Most forms [`AffixDict::forms`] builds; suggestions need a handful, not a combinatorial flood.
+const MAX_FORMS: usize = 4_096;
+/// Most continuation forms queued while building those forms.
+const MAX_CHAIN_FORMS: usize = 512;
 /// Empty slot in the stem hash table.
 const EMPTY: u32 = u32::MAX;
 
@@ -291,7 +302,7 @@ fn parse_aff(aff: &str) -> Result<Rules, String> {
                     _ => return Err(format!("line {}: FORBIDDENWORD needs one flag character", n + 1)),
                 }
             }
-            "TRY" => r.try_chars = at(1).to_string(),
+            "TRY" => r.try_chars = at(1).chars().take(MAX_TRY_CHARS).collect(),
             "MAP" => {
                 if !map_header && at(1).parse::<usize>().is_ok() {
                     map_header = true;
@@ -302,8 +313,9 @@ fn parse_aff(aff: &str) -> Result<Rules, String> {
             "REP" => {
                 if !rep_header && f.len() == 2 && at(1).parse::<usize>().is_ok() {
                     rep_header = true;
-                } else if f.len() >= 3 {
-                    r.rep.push((at(1).replace('_', " "), at(2).replace('_', " ")));
+                } else if f.len() >= 3 && r.rep.len() < MAX_REP_ENTRIES {
+                    let side = |s: &str| s.chars().take(MAX_REP_CHARS).collect::<String>().replace('_', " ");
+                    r.rep.push((side(at(1)), side(at(2))));
                 }
             }
             "PFX" | "SFX" => {
@@ -327,6 +339,9 @@ fn parse_aff(aff: &str) -> Result<Rules, String> {
                 };
                 let cond = if f.len() >= 5 { at(4) } else { "." };
                 parse_cond(cond).map_err(|e| format!("line {}: {e}", n + 1))?;
+                if r.suffixes.len() + r.prefixes.len() >= MAX_AFFIX_RULES {
+                    return Err(format!("line {}: more than {MAX_AFFIX_RULES} affix rules", n + 1));
+                }
                 let c = cross.get(&(suffix, flag)).copied().unwrap_or(false);
                 let rule: RawRule = (flag, c, zero_empty(at(2)), zero_empty(add), cont.to_string(), cond.to_string());
                 if suffix {
@@ -662,7 +677,8 @@ impl AffixDict {
         }
     }
 
-    /// Every form of the stem `stem` (itself included), unsorted, possibly with repeats.
+    /// The forms of the stem `stem` (itself included), unsorted, possibly with repeats, up to
+    /// [`MAX_FORMS`].
     pub fn forms(&self, stem: &str) -> Vec<String> {
         let Some(f) = self.stem_flags(stem) else { return Vec::new() };
         let mut out = vec![stem.to_string()];
@@ -670,41 +686,53 @@ impl AffixDict {
         // Suffix forms queued with the continuation classes they carry, for chained expansion.
         let mut chain: Vec<(String, u128)> = Vec::new();
         for r in &self.suffixes {
+            if out.len() >= MAX_FORMS {
+                break;
+            }
             if f & r.bit == 0 || !r.cond_matches(stem, true) {
                 continue;
             }
             let Some(base) = stem.strip_suffix(&*r.strip) else { continue };
             let form = format!("{base}{}", r.add);
-            if r.cross {
+            if r.cross && cross_sfx.len() < MAX_FORMS {
                 cross_sfx.push(form.clone());
             }
-            if r.cont != 0 {
+            if r.cont != 0 && chain.len() < MAX_CHAIN_FORMS {
                 chain.push((form.clone(), r.cont));
             }
             out.push(form);
         }
         // Continuation classes chain suffixes (`workable/B` → `workables`), up to [`MAX_CHAIN`]
-        // suffixes in all — the same bound the checker walks.
-        for _ in 0..INNER_CHAIN {
-            let level = std::mem::take(&mut chain);
-            if level.is_empty() {
-                break;
-            }
-            for (form, flags) in level {
-                for r in &self.suffixes {
-                    if flags & r.bit == 0 || !r.cond_matches(&form, true) {
-                        continue;
+        // suffixes in all — the same bound the checker walks. Stop as soon as the output budget
+        // is full: a hostile table must not turn one suggestion into a combinatorial flood.
+        if out.len() < MAX_FORMS {
+            'levels: for _ in 0..INNER_CHAIN {
+                let level = std::mem::take(&mut chain);
+                if level.is_empty() {
+                    break;
+                }
+                for (form, flags) in level {
+                    for r in &self.suffixes {
+                        if out.len() >= MAX_FORMS {
+                            break 'levels;
+                        }
+                        if flags & r.bit == 0 || !r.cond_matches(&form, true) {
+                            continue;
+                        }
+                        let Some(base) = form.strip_suffix(&*r.strip) else { continue };
+                        let next = format!("{base}{}", r.add);
+                        if r.cont != 0 && chain.len() < MAX_CHAIN_FORMS {
+                            chain.push((next.clone(), r.cont));
+                        }
+                        out.push(next);
                     }
-                    let Some(base) = form.strip_suffix(&*r.strip) else { continue };
-                    let next = format!("{base}{}", r.add);
-                    if r.cont != 0 {
-                        chain.push((next.clone(), r.cont));
-                    }
-                    out.push(next);
                 }
             }
         }
         for r in &self.prefixes {
+            if out.len() >= MAX_FORMS {
+                break;
+            }
             if f & r.bit == 0 || !r.cond_matches(stem, false) {
                 continue;
             }
@@ -712,6 +740,9 @@ impl AffixDict {
             out.push(format!("{}{rest}", r.add));
             if r.cross {
                 for s in &cross_sfx {
+                    if out.len() >= MAX_FORMS {
+                        break;
+                    }
                     if let Some(rest) = s.strip_prefix(&*r.strip) {
                         out.push(format!("{}{rest}", r.add));
                     }
@@ -1027,6 +1058,29 @@ mod tests {
         for form in d.forms("work") {
             assert!(d.contains(&form), "every listed form is accepted: {form}");
         }
+    }
+
+    #[test]
+    fn hostile_affix_tables_are_bounded() {
+        let long_try = "a".repeat(MAX_TRY_CHARS * 10);
+        let d = AffixDict::from_hunspell(&format!("TRY {long_try}\n"), "0\n", &[]).unwrap();
+        assert_eq!(d.try_chars().chars().count(), MAX_TRY_CHARS);
+
+        let mut aff = String::from("SET UTF-8\nFLAG UTF-8\nSFX A N 1\n");
+        for i in 0..MAX_AFFIX_RULES + 2 {
+            aff.push_str(&format!("SFX A 0 s{i} .\n"));
+        }
+        assert!(AffixDict::from_hunspell(&aff, "1\nx/A\n", &[]).is_err());
+    }
+
+    #[test]
+    fn forms_stop_at_the_output_budget() {
+        let mut aff = String::from("SET UTF-8\nFLAG UTF-8\nSFX A N 1\n");
+        for i in 0..MAX_FORMS + 2 {
+            aff.push_str(&format!("SFX A 0 s{i} .\n"));
+        }
+        let d = AffixDict::from_hunspell(&aff, "1\nx/A\n", &[]).unwrap();
+        assert_eq!(d.forms("x").len(), MAX_FORMS);
     }
 
     #[test]

@@ -2076,3 +2076,8 @@
 	Start-up	啟動
 	Show the Start screen when WordCraft starts	啟動 WordCraft 時顯示開始畫面
 	On: WordCraft opens on File › Home, with a blank document, the templates and your recent documents. Off: it opens a blank document.	開：WordCraft 開啟時顯示「檔案 › 常用」，其中有空白文件、範本和最近使用的文件。關：直接開啟空白文件。
+	Open Vault	開啟儲存庫
+	Refresh Vault	重新整理儲存庫
+	Search Vault	搜尋儲存庫
+	Save to Vault	儲存到儲存庫
+	Vault	儲存庫

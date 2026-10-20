@@ -136,7 +136,7 @@ fn nav(app: &mut WordApp, ui: &mut Ui) {
     }
     ui.add_space(4.0);
     ui.horizontal(|ui| {
-        for (k, l) in [("headings", "Headings"), ("pages", "Pages"), ("results", "Results")] {
+        for (k, l) in [("headings", "Headings"), ("pages", "Pages"), ("results", "Results"), ("vault", "Vault")] {
             if ui.selectable_label(app.ui.nav_tab == k, tl!(l)).clicked() {
                 app.ui.nav_tab = k.into();
             }
@@ -153,6 +153,7 @@ fn nav(app: &mut WordApp, ui: &mut Ui) {
                 }
             }
         }
+        "vault" => vault_nav(app, ui),
         "results" => {
             let results = app.session.find.results.clone();
             ui.label(egui::RichText::new(format!("{} results", results.len())).small().weak());
@@ -210,6 +211,82 @@ fn nav(app: &mut WordApp, ui: &mut Ui) {
             }
         }
     });
+}
+
+/// Obsidian vault: open or refresh a folder, search note titles and text, open a note, and save
+/// this document into the vault. Vaults need the desktop host's folder picker.
+fn vault_nav(app: &mut WordApp, ui: &mut Ui) {
+    let root = app.session.vault.root.as_ref().map(|p| p.to_string_lossy().to_string());
+    ui.horizontal(|ui| {
+        if ui.button(tl!("Open Vault…")).clicked() {
+            app.open_vault_dialog();
+        }
+        if root.is_some() && ui.button(tl!("Refresh")).clicked() {
+            let _ = app.run("vault.scan", json!({}));
+        }
+    });
+    let Some(root) = root else {
+        ui.label(egui::RichText::new(tl!("Open an Obsidian vault folder to search its notes and save into it.")).weak());
+        return;
+    };
+    ui.label(egui::RichText::new(root).small().weak());
+    ui.add_space(4.0);
+    let mut query = app.ui.vault_query.clone();
+    if ui.add(egui::TextEdit::singleline(&mut query).hint_text(tl!("Search notes")).desired_width(f32::INFINITY)).changed() {
+        app.ui.vault_query = query;
+        // Searching reads note files. Wait for a short pause in typing instead of rereading the
+        // vault on every keystroke, and repaint when the pause is over so the results appear.
+        let due = ui.input(|i| i.time) + 0.25;
+        ui.data_mut(|d| d.insert_temp(egui::Id::new("vault_search_due"), due));
+        ui.ctx().request_repaint_after(std::time::Duration::from_millis(250));
+    }
+    let due = ui.data(|d| d.get_temp::<f64>(egui::Id::new("vault_search_due")));
+    if due.is_some_and(|due| ui.input(|i| i.time) >= due) {
+        ui.data_mut(|d| d.remove_temp::<f64>(egui::Id::new("vault_search_due")));
+        let q = app.ui.vault_query.clone();
+        if let Err(e) = app.run("vault.search", json!({"q": q})) {
+            app.status(e);
+        }
+    }
+    let results = app.session.vault.results.clone();
+    let notes = results.len().to_string();
+    ui.label(egui::RichText::new(crate::i18n::fmt(tl!("{n} notes"), &[("n", &notes)])).small().weak());
+    ui.separator();
+    egui::ScrollArea::vertical().max_height(ui.available_height() * 0.62).show(ui, |ui| {
+        for hit in results.into_iter().take(500) {
+            let selected = app.session.vault.note.as_ref().is_some_and(|p| p.to_string_lossy().replace('\\', "/") == hit.path);
+            if ui
+                .add(egui::Button::selectable(selected, egui::RichText::new(&hit.title).font(semibold(12.5))).frame(false))
+                .on_hover_text(&hit.path)
+                .clicked()
+            {
+                if let Err(e) = app.run("vault.open", json!({"path": hit.path})) {
+                    app.status(e);
+                }
+                app.canvas.want_focus = true;
+            }
+            if !hit.snippet.is_empty() {
+                ui.label(egui::RichText::new(hit.snippet).small().weak());
+            }
+            ui.separator();
+        }
+    });
+    ui.separator();
+    ui.label(egui::RichText::new(tl!("Save this document to the vault as")).small().weak());
+    let mut path = app.ui.vault_export_path.clone();
+    if ui.add(egui::TextEdit::singleline(&mut path).hint_text(tl!("Note.md")).desired_width(f32::INFINITY)).changed() {
+        app.ui.vault_export_path = path.clone();
+    }
+    if ui.button(tl!("Save to Vault")).clicked() {
+        let name = if path.trim().is_empty() { format!("{}.md", app.title_stem()) } else { path.trim().to_string() };
+        match app.run("vault.export", json!({"path": name})) {
+            Ok(_) => {
+                app.ui.vault_export_path.clear();
+                app.status(crate::i18n::fmt(tl!("Saved {path}"), &[("path", &name)]));
+            }
+            Err(e) => app.status(e),
+        }
+    }
 }
 
 /// Constrain each heading to the available pane width so long document text cannot

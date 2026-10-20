@@ -1,5 +1,19 @@
 # Changelog
 
+## 1.0.2 — Hostile-input bounds, Paste Options and Obsidian vaults
+
+A second hardening pass over binary documents, pictures, fonts and proofing tables, Word's Paste Options button after a paste, and an Obsidian vault workspace.
+
+- **Paste Options**: a small button beside a fresh paste offers Keep Source Formatting, Merge Formatting, Keep Text Only and Paste Special…. Choosing a form undoes that paste and repeats it at the destination, so destination formatting and a single undo step are kept; cancelling Paste Special puts the original paste back. Hides when the caret moves, on another edit or document, and for pictures and equations
+- **Obsidian vaults**: open a vault folder in the Navigation pane, search note titles and text, open and save notes, and export the document into the vault with its pictures in an attachments folder. Frontmatter, wikilinks, `![[embeds]]` and unsupported syntax survive a round trip: unknown blocks stay as their original source instead of being normalised, and an unchanged note saves back byte-for-byte. Vault and attachments folder are remembered
+- **Binary .doc**: streams are capped at 1 GiB each and 1.5 GiB together; the piece table is counted against the bytes it can actually address, and text that would materialise more than 8 million characters is refused instead of expanding one small run hundreds of millions of times
+- **Pictures**: dimensions are read from the header before decoding; more than 40 million pixels per image and 100 million across a PDF export are refused, and a page raster above 40 million pixels is scaled down uniformly instead of cropped; a picture whose declared frame is unreadably small (~1 pt extents some PDF→Word converters write) comes in at its own pixel size at 96 ppi instead of being invisible
+- **Fonts**: collections and variable-font named instances are capped at 256 faces per file, and the collection count is checked before any face is enumerated
+- **Zotero**: conversion calls cap and deduplicate field and placeholder ids before they scan the document
+- **Proofing**: `TRY`/`REP` tables, affix rules and generated forms have explicit caps
+- **Layout**: equation and display lookups use binary search, so paragraphs with many equations no longer scan every equation for every line
+- Regression tests for repeated .doc pieces, picture headers, TTC face counts, affix floods and Zotero id floods
+
 ## 1.0.1 — Security hardening
 
 Limits, validation and atomic writes for documents WordCraft did not create.

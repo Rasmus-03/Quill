@@ -5,6 +5,9 @@
 //! Field ids handed to Zotero stay valid for the transaction: they are kept in a list parallel
 //! to the document-order list of Zotero fields, updated as fields are inserted and removed.
 
+use std::collections::hash_map::Entry;
+use std::collections::{HashMap, HashSet};
+
 use serde_json::{Value, json};
 use wordcraft_doc::edit::Fragment;
 use wordcraft_doc::para::OBJ;
@@ -26,6 +29,10 @@ pub const BIB_STYLE: &str = "Bibliography";
 const PLACEHOLDER: &str = "{Citation}";
 /// Where Zotero's placeholder links point.
 const PLACEHOLDER_URL: &str = "https://www.zotero.org/?";
+/// Most field ids one `Document_convert` call may name (Zotero sends each field once).
+const MAX_CONVERT_IDS: usize = 100_000;
+/// Most placeholders one conversion call may name.
+const MAX_PLACEHOLDERS: usize = 10_000;
 
 // Alert buttons (Zotero's constants) and the affirmative answer for each.
 const BUTTONS_OK: i64 = 0;
@@ -274,8 +281,16 @@ impl Bridge {
             // citation moves between the text, footnotes and endnotes (switching styles).
             "Document_convert" => {
                 let Value::Array(ids) = arg(c, 1)? else { return Err("field ids must be an array".into()) };
-                let ids: Vec<Value> = ids.iter().take(100_000).cloned().collect();
+                if ids.len() > MAX_CONVERT_IDS {
+                    return Err(format!("more than {MAX_CONVERT_IDS} field ids"));
+                }
+                let ids: Vec<Value> = ids.clone();
                 let notes = c.args.get(3).cloned().unwrap_or(Value::Null);
+                // Zotero names each field once. Deduplicating keeps a hostile call from making
+                // us rescan the whole document for the same id a hundred thousand times; a later
+                // duplicate's target wins, matching what converting them in order would do.
+                let mut items: Vec<(u64, i64)> = Vec::new();
+                let mut seen: HashMap<u64, usize> = HashMap::new();
                 for (i, idv) in ids.iter().enumerate() {
                     let id = match idv {
                         Value::Number(n) => n.as_u64(),
@@ -287,6 +302,19 @@ impl Bridge {
                         Value::Array(a) => a.get(i).and_then(Value::as_i64).unwrap_or(0),
                         v => v.as_i64().unwrap_or(0),
                     };
+                    match seen.entry(id) {
+                        Entry::Occupied(e) => items[*e.get()].1 = note,
+                        Entry::Vacant(e) => {
+                            e.insert(items.len());
+                            items.push((id, note));
+                        }
+                    }
+                }
+                self.fields(s);
+                if items.len() > self.ids.len() {
+                    return Err(format!("{} field ids, but the document has {} fields", items.len(), self.ids.len()));
+                }
+                for (id, note) in items {
                     self.convert_field(s, id, note)?;
                 }
                 Ok(Value::Null)
@@ -482,12 +510,19 @@ impl Bridge {
     }
 
     fn convert_placeholders(&mut self, s: &mut Session, ph: &[Value], note: i64) -> R {
+        if ph.len() > MAX_PLACEHOLDERS {
+            return Err(format!("more than {MAX_PLACEHOLDERS} placeholders"));
+        }
         let mut ids = Vec::new();
+        let mut seen = HashSet::new();
         for v in ph {
             let key = match v {
                 Value::String(x) => x.clone(),
                 other => other.to_string(),
             };
+            if !seen.insert(key.clone()) {
+                continue;
+            }
             let url = format!("{PLACEHOLDER_URL}{key}");
             let Some((a, b)) = find_link(s, &url) else { return Err(format!("placeholder {key} was not found")) };
             self.begin_edit(s);

@@ -817,6 +817,7 @@ fn bookmark_destination_is_the_page_of_its_start() {
         outlined: &outlined,
         cmaps: HashMap::new(),
         images: HashMap::new(),
+        image_pixels: 0,
         vectors: HashMap::new(),
         tags: Vec::new(),
         tag_index: HashMap::new(),
@@ -901,4 +902,30 @@ fn internal_links_export_in_linear_time() {
     let _ = export(&small, &PdfOptions::default());
     let ratio = fastest(&big) / fastest(&small).max(1e-9);
     assert!(ratio < 9.0, "4x the paragraphs and links took {ratio:.1}x as long (quadratic would be ~16x)");
+}
+
+/// A BMP header with the given dimensions and no pixel data.
+fn bmp_header(w: u32, h: u32) -> Vec<u8> {
+    let mut b = vec![0u8; 54];
+    b[0..2].copy_from_slice(b"BM");
+    b[2..6].copy_from_slice(&54u32.to_le_bytes());
+    b[10..14].copy_from_slice(&54u32.to_le_bytes());
+    b[14..18].copy_from_slice(&40u32.to_le_bytes());
+    b[18..22].copy_from_slice(&(w as i32).to_le_bytes());
+    b[22..26].copy_from_slice(&(h as i32).to_le_bytes());
+    b[26..28].copy_from_slice(&1u16.to_le_bytes());
+    b[28..30].copy_from_slice(&24u16.to_le_bytes());
+    b
+}
+
+/// Picture dimensions are read from the header first: a 30k × 30k image once allocated 2.7 GB
+/// (or 3.6 GB RGBA) before the old post-decode check rejected it.
+#[test]
+fn image_dimensions_are_checked_before_decoding() {
+    let huge = Arc::new(bmp_header(30_000, 30_000));
+    assert!(image_header(huge.as_slice()).is_none(), "900M pixels must be rejected from the header");
+    assert!(load_image(&huge).is_none());
+    assert!(image_header(&bmp_header(MAX_IMAGE_SIDE + 1, 1)).is_none(), "side limit");
+    assert_eq!(image_header(&bmp_header(100, 100)).map(|(_, w, h)| (w, h)), Some((100, 100)));
+    assert_eq!(image_header(&png()).map(|(_, w, h)| (w, h)), Some((16, 8)));
 }

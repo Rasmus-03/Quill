@@ -18,6 +18,7 @@ pub mod ribbon;
 pub mod sample;
 mod session;
 pub mod speech;
+pub mod vault;
 
 use std::collections::HashMap;
 

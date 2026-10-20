@@ -17,6 +17,9 @@ use wordcraft_doc::{Align, Block, Blocks, Document, Paragraph, Rgb, Table, para_
 pub const MONO_FONT: &str = "Courier New";
 /// Style id of code-block paragraphs.
 pub const CODE_STYLE: &str = "Code";
+/// Style id of Markdown kept as source because Obsidian, CommonMark or GFM has no flow-model
+/// equivalent: it is shown in a monospace style and exported back byte-for-byte.
+pub const RAW_STYLE: &str = "Obsidian Source";
 /// Nesting limit for tables in tables (hostile input).
 pub const MAX_DEPTH: usize = 8;
 
@@ -31,6 +34,11 @@ pub struct Fmt {
     pub sup: bool,
     pub sub: bool,
     pub link: Option<String>,
+    /// Obsidian `[[target|display]]`: the target including `#heading`, `^block` and `|alias`'s
+    /// left side. The text of the span is the display text.
+    pub wikilink: Option<String>,
+    /// Obsidian `![[target]]`: the complete text between the brackets, including any `|size`.
+    pub embed: Option<String>,
     pub color: Option<Rgb>,
     /// Points.
     pub size: Option<f32>,
@@ -45,6 +53,9 @@ pub struct Img {
     pub data: Arc<Vec<u8>>,
     /// File extension (`png`, `jpeg`…).
     pub ext: String,
+    /// Media key in the document (`word/media/…`), when the image came from one: lets exporters
+    /// preserve the name and write the bytes beside the text.
+    pub key: Option<String>,
     /// Display size, points.
     pub w: f32,
     pub h: f32,
@@ -78,6 +89,8 @@ pub enum Kind {
     Quote,
     /// One line of a code block.
     Code,
+    /// Markdown source kept as-is because the flow model has no semantic equivalent.
+    Raw,
     /// A horizontal rule (empty paragraph with a bottom border).
     Rule,
 }
@@ -336,7 +349,16 @@ pub fn char_props(f: &Fmt) -> CharProps {
         } else {
             None
         },
-        link: f.link.clone().filter(|l| !l.is_empty()),
+        // Obsidian links live in the ordinary hyperlink field so they survive save and reopen.
+        // The schemes are private to WordCraft and are turned back into `[[…]]`/`![[…]]` on
+        // Markdown export.
+        link: if let Some(t) = &f.wikilink {
+            Some(format!("obsidian:{t}"))
+        } else if let Some(e) = &f.embed {
+            Some(format!("obsidian-embed:{e}"))
+        } else {
+            f.link.clone().filter(|l| !l.is_empty())
+        },
         color: f.color.map(TextColor::Rgb),
         size: f.size.filter(|s| s.is_finite() && *s >= 1.0 && *s <= 1638.0),
         font: if f.code { Some(MONO_FONT.to_string()) } else { f.font.clone().filter(|s| !s.is_empty()) },
@@ -353,6 +375,19 @@ fn code_style() -> Style {
         based_on: Some("Normal".into()),
         para: ParaProps { space_after: Some(0.0), space_before: Some(0.0), line_spacing: Some(Default::default()), ..Default::default() },
         chr: CharProps { font: Some(MONO_FONT.into()), size: Some(10.0), ..Default::default() },
+        quick: false,
+        ..Default::default()
+    }
+}
+
+fn raw_style() -> Style {
+    Style {
+        id: RAW_STYLE.into(),
+        name: RAW_STYLE.into(),
+        kind: StyleKind::Paragraph,
+        based_on: Some("Normal".into()),
+        para: ParaProps { space_after: Some(0.0), space_before: Some(0.0), line_spacing: Some(Default::default()), ..Default::default() },
+        chr: CharProps { font: Some(MONO_FONT.into()), size: Some(9.5), ..Default::default() },
         quick: false,
         ..Default::default()
     }
@@ -394,6 +429,7 @@ impl Builder<'_> {
             Kind::Title => Some("Title".into()),
             Kind::Quote => Some("Quote".into()),
             Kind::Code => Some(CODE_STYLE.into()),
+            Kind::Raw => Some(RAW_STYLE.into()),
             Kind::Rule | Kind::Normal => None,
         };
         out.props.style = style;
@@ -599,9 +635,11 @@ pub fn to_doc_in(flow: &Flow, section: wordcraft_doc::SectionProps) -> Document 
     let mut doc = Document::new();
     doc.last_section = section;
     doc.numbering = Default::default();
-    let uses_code = uses_kind(&flow.blocks, Kind::Code, 0);
-    if uses_code {
+    if uses_kind(&flow.blocks, Kind::Code, 0) {
         doc.styles.upsert(code_style());
+    }
+    if uses_kind(&flow.blocks, Kind::Raw, 0) {
+        doc.styles.upsert(raw_style());
     }
     let body = Builder { doc: &mut doc }.blocks(&flow.blocks, 0);
     doc.body = body;
@@ -671,6 +709,11 @@ fn effective(doc: &Document, cp: &CharProps) -> CharProps {
 fn fmt_of(doc: &Document, cp: &CharProps, in_code: bool) -> Fmt {
     let e = effective(doc, cp);
     let code = !in_code && e.font.as_deref().is_some_and(is_mono);
+    let (link, wikilink, embed) = match e.link.as_deref() {
+        Some(l) if l.starts_with("obsidian-embed:") => (None, None, Some(l.trim_start_matches("obsidian-embed:").to_string())),
+        Some(l) if l.starts_with("obsidian:") => (None, Some(l.trim_start_matches("obsidian:").to_string()), None),
+        other => (other.map(str::to_string), None, None),
+    };
     Fmt {
         bold: e.bold.unwrap_or(false),
         italic: e.italic.unwrap_or(false),
@@ -679,7 +722,9 @@ fn fmt_of(doc: &Document, cp: &CharProps, in_code: bool) -> Fmt {
         code,
         sup: e.vert_align == Some(VertAlign::Superscript),
         sub: e.vert_align == Some(VertAlign::Subscript),
-        link: e.link.clone(),
+        link,
+        wikilink,
+        embed,
         color: match e.color {
             Some(TextColor::Rgb(c)) => Some(c),
             _ => None,
@@ -700,6 +745,8 @@ pub fn para_kind(doc: &Document, p: &Paragraph) -> (Kind, Option<ListInfo>) {
         Kind::Title
     } else if doc.styles.chain(style).iter().any(|s| s.id == "Quote" || s.id == "IntenseQuote") {
         Kind::Quote
+    } else if doc.styles.chain(style).iter().any(|s| s.id == RAW_STYLE) {
+        Kind::Raw
     } else if is_code_style(doc, style) {
         Kind::Code
     } else if p.plain_text().trim().is_empty()
@@ -732,6 +779,12 @@ fn media_ext(key: &str, data: &[u8]) -> String {
 /// paragraph, and the text after it starts a new one that carries `page_break`.
 pub fn flow_paras(doc: &Document, p: &Paragraph) -> Vec<Para> {
     let (kind, list) = para_kind(doc, p);
+    if kind == Kind::Raw {
+        let mut out = Para::new(Kind::Raw);
+        out.list = list;
+        out.push_text(&p.plain_text(), &Fmt::default());
+        return vec![out];
+    }
     let mut done: Vec<Para> = Vec::new();
     let mut out = Para {
         kind,
@@ -787,9 +840,14 @@ pub fn flow_paras(doc: &Document, p: &Paragraph) -> Vec<Para> {
                         out.push_text(&std::mem::take(&mut buf), &f);
                     }
                     match doc.media.get(media) {
-                        Some(data) => {
-                            out.inlines.push(Inline::Image(Img { data: data.clone(), ext: media_ext(media, data), w: *w, h: *h, alt: alt.clone() }))
-                        }
+                        Some(data) => out.inlines.push(Inline::Image(Img {
+                            data: data.clone(),
+                            ext: media_ext(media, data),
+                            key: Some(media.clone()),
+                            w: *w,
+                            h: *h,
+                            alt: alt.clone(),
+                        })),
                         None if !alt.is_empty() => buf.push_str(alt),
                         None => {}
                     }
@@ -936,7 +994,19 @@ pub fn make_img(data: impl Into<Arc<Vec<u8>>>, w: Option<f32>, h: Option<f32>, a
         h *= 468.0 / w;
         w = 468.0;
     }
-    Some(Img { data, ext: ext.to_string(), w: w.clamp(1.0, 1584.0), h: h.clamp(1.0, 1584.0), alt: alt.to_string() })
+    let key = Some(data_key(&data));
+    Some(Img { data, ext: ext.to_string(), key, w: w.clamp(1.0, 1584.0), h: h.clamp(1.0, 1584.0), alt: alt.to_string() })
+}
+
+/// Stable key for an image decoded from a data URI, so an exporter can give the same bytes the
+/// same file name in several places.
+fn data_key(data: &[u8]) -> String {
+    let mut h = 0xcbf2_9ce4_8422_2325u64;
+    for b in data {
+        h ^= u64::from(*b);
+        h = h.wrapping_mul(0x0000_0100_0000_01b3);
+    }
+    format!("data:{h:016x}")
 }
 
 const B64: &[u8; 64] = b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";

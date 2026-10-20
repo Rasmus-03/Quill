@@ -222,6 +222,10 @@ impl Writer {
             }
             Kind::Title => self.out.push_str(&format!("\\begin{{center}}\n{{\\LARGE {text}\\par}}\n\\end{{center}}\n\n")),
             Kind::Heading(_) => self.out.push_str(&format!("\\textbf{{{text}}}{end}")),
+            Kind::Raw => {
+                self.out.push_str(text);
+                self.out.push_str(end);
+            }
             _ => match p.align {
                 Some(Align::Center) => self.out.push_str(&format!("\\begin{{center}}\n{text}\n\\end{{center}}\n\n")),
                 Some(Align::Right) => self.out.push_str(&format!("\\begin{{flushright}}\n{text}\n\\end{{flushright}}\n\n")),

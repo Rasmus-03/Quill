@@ -60,6 +60,7 @@ pub mod mini_toolbar;
 pub mod objects;
 pub mod options;
 pub mod panes;
+pub mod paste_options;
 pub mod paste_picture;
 pub mod previews;
 pub mod print_page;
@@ -96,6 +97,8 @@ pub struct Services {
     pub pick_open: Option<Box<dyn Fn(&str) -> Option<String>>>,
     /// Pick a path to save to, given a suggested name.
     pub pick_save: Option<Box<dyn Fn(&str) -> Option<String>>>,
+    /// Pick a folder (an Obsidian vault, attachments folder). Desktop only.
+    pub pick_folder: Option<Box<dyn Fn() -> Option<String>>>,
     /// Desktop: show a native file dialog without blocking the UI thread (#94); used instead of
     /// `pick_open` / `pick_save` when set. The host sends the picked path (`Ok(None)` when
     /// cancelled) through the returned channel once the user answers, and wakes the UI; a dropped
@@ -189,6 +192,9 @@ pub struct UiState {
     #[serde(rename = "dark", skip_serializing)]
     pub(crate) legacy_dark: Option<bool>,
     pub nav_tab: String,
+    /// Obsidian vault search text and the note path typed for Save to Vault.
+    pub vault_query: String,
+    pub vault_export_path: String,
     /// User name (File › Options) for comments and tracked changes; empty keeps the default.
     pub author: String,
     /// Desktop: the main window's size and position, restored at the next launch.
@@ -275,6 +281,8 @@ impl Default for UiState {
             animations: theme::Animations::default(),
             legacy_dark: None,
             nav_tab: "headings".into(),
+            vault_query: String::new(),
+            vault_export_path: String::new(),
             author: String::new(),
             window: None,
             language: i18n::AUTO.into(),
@@ -645,6 +653,11 @@ impl WordApp {
     /// Close, Envelopes, Labels and Finish & Merge on a document with unsaved changes first ask
     /// Save / Don't Save / Cancel, and the command runs once that is answered (`ui.saveChanges`).
     pub fn run(&mut self, id: &str, params: Value) -> Result<Value, String> {
+        paste_options::dismiss_if_stale(self);
+        // Any other command ends a pending Paste Special replacement (its own dialog's OK keeps it).
+        if id != "edit.pasteSpecial" {
+            self.canvas.paste_options_restore = None;
+        }
         // A button whose command needs input the user hasn't given yet opens its dialog (#240).
         if let Some(name) = input_dialog(id, &params)
             && widgets::enabled(self, id)
@@ -663,6 +676,7 @@ impl WordApp {
         // doesn't carry (#687).
         let mut params = params;
         if let Some(r) = system_clipboard::fill(self, id, &mut params) {
+            paste_options::dismiss_if_stale(self);
             return r;
         }
         // Paste without system clipboard text: a picture there is newer than our own copy (copying
@@ -671,8 +685,10 @@ impl WordApp {
             && params.get("text").is_none()
             && let Some(r) = paste_picture::paste(self)
         {
+            paste_options::dismiss_if_stale(self);
             return r;
         }
+        let paste = system_clipboard::is_paste(id).then(|| paste_options::started(self, params.clone()));
         let r = self.execute_user(id, params);
         let r = system_clipboard::explain(self, id, r);
         // Check Accessibility shows its findings in the Accessibility pane, kept up to date there.
@@ -685,6 +701,10 @@ impl WordApp {
         {
             self.dialog = Some(d);
         }
+        if let Some(started) = paste {
+            paste_options::note(self, id, started, &r);
+        }
+        paste_options::dismiss_if_stale(self);
         r
     }
 
@@ -771,6 +791,13 @@ impl WordApp {
         }
         if let Ok(v) = &r {
             self.keep_web_font(id, &params, v);
+            // `vault.open` and `vault.search` are also called by scripts and the control
+            // channel; keep the Navigation pane's search box in step with the engine.
+            if matches!(id, "vault.open" | "vault.scan" | "vault.search")
+                && let Some(q) = v.get("query").and_then(Value::as_str)
+            {
+                self.ui.vault_query = q.to_string();
+            }
         }
         self.after_command(id);
         if let Err(e) = &r {
@@ -1045,6 +1072,11 @@ impl WordApp {
                 }
                 "insertPicture" => self.pick_picture(),
                 "addFont" => self.pick_font(),
+                "vault" => self.open_vault_dialog(),
+                "vaultExport" => {
+                    self.ui.nav_tab = "vault".into();
+                    self.session.view.nav_pane = true;
+                }
                 "print" => {
                     self.ui.backstage = true;
                     self.ui.backstage_page = "print".into();
@@ -1973,6 +2005,7 @@ fn discards_document(id: &str, params: &Value) -> bool {
         "file.new" | "file.close" | "mailings.labels" => true,
         "mailings.envelopes" => params.get("add").and_then(Value::as_bool) != Some(true),
         "file.open" => params.get("path").is_some(),
+        "vault.open" => params.get("path").is_some(),
         "mailings.finish" => params.get("path").and_then(Value::as_str).is_none(),
         _ => false,
     }

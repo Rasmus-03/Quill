@@ -9,6 +9,8 @@
 //!
 //! Export writes the same constructs; pictures become `![alt](media-name)` placeholders.
 
+use std::collections::BTreeMap;
+
 use wordcraft_doc::{Align, Document};
 
 use crate::html::decode_entity;
@@ -16,6 +18,8 @@ use crate::model::{self, Cell, FBlock, FTable, Fmt, Inline, Kind, ListInfo, Para
 
 /// Nesting limit for block containers (quotes, list items) and inline links.
 const MAX_NEST: usize = 32;
+/// Longest `[[…]]` target or embed taken as a wikilink.
+const MAX_WIKILINK: usize = 4096;
 
 // ---------------------------------------------------------------------------------------------
 // Import
@@ -257,6 +261,109 @@ fn code_para(line: &str) -> FBlock {
     FBlock::Para(p)
 }
 
+fn raw_para(text: &str) -> FBlock {
+    let mut p = Para::new(Kind::Raw);
+    p.push_text(text, &Fmt::default());
+    FBlock::Para(p)
+}
+
+/// Does this line contain syntax the flow model cannot represent faithfully? Such blocks are kept
+/// as source ([`Kind::Raw`]) instead of being escaped into different Markdown.
+fn unsupported_syntax(line: &str) -> bool {
+    let t = line.trim_start();
+    // A `data:` URI's payload (base64 bodies, %-encoded text) is opaque: its `==` is padding, not
+    // Obsidian highlight, so the syntax checks below read a line with the payloads cut out.
+    let mut probe = String::new();
+    let mut rest = t;
+    loop {
+        match rest.find("data:") {
+            Some(k) => {
+                probe.push_str(rest.get(..k + 5).unwrap_or(rest));
+                let after = rest.get(k + 5..).unwrap_or("");
+                let end = after.find([')', ' ', '\n']).unwrap_or(after.len());
+                probe.push('…');
+                rest = after.get(end..).unwrap_or("");
+            }
+            None => {
+                probe.push_str(rest);
+                break;
+            }
+        }
+    }
+    let t = probe.as_str();
+    // Obsidian callouts (`> [!note]`) would otherwise turn into a quote with literal brackets.
+    if t.starts_with("> [!") {
+        return true;
+    }
+    if t.contains("%%") || t.contains("==") || t.contains("[^") || t.contains("<%") {
+        return true;
+    }
+    // Inline math (`$x$`), display math (`$$`), Obsidian block references (` ^id`) and task boxes.
+    if t.bytes().filter(|b| *b == b'$').count() >= 2 {
+        return true;
+    }
+    if let Some(pos) = t.rfind('^')
+        && pos > 0
+        && t.as_bytes().get(pos - 1) == Some(&b' ')
+    {
+        return true;
+    }
+    if t.contains("[ ]") || t.contains("[x]") || t.contains("[X]") {
+        return true;
+    }
+    // Standard Markdown images are loaded through the local filesystem by the inline parser;
+    // without the source file's directory that is not reliable, so keep the line as source.
+    // Obsidian embeds (`![[…]]`) and self-contained destinations (`data:` and `http(s):`) do not
+    // need anything local and import as pictures.
+    t.match_indices("![").any(|(at, _)| {
+        if t.as_bytes().get(at + 2) == Some(&b'[') {
+            return false;
+        }
+        let Some(rest) = t.get(at..).and_then(|r| r.find("](").and_then(|k| r.get(k + 2..))) else {
+            return true;
+        };
+        let dest = rest.trim_start();
+        !(dest.starts_with("data:") || dest.starts_with("http://") || dest.starts_with("https://"))
+    })
+}
+
+/// A fenced block with an info string (```` ```dataview ````) or a line with unsupported syntax,
+/// kept verbatim. Returns the index after the block and its exact source.
+fn raw_block(lines: &[String], i: usize) -> Option<(usize, String)> {
+    let line = lines.get(i)?;
+    if indent(line) >= 4 {
+        return None;
+    }
+    let t = line.trim_start();
+    if let Some((fc, fl)) = fence(t) {
+        let info = t.get(fl..).unwrap_or("").trim();
+        if info.is_empty() {
+            // A plain fence is a code block the flow model understands.
+            return None;
+        }
+        let mut j = i + 1;
+        while let Some(l) = lines.get(j) {
+            j += 1;
+            let lt = l.trim_start();
+            if indent(l) < 4 && fence(lt).is_some_and(|(c, n)| c == fc && n >= fl) && lt.trim_start_matches(fc).trim().is_empty() {
+                break;
+            }
+        }
+        return Some((j, lines.get(i..j)?.join("\n")));
+    }
+    if !unsupported_syntax(line) {
+        return None;
+    }
+    let mut j = i;
+    while let Some(l) = lines.get(j) {
+        if j > i && is_blank(l) {
+            break;
+        }
+        j += 1;
+    }
+    Some((j, lines.get(i..j)?.join("\n")))
+}
+
 /// Parse block structure. `level` is the list nesting level for lists found here.
 fn parse_blocks(lines: &[String], depth: usize, level: u8) -> Vec<FBlock> {
     let mut out = Vec::new();
@@ -307,6 +414,23 @@ fn parse_blocks(lines: &[String], depth: usize, level: u8) -> Vec<FBlock> {
                 i += 1;
                 continue;
             }
+        }
+        if let Some((end, mut raw)) = raw_block(lines, i) {
+            if !para.is_empty() {
+                if interrupts(t) {
+                    flush_para(&mut para, &mut out, depth);
+                } else {
+                    // Unsupported syntax in the middle of a paragraph keeps the whole paragraph.
+                    let mut all = para.join("\n");
+                    all.push('\n');
+                    all.push_str(&raw);
+                    raw = all;
+                    para.clear();
+                }
+            }
+            out.push(raw_para(&raw));
+            i = end;
+            continue;
         }
         if let Some((n, body)) = atx_heading(t) {
             flush_para(&mut para, &mut out, depth);
@@ -544,13 +668,13 @@ fn push_text(nodes: &mut Vec<Node>, s: &str, f: &Fmt) {
 
 /// The closing `]` matching the `[` at byte `open` (escapes and code spans respected). Gives up
 /// after looking `max` bytes ahead.
-fn matching_bracket(s: &str, open: usize, max: usize) -> Option<usize> {
+fn matching_bracket(s: &str, open: usize, max: usize) -> (Option<usize>, usize) {
     let b = s.as_bytes();
     let mut depth = 0usize;
     let mut i = open;
     while let Some(&c) = b.get(i) {
         if i - open > max {
-            return None;
+            return (None, i - open);
         }
         match c {
             b'\\' => i += 1,
@@ -566,14 +690,14 @@ fn matching_bracket(s: &str, open: usize, max: usize) -> Option<usize> {
             b']' => {
                 depth = depth.saturating_sub(1);
                 if depth == 0 {
-                    return Some(i);
+                    return (Some(i), i - open);
                 }
             }
             _ => {}
         }
         i += 1;
     }
-    None
+    (None, i.saturating_sub(open))
 }
 
 /// Byte index of a run of exactly `n` backticks at or after `from`.
@@ -689,6 +813,50 @@ fn tag_attr(tag: &str, name: &str) -> Option<String> {
     None
 }
 
+/// Parse an Obsidian `[[target|display]]` or `![[target|size]]` at `at`.
+/// Returns `(after, target, display, inner, embed)`.
+fn wikilink(s: &str, at: usize, scan_budget: &mut usize) -> Option<(usize, String, String, String, bool)> {
+    // An escaped `!\[[` must stay literal (the backslash branch already emitted the `!`).
+    if at >= 2 && s.as_bytes().get(at - 1) == Some(&b'!') && s.as_bytes().get(at - 2) == Some(&b'\\') {
+        return None;
+    }
+    let rest = s.get(at..)?;
+    let (start, embed) = if rest.starts_with("![[") {
+        (at + 1, true)
+    } else if rest.starts_with("[[") {
+        (at, false)
+    } else {
+        return None;
+    };
+    let inner_start = start + 2;
+    let max = MAX_WIKILINK.min(*scan_budget);
+    if max == 0 {
+        return None;
+    }
+    let tail = s.get(inner_start..)?;
+    let window = within(tail, max);
+    let Some(end) = window.find("]]") else {
+        // An unmatched `[[` must not make every later bracket rescan the same text.
+        *scan_budget = scan_budget.saturating_sub(window.len());
+        return None;
+    };
+    *scan_budget = scan_budget.saturating_sub(end + 2);
+    let inner = tail.get(..end)?;
+    if inner.contains(['\n', '\r', '[', ']']) {
+        return None;
+    }
+    let (target, display) = match inner.split_once('|') {
+        Some((t, d)) => (t.trim(), d),
+        None => (inner, inner),
+    };
+    if target.is_empty() {
+        return None;
+    }
+    let after = inner_start + end + 2;
+    let shown = if embed { inner.to_string() } else { display.to_string() };
+    Some((after, target.to_string(), shown, inner.to_string(), embed))
+}
+
 fn tokenize(s: &str, base: &Fmt, depth: usize) -> Vec<Node> {
     let mut nodes: Vec<Node> = Vec::new();
     // Bytes the link and image scans below may look ahead in total. Each unmatched `[` or `![(`
@@ -764,11 +932,27 @@ fn tokenize(s: &str, base: &Fmt, depth: usize) -> Vec<Node> {
                 text_start = i;
             }
             b'!' | b'[' if depth < MAX_NEST => {
+                if let Some((end, target, display, inner, embed)) = wikilink(s, i, &mut scan_budget) {
+                    flush!();
+                    let mut f = base.clone();
+                    if embed {
+                        f.embed = Some(inner.clone());
+                        push_text(&mut nodes, &format!("![[{inner}]]"), &f);
+                    } else {
+                        f.wikilink = Some(target);
+                        push_text(&mut nodes, &display, &f);
+                    }
+                    i = end;
+                    text_start = i;
+                    continue;
+                }
                 let img = c == b'!';
                 let open = if img { i + 1 } else { i };
                 let parsed = if b.get(open) == Some(&b'[') && scan_budget > 0 {
-                    let found = matching_bracket(s, open, scan_budget);
-                    scan_budget = scan_budget.saturating_sub(found.map_or(scan_budget, |close| close - open));
+                    // Charge the scan even when no matching bracket is found: otherwise every
+                    // unmatched `[` rescans the rest of a hostile, bracket-heavy note.
+                    let (found, scanned) = matching_bracket(s, open, scan_budget);
+                    scan_budget = scan_budget.saturating_sub(scanned);
                     found.and_then(|close| {
                         // A destination that does not parse may have been read to the end of the text.
                         scan_budget = scan_budget.saturating_sub(s.len().saturating_sub(close));
@@ -1033,7 +1217,9 @@ fn escape_line_start(s: String) -> String {
     let s = s.trim_start().to_string();
     let t = s.as_str();
     let lead = s.len() - t.len();
-    let needs = t.starts_with('#')
+    // `#tag` is an Obsidian tag, not an ATX heading; only `# ` (or a bare `#`) starts one.
+    let needs = t == "#"
+        || t.starts_with("# ")
         || t.starts_with('>')
         || t.starts_with("- ")
         || t.starts_with("+ ")
@@ -1078,13 +1264,22 @@ enum Mark {
 }
 
 /// Inline spans → Markdown with properly nested markers.
-fn inlines_md(inlines: &[Inline]) -> String {
+fn inlines_md(inlines: &[Inline], names: &BTreeMap<String, String>) -> String {
     // Split into (text, fmt) pieces with whitespace moved outside emphasis.
     let mut pieces: Vec<(String, Fmt, Option<String>)> = Vec::new();
     let inlines = crate::model::equations_as_text(inlines);
     for i in inlines.iter() {
         match i {
             Inline::Text(t, f) => {
+                if let Some(target) = &f.wikilink {
+                    let raw = if t == target { format!("[[{target}]]") } else { format!("[[{target}|{t}]]") };
+                    pieces.push((String::new(), Fmt::default(), Some(raw)));
+                    continue;
+                }
+                if let Some(embed) = &f.embed {
+                    pieces.push((String::new(), Fmt::default(), Some(format!("![[{embed}]]"))));
+                    continue;
+                }
                 let has_emph = f.bold || f.italic || f.strike;
                 if has_emph && !f.code {
                     let core = t.trim_matches([' ', '\t', '\n']);
@@ -1105,7 +1300,7 @@ fn inlines_md(inlines: &[Inline]) -> String {
                 }
             }
             Inline::Image(img) => {
-                let name = format!("image.{}", img.ext);
+                let name = img.key.as_ref().and_then(|k| names.get(k)).cloned().unwrap_or_else(|| format!("image.{}", img.ext));
                 pieces.push((String::new(), Fmt::default(), Some(format!("![{}]({})", escape(&img.alt), name))));
             }
             Inline::Anchor(a) => {
@@ -1183,13 +1378,13 @@ fn marker(m: Mark) -> &'static str {
     }
 }
 
-fn table_md(t: &FTable, out: &mut Vec<String>) {
+fn table_md(t: &FTable, out: &mut Vec<String>, names: &BTreeMap<String, String>) {
     let cols = t.cols().max(1);
     let cell_md = |c: &Cell| -> String {
         let mut parts = Vec::new();
         for b in &c.blocks {
             match b {
-                FBlock::Para(p) => parts.push(inlines_md(&p.inlines).replace("\\\n", "<br>")),
+                FBlock::Para(p) => parts.push(inlines_md(&p.inlines, names).replace("\\\n", "<br>")),
                 FBlock::Table(inner) => parts.push(escape(&inner.rows.iter().flat_map(|r| r.iter().map(Cell::text)).collect::<Vec<_>>().join(" "))),
             }
         }
@@ -1233,9 +1428,15 @@ fn table_md(t: &FTable, out: &mut Vec<String>) {
 
 /// Markdown text of a document.
 pub fn export(doc: &Document) -> String {
+    export_with_names(doc, &BTreeMap::new())
+}
+
+/// Markdown text of a document, naming images from `names` (media key → path relative to the
+/// Markdown file). Keys missing from the map keep the generic `image.<ext>` name.
+pub fn export_with_names(doc: &Document, names: &BTreeMap<String, String>) -> String {
     let flow = model::from_doc(doc);
     let mut out: Vec<String> = Vec::new();
-    write_blocks(&flow.blocks, &mut out);
+    write_blocks(&flow.blocks, &mut out, names);
     let mut s = out.join("\n");
     while s.ends_with("\n\n") {
         s.pop();
@@ -1246,7 +1447,7 @@ pub fn export(doc: &Document) -> String {
     s
 }
 
-fn write_blocks(blocks: &[FBlock], out: &mut Vec<String>) {
+fn write_blocks(blocks: &[FBlock], out: &mut Vec<String>, names: &BTreeMap<String, String>) {
     let mut i = 0;
     let mut counters = [0u32; 9];
     let mut prev_list = false;
@@ -1254,7 +1455,12 @@ fn write_blocks(blocks: &[FBlock], out: &mut Vec<String>) {
     while let Some(b) = blocks.get(i) {
         match b {
             FBlock::Table(t) => {
-                table_md(t, out);
+                table_md(t, out, names);
+                out.push(String::new());
+                prev_list = false;
+            }
+            FBlock::Para(p) if p.kind == Kind::Raw && p.list.is_none() => {
+                out.push(p.text());
                 out.push(String::new());
                 prev_list = false;
             }
@@ -1277,7 +1483,7 @@ fn write_blocks(blocks: &[FBlock], out: &mut Vec<String>) {
                 continue;
             }
             FBlock::Para(p) => {
-                let body = inlines_md(&p.inlines);
+                let body = inlines_md(&p.inlines, names);
                 match p.list {
                     Some(li) => {
                         let lv = li.level.min(8) as usize;
@@ -1407,7 +1613,7 @@ mod tests {
     fn export_escapes_round_trip() {
         let mut p = Para::default();
         p.push_text("1. not a list *really*", &Fmt::default());
-        let md = escape_line_start(inlines_md(&p.inlines));
+        let md = escape_line_start(inlines_md(&p.inlines, &BTreeMap::new()));
         let back = parse(&md);
         let FBlock::Para(q) = &back.blocks[0] else { panic!() };
         assert_eq!(q.text(), "1. not a list *really*");

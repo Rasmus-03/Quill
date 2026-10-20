@@ -1956,3 +1956,66 @@ fn text_frames_read_and_round_trip() {
     assert_eq!(q[1].props.frame, p[1].props.frame);
     assert!(q.iter().any(|x| x.props.drop_cap == Some(2) && x.props.frame.is_none()));
 }
+
+/// #812: pictures whose declared frame is unreadably small (some PDF→Word converters write ~1 pt
+/// extents whatever the picture file says) come in at the picture's own pixel size at 96 ppi, so
+/// they are visible in the document. A frame a real size keeps, and so does a tiny picture that
+/// is only as big as its frame.
+#[test]
+fn unreadable_picture_frame_takes_the_pictures_natural_size() {
+    let png = |w: u32, h: u32| {
+        let mut bytes = vec![0x89u8, b'P', b'N', b'G', 0x0d, 0x0a, 0x1a, 0x0a, 0, 0, 0, 13];
+        bytes.extend_from_slice(b"IHDR");
+        bytes.extend_from_slice(&w.to_be_bytes());
+        bytes.extend_from_slice(&h.to_be_bytes());
+        bytes
+    };
+    let pic = |cx: u32, cy: u32, r: &str| {
+        format!(
+            r#"<w:p><w:r><w:drawing><wp:inline><wp:extent cx="{cx}" cy="{cy}"/><wp:docPr id="1" name="P"/><a:graphic><a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/picture"><pic:pic><pic:blipFill><a:blip r:embed="{r}"/></pic:blipFill></pic:pic></a:graphicData></a:graphic></wp:inline></w:drawing></w:r></w:p>"#
+        )
+    };
+    let body = format!(
+        "{}{}{}<w:sectPr/>",
+        // Declared 1 x 1 pt at a 400 x 50 px picture: invisible, so the natural size wins.
+        pic(12_700, 12_700, "rId1"),
+        // A real one-inch frame is unchanged.
+        pic(914_400, 914_400, "rId2"),
+        // A 3 x 1.5 pt frame around a 4 x 3 px picture: as big as its frame, kept.
+        pic(38_100, 19_050, "rId3"),
+    );
+    let files = {
+        let mut z = zip::ZipArchive::new(std::io::Cursor::new(docx(
+            &body,
+            &[("rId1", "image", "media/s.png"), ("rId2", "image", "media/b.png"), ("rId3", "image", "media/t.png")],
+            &[],
+        )))
+        .unwrap();
+        let mut entries: Vec<(String, Vec<u8>)> = Vec::new();
+        for i in 0..z.len() {
+            let mut f = z.by_index(i).unwrap();
+            let mut v = Vec::new();
+            std::io::Read::read_to_end(&mut f, &mut v).unwrap();
+            entries.push((f.name().to_string(), v));
+        }
+        entries.push(("word/media/s.png".into(), png(400, 50)));
+        entries.push(("word/media/b.png".into(), png(20, 20)));
+        entries.push(("word/media/t.png".into(), png(4, 3)));
+        zip(&entries.iter().map(|(n, v)| (n.as_str(), v.as_slice())).collect::<Vec<_>>())
+    };
+    let d = wordcraft_docx::read(&files).unwrap();
+    let sizes = |d: &Document| -> Vec<(f32, f32)> {
+        paras(d)
+            .iter()
+            .filter_map(|p| p.objects.first())
+            .map(|o| match o {
+                InlineObject::Image { w, h, .. } => (*w, *h),
+                x => panic!("{x:?}"),
+            })
+            .collect()
+    };
+    assert_eq!(sizes(&d), [(300.0, 37.5), (72.0, 72.0), (3.0, 1.5)]);
+    // Saving writes the settled frame back, so it stays visible on the next read.
+    let again = wordcraft_docx::read(&wordcraft_docx::write(&d).unwrap()).unwrap();
+    assert_eq!(sizes(&again), [(300.0, 37.5), (72.0, 72.0), (3.0, 1.5)]);
+}

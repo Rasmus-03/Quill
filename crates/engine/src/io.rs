@@ -1,9 +1,13 @@
 //! File format dispatch by extension. Format crates plug in here.
+//!
+//! The vault's own file primitives live in [`io::vault_fs`] (real file system only; on wasm
+//! they read back nothing and refuse writes).
 
 use wordcraft_doc::Document;
 
 #[cfg(not(target_arch = "wasm32"))]
 mod safe_save;
+pub(crate) mod vault_fs;
 
 /// Formats WordCraft opens.
 pub const OPEN_EXTS: &[&str] = &[
@@ -23,6 +27,7 @@ pub const OPEN_EXTS: &[&str] = &[
     "tex",
     "latex",
     "ltx",
+    "pdf",
     "xml",
     "wcraft.json",
     "json",
@@ -203,6 +208,16 @@ fn open_by_content(name: &str, ext: &str, bytes: &[u8], password: Option<&str>) 
         (wordcraft_docbin::read(bytes).map_err(|e| format!("{name}: not a document WordCraft can open ({e})"))?, false)
     } else if bytes.starts_with(b"{\\rtf") {
         (wordcraft_formats::rtf::import(bytes)?, false)
+    } else if bytes.starts_with(b"%PDF-") {
+        // A PDF opened under any other name (WordCraft's own reflow, desktop only).
+        #[cfg(not(target_arch = "wasm32"))]
+        {
+            (wordcraft_formats::pdf::import(bytes)?, false)
+        }
+        #[cfg(target_arch = "wasm32")]
+        {
+            return Err(format!("{name}: PDFs open as documents in WordCraft for the desktop"));
+        }
     } else if wordcraft_formats::txt::is_text(bytes) {
         (wordcraft_formats::txt::import(bytes), false)
     } else if ext.is_empty() {
@@ -423,6 +438,12 @@ pub fn read_file_capped(path: &str, max: u64, what: &str) -> Result<Vec<u8>, Str
         return Err(format!("{path}: the {what} is larger than {} MB", max >> 20));
     }
     Ok(bytes)
+}
+
+/// On the web, files arrive through the browser: a local path can never be read here.
+#[cfg(target_arch = "wasm32")]
+pub fn read_file_capped(path: &str, _max: u64, _what: &str) -> Result<Vec<u8>, String> {
+    Err(format!("{path}: a local path is read through the browser on the web"))
 }
 
 /// Write `bytes` to the file at `path`, inside the automation write root when there is one.

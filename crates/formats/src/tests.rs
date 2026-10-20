@@ -603,14 +603,17 @@ fn hostile_importer_input_takes_linear_time() {
     }
 }
 
-/// The bounded scans must not change how ordinary links, images, tags and entities read.
+/// The bounded scans must not change how ordinary links, tags and entities read.
 #[test]
 fn bounded_scans_keep_ordinary_markdown_and_entities() {
-    let md =
-        import("md", b"See [the *docs*](https://example.com/a(b) and ![alt](x.png) & &amp; <b>bold</b> <https://example.com>.\n").unwrap().unwrap();
+    let md = import("md", b"See [the *docs*](https://example.com/a(b) & &amp; <b>bold</b> <https://example.com>.\n").unwrap().unwrap();
     let text = md.plain_text(Default::default());
     assert!(text.contains("the docs"), "{text}");
     assert!(text.contains("& &"), "{text}");
+    // A standard Markdown image names a local file the inline parser cannot load (the note's
+    // folder travels separately), so its whole line stays as raw source without being rescanned.
+    let img = import("md", b"See ![alt](x.png) here.\n").unwrap().unwrap();
+    assert!(img.plain_text(Default::default()).contains("![alt](x.png)"));
     let html = import("html", "<p>&lt;&amp;&#65;&eacute; &nosuchentity; &#x41;</p>".as_bytes()).unwrap().unwrap();
     assert_eq!(html.plain_text(Default::default()).trim(), "<&Aé &nosuchentity; A");
     // An entity name longer than the scan window is left alone, as before.

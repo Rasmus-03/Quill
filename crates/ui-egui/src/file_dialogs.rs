@@ -25,6 +25,8 @@ pub enum FileDialogRequest {
     Open { purpose: String },
     /// Pick a path to save to, given a suggested file name.
     Save { name: String },
+    /// Pick a folder (an Obsidian vault).
+    Folder,
 }
 
 /// The host's answer to a [`FileDialogRequest`]: the picked path, `Ok(None)` when the user
@@ -32,7 +34,9 @@ pub enum FileDialogRequest {
 pub type FileDialogAnswer = Result<Option<String>, String>;
 
 const PICTURES: &[&str] = &["png", "jpg", "jpeg", "gif", "webp", "bmp", "wmf", "emf"];
-const DOCUMENTS: &[&str] = &["docx", "docm", "dotx", "dotm", "doc", "dot", "odt", "rtf", "txt", "md", "html", "htm", "tex", "json", "xml"];
+// Like `io::OPEN_EXTS`, which the engine opens by; `pdf` is the desktop reflow import, which is
+// engine-side, so the dialog lists it for the desktop and the web shell keeps it out.
+const DOCUMENTS: &[&str] = &["docx", "docm", "dotx", "dotm", "doc", "dot", "odt", "rtf", "txt", "md", "html", "htm", "tex", "pdf", "json", "xml"];
 
 /// The file types Open offers, as (label, extensions; `*` is any file): pictures for Insert/Change
 /// Picture, recipient lists for Select Recipients › Use an Existing List…, documents otherwise.
@@ -67,6 +71,8 @@ pub(crate) enum AfterPick {
     ForDialog,
     /// Put the picked document into the Compare dialog (original or revised, #412).
     ComparePath { revised: bool },
+    /// Open the picked folder as an Obsidian vault.
+    VaultOpen,
 }
 
 /// What to do once Save As has written the document.
@@ -133,6 +139,7 @@ impl WordApp {
         let picked = match &req {
             FileDialogRequest::Open { purpose } => self.services.pick_open.as_ref().and_then(|f| f(purpose)),
             FileDialogRequest::Save { name } => self.services.pick_save.as_ref().and_then(|f| f(name)),
+            FileDialogRequest::Folder => self.services.pick_folder.as_ref().and_then(|f| f()),
         };
         Asked::Done(self.finish_pick(after, picked))
     }
@@ -213,6 +220,10 @@ impl WordApp {
                 crate::dialogs_review::set_compare_path(self, revised, path);
                 Ok(json!({"picked": true}))
             }
+            AfterPick::VaultOpen => {
+                let Some(path) = picked else { return Ok(json!({"cancelled": true})) };
+                self.run("vault.open", json!({"path": path}))
+            }
             AfterPick::Export { ext } => {
                 let Some(path) = picked else { return Ok(json!({"cancelled": true})) };
                 let r = if ext == "png" { self.run("file.exportPng", json!({"path": path})) } else { self.run("file.saveAs", json!({"path": path})) };
@@ -292,6 +303,11 @@ impl WordApp {
         let _ = self.ask_file(FileDialogRequest::Open { purpose: "document".into() }, AfterPick::OpenDocument);
     }
 
+    /// Ask for an Obsidian vault folder through the same non-blocking dialog path as other files.
+    pub(crate) fn open_vault_dialog(&mut self) {
+        let _ = self.ask_file(FileDialogRequest::Folder, AfterPick::VaultOpen);
+    }
+
     pub(crate) fn pick_picture(&mut self) {
         if let Some(f) = &self.services.open_async {
             f("picture");
@@ -321,6 +337,20 @@ mod tests {
     use wordcraft_engine::Session;
 
     const UNSAVED: &str = "My unsaved novel chapter";
+
+    /// #706: the Open dialog must list every format the engine opens ([`io::OPEN_EXTS`]). When
+    /// the engine gained `.pdf` reflow, this list didn't, so `HW4.pdf` was only openable through
+    /// "All files". The engine's aliases (`.text`, `.wcraft.json`) don't need entries.
+    #[test]
+    fn the_document_filter_offers_every_openable_extension() {
+        let open = wordcraft_engine::io::OPEN_EXTS;
+        for ext in DOCUMENTS {
+            assert!(open.contains(ext), ".{ext} is offered in the Open dialog but not in OPEN_EXTS");
+        }
+        for ext in ["pdf", "docx", "odt", "rtf"] {
+            assert!(DOCUMENTS.contains(&ext) && open.contains(&ext), ".{ext} is openable in the app");
+        }
+    }
 
     /// Dialogs the fake host was asked to show, each with the channel its answer goes through.
     type Shown = Rc<RefCell<Vec<(FileDialogRequest, Sender<FileDialogAnswer>)>>>;
@@ -484,6 +514,29 @@ mod tests {
         answer(&shown, None);
         assert_eq!(a.poll_file_dialog().unwrap().unwrap(), json!({"cancelled": true}));
         assert_eq!(a.session.merge.rows.len(), 2);
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    /// The vault folder picker uses the same non-blocking dialog path as Open and Save.
+    #[test]
+    fn a_vault_folder_answer_opens_the_vault() {
+        let dir = scratch("vault");
+        std::fs::write(dir.join("One.md"), "# One\n").unwrap();
+        let (mut a, shown) = async_app();
+        a.open_vault_dialog();
+        assert_eq!(shown.borrow()[0].0, FileDialogRequest::Folder);
+        assert!(a.file_dialog_open());
+        answer(&shown, Some(&dir.to_string_lossy()));
+        a.poll_file_dialog().unwrap().unwrap();
+        let root = dir.canonicalize().unwrap();
+        assert_eq!(a.session.vault.root.as_deref(), Some(root.as_path()));
+        assert_eq!(a.session.vault.files.len(), 1);
+        // Cancelling leaves no vault open.
+        let (mut a, shown) = async_app();
+        a.open_vault_dialog();
+        answer(&shown, None);
+        assert_eq!(a.poll_file_dialog().unwrap().unwrap(), json!({"cancelled": true}));
+        assert!(a.session.vault.root.is_none());
         let _ = std::fs::remove_dir_all(&dir);
     }
 

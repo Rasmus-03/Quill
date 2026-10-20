@@ -131,6 +131,7 @@ fn new(s: &mut Session, v: &Value) -> CmdResult {
     };
     s.set_document(doc);
     s.path = None;
+    s.vault.note = None;
     sel_result(s)
 }
 
@@ -155,6 +156,11 @@ fn open(s: &mut Session, v: &Value) -> CmdResult {
     }
     s.set_document(doc);
     s.path = Some(path.into());
+    if let Some(note) = s.path.as_deref().and_then(|p| s.vault.relative(p).ok()) {
+        s.vault.note = Some(note);
+    } else {
+        s.vault.note = None;
+    }
     // Like Word, a document opened with a password is saved with it again.
     if encrypted {
         s.password = password.map(crate::io::Password::new);
@@ -189,6 +195,11 @@ fn save(s: &mut Session, v: &Value) -> CmdResult {
             return Ok(json!({"saved": false}));
         }
     };
+    // A Markdown note inside the open vault saves as a bundle: the note plus the images it
+    // refers to (Obsidian's own layout).
+    if let Some(r) = crate::vault::save_if_note(s, &path, v) {
+        return r;
+    }
     // A failed save must leave the session as it was: keep the metadata and password to restore.
     let core_before = s.doc.core.clone();
     let password_before = s.password.clone();

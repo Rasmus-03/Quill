@@ -100,6 +100,7 @@ pub fn registry() -> Registry {
     v.extend(wordart::specs());
     v.extend(connectors::specs());
     v.extend(tools::specs());
+    v.extend(crate::vault::specs());
     v.extend(templates::specs());
     v.extend(protect::specs());
     v.extend(speech::specs());

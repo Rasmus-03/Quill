@@ -51,6 +51,40 @@ fn collection(faces: &[Vec<u8>]) -> Vec<u8> {
     out
 }
 
+/// A collection with `count` face offsets that all point at the same adjusted font.
+fn repeated_collection(face: &[u8], count: usize) -> Vec<u8> {
+    let mut out = b"ttcf".to_vec();
+    out.extend_from_slice(&0x0001_0000_u32.to_be_bytes());
+    out.extend_from_slice(&(count as u32).to_be_bytes());
+    let base = 12 + 4 * count;
+    for _ in 0..count {
+        out.extend_from_slice(&(base as u32).to_be_bytes());
+    }
+    let start = out.len() as u32;
+    assert_eq!(start as usize, base);
+    let mut f = face.to_vec();
+    let tables = u16::from_be_bytes([f[4], f[5]]) as usize;
+    for r in 0..tables {
+        let at = 12 + r * 16 + 8;
+        let off = u32::from_be_bytes(f[at..at + 4].try_into().unwrap()) + start;
+        f[at..at + 4].copy_from_slice(&off.to_be_bytes());
+    }
+    out.extend_from_slice(&f);
+    out
+}
+
+#[test]
+fn a_collection_with_too_many_faces_is_rejected_before_enumeration() {
+    let face = renamed("SourceSans3-Regular.ttf");
+    let data = repeated_collection(&face, 100_000);
+    let started = std::time::Instant::now();
+    let found = enumerate_faces(&data);
+    assert_eq!(found.len(), MAX_FACES_PER_FILE + 1);
+    assert!(started.elapsed() < std::time::Duration::from_secs(5));
+    let db = FontDb::with_font_dirs(Vec::new());
+    assert_eq!(db.add_font(data), 0);
+}
+
 /// A font folder (with a subfolder, a damaged font and a file that isn't a font) holding
 /// [`FAMILY`] Regular and Bold.
 fn font_dir(name: &str) -> PathBuf {

@@ -123,6 +123,10 @@ pub struct CanvasState {
     pub balloon_rects: Vec<(u32, Rect)>,
     /// A paste event arrived since the last Mod+V release (see `keys::canvas_events`).
     pub(crate) pasted: bool,
+    /// The Paste Options button shown beside the text a paste just inserted.
+    pub(crate) paste_options: Option<crate::paste_options::State>,
+    /// The paste a cancelled Paste Special dialog puts back (see `paste_options::restore`).
+    pub(crate) paste_options_restore: Option<crate::paste_options::State>,
     /// Draw Table or Eraser is on (`table_pen`): presses draw instead of moving the caret.
     pub table_tool: Option<crate::table_pen::TableTool>,
     /// The Draw Table stroke (or eraser press) in progress.
@@ -196,6 +200,8 @@ impl Default for CanvasState {
             context_menu_at: None,
             mini_anchor: None,
             pasted: false,
+            paste_options: None,
+            paste_options_restore: None,
             swallow_text: false,
             wheel: Default::default(),
             scroll_offset: egui::Vec2::ZERO,
@@ -1383,6 +1389,7 @@ pub fn show(app: &mut WordApp, ui: &mut Ui) {
     {
         crate::mini_toolbar::show(app, ui.ctx(), sel, area);
     }
+    crate::paste_options::show(app, ui.ctx(), area);
     if app.session.view.read_mode {
         // Fixed navigation chrome, independent of the horizontally moving columns.
         let step = app.session.view.read_width * app.canvas.scale + GAP;

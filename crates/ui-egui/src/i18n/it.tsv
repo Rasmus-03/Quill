@@ -2459,3 +2459,19 @@ preview	Title	Esempio
 	Automatic ({region})	Automatico ({region})
 	Search	Cerca
 	Title Bar	Barra del titolo
+	Paste Options	Opzioni incolla
+	Keep Source Formatting	Mantieni formattazione originale
+	Open Vault…	Apri caveau…
+	Vault	Caveau
+	Search notes	Cerca note
+	Save this document to the vault as	Salva questo documento nel caveau come
+	Save to Vault	Salva nel caveau
+	Saved {path}	Salvato: {path}
+	Open an Obsidian vault folder to search its notes and save into it.	Apri una cartella caveau di Obsidian per cercare le sue note e salvarci dentro.
+	{n} notes	Note: {n}
+	Note.md	Nota.md
+	Choose Folder	Scegli cartella
+	Choose	Scegli
+	Open Vault	Apri caveau
+	Refresh Vault	Aggiorna caveau
+	Search Vault	Cerca nel caveau

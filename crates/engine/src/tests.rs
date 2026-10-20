@@ -3885,7 +3885,14 @@ fn unknown_text_extensions_open_as_text() {
         let err = crate::io::open_bytes(name, bytes).unwrap_err();
         assert!(err.contains(name) && err.contains("not a document"), "{name}: {err}");
     }
+    // A truncated PDF is still an error, not a panic (and not the file shown as garbage text).
     assert!(crate::io::open_bytes("x.pdf", b"%PDF-1.7\n1 0 obj\n").is_err());
+    // PDF Reflow: a written PDF opens as an editable document (gap #23's page size, text,
+    // pictures), whatever the extension it arrives with.
+    let pdf = wordcraft_pdf::export(&crate::sample::letter(), &wordcraft_pdf::PdfOptions::default()).map_err(|e| e.to_string()).unwrap();
+    assert_ne!(pdf, Vec::<u8>::new());
+    let flow = crate::io::open_bytes("letter.received", &pdf).unwrap();
+    assert!(lines(&flow).contains("Dear Recipient,"), "PDF Reflow opened the letter's text: {:?}", lines(&flow));
     // A Word document or RTF file with the wrong extension opens by what it holds.
     let docx = crate::io::save_bytes("x.docx", &crate::sample::letter()).unwrap();
     assert_eq!(lines(&crate::io::open_bytes("letter.bak", &docx).unwrap()), lines(&crate::io::open_bytes("x.docx", &docx).unwrap()));
@@ -3906,6 +3913,37 @@ fn unknown_text_extensions_open_as_text() {
     let bad = crate::cmd::insert::base64_encode(b"\0\x01\x02binary\0");
     assert!(s.run("file.open", &json!({"path": "x.bin", "data": bad})).is_err());
     assert!(text(&s).contains("Радио"), "a failed open leaves the document alone");
+    let _ = std::fs::remove_dir_all(&dir);
+}
+
+/// PDF Reflow keeps pictures at the size they were drawn: a PDF with a picture comes back with
+/// the picture placed at its drawn size, not collapsed to the unit square (which happened when
+/// a `cm`'s six operands arrived as scalars instead of a six-number array and were dropped).
+#[test]
+#[cfg(not(target_arch = "wasm32"))]
+fn pdf_reflow_keeps_a_picture_at_its_drawn_size() {
+    use wordcraft_doc::para::InlineObject;
+    // A 160×80 PNG, inserted sitting at its natural size (120×60 pt as Word places it).
+    let img = image::RgbaImage::from_fn(160, 80, |x, y| image::Rgba([(x % 255) as u8, y as u8, 32, 255]));
+    let mut buf = Vec::new();
+    image::DynamicImage::ImageRgba8(img).write_to(&mut std::io::Cursor::new(&mut buf), image::ImageFormat::Png).unwrap();
+    let dir = scratch_dir("pdf-reflow-picture");
+    let path = dir.join("pic.png");
+    std::fs::write(&path, &buf).unwrap();
+    let mut s = s();
+    let r = run(&mut s, "insert.picture", json!({"path": path.to_string_lossy()}));
+    assert!(r["media"].is_string(), "{r}");
+    let Some((_, InlineObject::Image { w: w0, h: h0, .. })) = crate::cmd::objects::selected(&s) else { panic!("no picture") };
+    let pdf = crate::io::save_bytes("x.pdf", &s.doc).unwrap();
+    let flow = crate::io::open_bytes("x.pdf", &pdf).unwrap();
+    let mut placed: Option<(f32, f32)> = None;
+    flow.objects_in_reading_order(&mut |o| {
+        if let InlineObject::Image { w, h, .. } = o {
+            placed = Some((*w, *h));
+        }
+    });
+    let (w, h) = placed.expect("the picture is in the reflowed document");
+    assert!(((w - w0) / w0).abs() < 0.35 && ((h - h0) / h0).abs() < 0.35, "placed at {w}x{h} pt, drawn at {w0}x{h0}");
     let _ = std::fs::remove_dir_all(&dir);
 }
 

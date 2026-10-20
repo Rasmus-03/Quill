@@ -734,6 +734,9 @@ struct Found {
     coords: Vec<([u8; 4], f32)>,
 }
 
+/// Most faces one file may add (collections, variable fonts' named instances).
+pub(crate) const MAX_FACES_PER_FILE: usize = 256;
+
 /// The faces of `f` (face `index` of its file): one per named instance of a variable font
 /// (InDesign lists them as styles), otherwise the font itself.
 fn font_faces(f: &skrifa::FontRef<'_>, index: u32) -> Vec<Found> {
@@ -742,7 +745,7 @@ fn font_faces(f: &skrifa::FontRef<'_>, index: u32) -> Vec<Found> {
     let east_asian = east_asian_font(f);
     let axes = f.axes();
     let mut named: Vec<Found> = Vec::new();
-    for ni in f.named_instances().iter() {
+    for ni in f.named_instances().iter().take(MAX_FACES_PER_FILE + 1) {
         let Some(style) = name(f, &[ni.subfamily_name_id()]) else { continue };
         if named.iter().any(|n| n.style.eq_ignore_ascii_case(&style)) {
             continue;
@@ -764,12 +767,16 @@ fn font_faces(f: &skrifa::FontRef<'_>, index: u32) -> Vec<Found> {
 /// Parse every face in `data` (a font file or collection); a variable font yields one face per
 /// named instance.
 fn enumerate_faces(data: &[u8]) -> Vec<Found> {
+    // A collection's offset table can name millions of faces that all point at one font; stop at
+    // one past the per-file limit so callers can reject it without materialising the rest.
+    let limit = MAX_FACES_PER_FILE + 1;
     let count = match FileRef::new(data) {
         Ok(FileRef::Font(_)) => 1,
         Ok(FileRef::Collection(c)) => c.len(),
         Err(_) => 0,
     };
-    (0..count).filter_map(|i| skrifa::FontRef::from_index(data, i).ok().map(|f| font_faces(&f, i))).flatten().collect()
+    let count = count.min(limit as u32);
+    (0..count).filter_map(|i| skrifa::FontRef::from_index(data, i).ok().map(|f| font_faces(&f, i))).flatten().take(limit).collect()
 }
 
 /// The compiled-in Source Sans 3 Regular, for a database that somehow has no faces at all.
@@ -1058,7 +1065,13 @@ impl FontDb {
         let mut new = Vec::new();
         for bytes in files {
             let data = Arc::new(bytes);
-            for f in enumerate_faces(&data) {
+            let found = enumerate_faces(&data);
+            // A collection that names more faces than the per-file limit is hostile or unusable;
+            // don't load a truncated subset of it.
+            if found.len() > MAX_FACES_PER_FILE {
+                continue;
+            }
+            for f in found {
                 if let Some(mut face) = make_face(FontBytes::Owned(data.clone()), f.index, f.family, f.style, f.legacy, f.coords) {
                     face.local_names = f.local;
                     new.push(Arc::new(face));

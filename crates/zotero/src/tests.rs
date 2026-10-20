@@ -494,6 +494,18 @@ fn switching_to_a_note_style_moves_citations_into_footnotes_and_back() {
 }
 
 #[test]
+fn document_convert_rejects_more_ids_than_fields_before_changing_anything() {
+    let mut z = Z::new("Text.", 5);
+    z.begin();
+    let a = z.cite(0, "(Doe 2020)");
+    z.ok("Document_complete", json!([1]));
+    z.begin();
+    let before = z.text();
+    assert!(z.call("Document_convert", json!([1, a, 999, 1000, 1001])).is_err());
+    assert_eq!(z.text(), before, "a rejected conversion must not move the first field");
+}
+
+#[test]
 fn a_note_with_other_text_stays_when_its_citation_leaves() {
     let mut z = Z::new("Text.", 5);
     z.begin();

@@ -41,6 +41,13 @@ use table::ParaOut;
 
 /// Largest stream we materialise (bytes); the engine already caps whole files at 2 GB.
 const MAX_STREAM: u64 = 1 << 30;
+/// Combined size of the three streams we materialise. Each is capped by [`MAX_STREAM`], but
+/// three 1 GiB streams plus the caller's input would still be several GiB.
+const MAX_STREAM_TOTAL: u64 = 3 * 512 * 1024 * 1024;
+/// Most characters the reader will materialise across all stories. A hostile piece table can
+/// map hundreds of millions of CPs onto the same small run of bytes; layout then builds a
+/// cluster (tens of bytes) for every one, so the CP count the FIB claims is not a memory bound.
+const MAX_TEXT_CP: u64 = 8_000_000;
 /// Most header/footer parts we create (matches the docx reader's cap).
 const MAX_PARTS: usize = 50_000;
 /// `sprmCPicLocation`: the fc of a picture in the Data stream.
@@ -72,7 +79,7 @@ pub enum DocbinError {
 /// Read a `.doc` (Word 97-2003 binary) file into a [`Document`].
 pub fn read(bytes: &[u8]) -> Result<Document, DocbinError> {
     let mut comp = cfb::CompoundFile::open(std::io::Cursor::new(bytes)).map_err(|e| DocbinError::Container(e.to_string()))?;
-    let word = stream(&mut comp, "WordDocument").ok_or_else(|| DocbinError::NotWord("no WordDocument stream".into()))?;
+    let word = stream(&mut comp, "WordDocument", MAX_STREAM).ok_or_else(|| DocbinError::NotWord("no WordDocument stream".into()))?;
     if word.len() as u64 > MAX_STREAM {
         return Err(DocbinError::Limit(format!("WordDocument stream is {} bytes", word.len())));
     }
@@ -84,15 +91,21 @@ pub fn read(bytes: &[u8]) -> Result<Document, DocbinError> {
     // since files written by other writers sometimes carry the wrong bit.
     let named = if fib.which_tbl_stm { "1Table" } else { "0Table" };
     let other = if fib.which_tbl_stm { "0Table" } else { "1Table" };
-    let table = stream(&mut comp, named).or_else(|| stream(&mut comp, other)).unwrap_or_default();
+    let table_budget = MAX_STREAM.min(MAX_STREAM_TOTAL.saturating_sub(word.len() as u64));
+    let table = stream(&mut comp, named, table_budget).or_else(|| stream(&mut comp, other, table_budget)).unwrap_or_default();
     if table.len() as u64 > MAX_STREAM {
         return Err(DocbinError::Limit(format!("Table stream is {} bytes", table.len())));
     }
+    check_stream_total([word.len() as u64, table.len() as u64, 0])?;
 
     // The piece table locates every character in the WordDocument stream.
     let (fc_clx, lcb_clx) =
         fib.pair(fib::pair::CLX).filter(|(_, lcb)| *lcb > 0).ok_or_else(|| DocbinError::Malformed("the FIB has no piece table (Clx)".into()))?;
     let pieces = piece::PieceTable::parse(&table, fc_clx, lcb_clx)?;
+    let readable = pieces.readable_cps(&word);
+    if readable > MAX_TEXT_CP {
+        return Err(DocbinError::Limit(format!("document text expands to {readable} characters")));
+    }
 
     // Styles, fonts and the formatting bin tables; each is optional in broken files.
     let fonts = fib.pair(fib::pair::STTBF_FFN).map(|(f, l)| stsh::fonts(&table, f, l)).unwrap_or_default();
@@ -109,10 +122,12 @@ pub fn read(bytes: &[u8]) -> Result<Document, DocbinError> {
         None => Bins::parse(&[], 0, 0)?,
     };
 
-    let data = stream(&mut comp, "Data").unwrap_or_default();
+    let data_budget = MAX_STREAM.min(MAX_STREAM_TOTAL.saturating_sub(word.len() as u64 + table.len() as u64));
+    let data = stream(&mut comp, "Data", data_budget).unwrap_or_default();
     if data.len() as u64 > MAX_STREAM {
         return Err(DocbinError::Limit(format!("Data stream is {} bytes", data.len())));
     }
+    check_stream_total([word.len() as u64, table.len() as u64, data.len() as u64])?;
 
     let mut doc = Document::new();
     doc.body.clear();
@@ -641,13 +656,21 @@ fn char_props(grpprl: &[u8], fonts: &[String], base: &CharProps) -> CharProps {
     p
 }
 
-/// Read a root-level stream fully, or `None` if it is absent.
-fn stream<F: Read + Seek>(comp: &mut cfb::CompoundFile<F>, name: &str) -> Option<Vec<u8>> {
+/// Reject a file whose materialised streams together exceed [`MAX_STREAM_TOTAL`].
+fn check_stream_total(sizes: [u64; 3]) -> Result<(), DocbinError> {
+    let total = sizes.into_iter().fold(0u64, u64::saturating_add);
+    if total > MAX_STREAM_TOTAL {
+        return Err(DocbinError::Limit(format!("document streams total {total} bytes")));
+    }
+    Ok(())
+}
+
+/// Read a root-level stream fully, or `None` if it is absent. Reads at most `max + 1` bytes so
+/// the caller can reject an oversized stream without materialising all of it.
+fn stream<F: Read + Seek>(comp: &mut cfb::CompoundFile<F>, name: &str, max: u64) -> Option<Vec<u8>> {
     let mut s = comp.open_stream(format!("/{name}")).ok()?;
     let mut v = Vec::new();
-    // Read with a cap one byte above the limit so oversized streams are still caught by the
-    // caller instead of exhausting memory here.
-    s.by_ref().take(MAX_STREAM + 1).read_to_end(&mut v).ok()?;
+    s.by_ref().take(max.saturating_add(1)).read_to_end(&mut v).ok()?;
     Some(v)
 }
 

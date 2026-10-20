@@ -61,6 +61,7 @@ impl Launcher {
                     let exts = save_exts(&name);
                     Box::pin(dialog.set_file_name(name).add_filter("Documents", &exts).save_file())
                 }
+                FileDialogRequest::Folder => Box::pin(dialog.pick_folder()),
             };
             let ctx = self.ctx.clone();
             let waiting = std::thread::Builder::new().name("file dialog".into()).spawn(move || {

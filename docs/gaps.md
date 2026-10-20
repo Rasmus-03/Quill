@@ -1,6 +1,6 @@
 # Where WordCraft falls short of Word
 
-> **Last reviewed:** 2026-10-10 · **Last updated:** 2026-10-11 · **Change:** trivial (the Font list no longer keeps every previewed font in memory, #848; previously trivial: table column and row markers on the rulers, #700; previously trivial: table borders and the resize handle drag on the page, #217; previously trivial: formatting revisions landed, #41; previously trivial: Draw Table and Eraser landed, #303; previously minor: beta distance restated: ~15 points, ~150–230 h; previously: first version; every known shortfall from the 2026-10-10 re-measure, ranked) · **Target:** Microsoft Word (Microsoft 365) for Mac 16.113.4
+> **Last reviewed:** 2026-10-10 · **Last updated:** 2026-10-20 · **Change:** minor (Paste Options button and Obsidian vault workspace landed; previously trivial: the Font list no longer keeps every previewed font in memory, #848; previously trivial: table column and row markers on the rulers, #700; previously trivial: table borders and the resize handle drag on the page, #217; previously trivial: formatting revisions landed, #41; previously trivial: Draw Table and Eraser landed, #303; previously minor: beta distance restated: ~15 points, ~150–230 h; previously: first version; every known shortfall from the 2026-10-10 re-measure, ranked) · **Target:** Microsoft Word (Microsoft 365) for Mac 16.113.4
 
 > **Printing update:** 2026-10-12 · direct desktop printing through craft-print; details below.
 
@@ -37,7 +37,7 @@ Native save reliability: synthetic cases on macOS reproduced loss through the pr
 | 20 | **Performance on large real-world documents** unmeasured (500+ pages, many pictures) | | Only the 188-page sample benchmark; scrolling a 1,096-page one-table document went from ~600 ms to ~2–5 ms a frame (#811), but opening it still lays out for seconds | Thesis and book authors | 10–20 | [layout-parity.md](layout-parity.md) |
 | 21 | **Mail merge data sources**: no Outlook/Contacts, Access or database sources, no email merge; CSV, typed lists (#247) and Excel/OpenDocument spreadsheets (#334) only | | Select Recipients reads .csv/.tsv, .xlsx/.xlsm and .ods | Office administrators | 4–8 | [target-app-parity.md](target-app-parity.md) |
 | 22 | **Ecosystem**: no VBA execution (macros preserved only), no Office add-ins, no cloud storage, no real-time co-authoring | | `.docm` keeps macros (#172) | Enterprise users with macro templates; teams | 40–80 + owner decisions | [target-app-parity.md](target-app-parity.md) |
-| 23 | **PDF Reflow** (open a PDF as an editable document, Word for Windows) | | | Users who edit PDFs they receive | 30–50 | [file-format-parity.md](file-format-parity.md) |
+| 23 | **PDF Reflow depth**: v1 landed (2026-10-20, desktop): glyphs reflow into lines and paragraphs, headings from a size step up, list marks, centred paragraphs, the MediaBox page, picture XObjects decoded in place; still missing: run colour and bold/italic faces, tables drawn from rules, palette (Indexed) and JPX pictures, text without a ToUnicode map | | `crates/formats/src/pdf.rs`; Word's own import keeps far more of the formatting | Users who edit PDFs they receive | 12–18 | [file-format-parity.md](file-format-parity.md) |
 | 24 | **Default shortcuts**: ~135 of Word's ~250 (#330, #339, #343; Customize Keyboard #368, Customize Ribbon and the Quick Access Toolbar #379 landed) | | [ui-parity.md](ui-parity.md) | Power users | 4–7 | [ui-parity.md](ui-parity.md) |
 | 25 | **In-app AI assistant** (Copilot-style draft, rewrite, summarize) | | Chat PR #178 open | Users expecting Copilot | 15–30 + owner (provider) | [target-app-parity.md](target-app-parity.md) |
 | 26 | **Minor formats**: MHT, Works/WordPerfect, saving Word 2003 XML | | Word XML Document (Flat OPC) opens and saves, Word 2003 XML opens (#548) | Rare | 15–28 | [file-format-parity.md](file-format-parity.md) |
@@ -58,8 +58,12 @@ The same gaps grouped the way the parity documents are, for agents working in on
   re-implementing). Paste Special, Advanced Find, Column Selection, Style Inspector, custom table
   styles, and Draw Table and Eraser (#303) landed on 2026-10-10. Paste from other programs keeps
   their formatting (system clipboard HTML/RTF), Merge Formatting keeps emphasis, Paste Special lists
-  what the system clipboard holds, and Linux/Wayland clipboard pictures paste (#687, #833);
-  still missing: the Paste Options button after a paste, and RTF on macOS and X11.
+  what the system clipboard holds, and Linux/Wayland clipboard pictures paste (#687, #833). A Paste
+  Options button beside a fresh paste offers Keep Source Formatting, Merge Formatting, Keep Text Only
+  and Paste Special…; still missing: RTF on macOS and X11. An Obsidian vault opens in the Navigation
+  pane with title/text search, note open/save and Export into the vault, preserving frontmatter,
+  wikilinks, embeds and unknown syntax; it is not a Word feature, and has no backlinks, graph, tags
+  pane, Canvas or plugin semantics.
 - **UI/UX gaps:** #7, #18, #24; crop handles on the canvas (rotation handle landed, #332); context menus for objects (the table's landed; it still lacks Border Styles); Linux title bar theming (#78); File ›
   Options › Animation effects › Use system setting reads macOS (Reduce motion) and the Linux/BSD
   desktops (`apps/wordcraft/src/animations.rs`) but hasn't been tried on a Mac or in a real
@@ -73,6 +77,7 @@ The same gaps grouped the way the parity documents are, for agents working in on
 
 | Date | Change | Summary |
 |---|---|---|
+| 2026-10-20 | minor | PDF Reflow landed (desktop): a PDF opens as an editable document — reflowed text with headings, list marks and centred paragraphs, the MediaBox page and measured margins, picture XObjects decoded in place; gap #23 narrowed to the formatting depth (colour, faces, tables from rules, palette/JPX pictures, no-ToUnicode text). Paste Options button and Obsidian vault workspace landed the same day: a fresh paste can switch form in place with one undo step; a vault opens in the Navigation pane with title/text search, note open/save and Export, preserving frontmatter, wikilinks, embeds and unknown syntax. Remaining Obsidian depth (backlinks, graph, tags, Canvas, plugins) is listed as a non-Word extra |
 | 2026-10-11 | trivial | Table column and row markers on the rulers landed (#700): the ruler's column markers are off the UI/UX gaps |
 | 2026-10-11 | trivial | UI/UX gaps: the table context menu landed, its items following the selection as in Word (Delete Cells, Rows, Columns or Table, Merge and Split Cells, Distribute, AutoFit, Text Direction, Insert Caption…, Table Properties…); objects' menus and Border Styles remain |
 | 2026-10-11 | trivial | Tables: ordinary drags, Shift+arrows and Shift+click over cells select a rectangle of whole cells (into or out of a table, whole rows); removed from the UI/UX gaps |

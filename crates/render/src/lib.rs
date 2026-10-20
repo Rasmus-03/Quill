@@ -32,6 +32,12 @@ pub fn default_threads() -> u16 {
 
 /// Largest raster side vello_cpu handles comfortably.
 pub const MAX_SIDE: u32 = 16_000;
+/// Most pixels in one page raster: 160 MiB of RGBA, and about a 600 dpi A4 page.
+pub const MAX_PIXELS: u64 = 40_000_000;
+/// Most pixels in one embedded picture, checked from its header before decoding. Decoding,
+/// converting to RGBA and premultiplying each allocate a full copy, so an unbounded size is a
+/// decompression bomb even when the compressed file is tiny.
+const MAX_IMAGE_PIXELS: u64 = 40_000_000;
 
 /// A rendered image (premultiplied RGBA8, row-major).
 #[derive(Clone, Default)]
@@ -168,8 +174,14 @@ fn vectors() -> &'static Mutex<MediaCache<Option<Arc<Vector>>>> {
 
 /// Decode an encoded image to a premultiplied pixmap.
 pub fn decode_pixmap(bytes: &[u8]) -> Option<Pixmap> {
+    let (w, h) = image_size(bytes)?;
+    if w == 0 || h == 0 || w > u16::MAX as u32 || h > u16::MAX as u32 || u64::from(w) * u64::from(h) > MAX_IMAGE_PIXELS {
+        return None;
+    }
     let img = image::load_from_memory(bytes).ok()?.to_rgba8();
-    let (w, h) = img.dimensions();
+    if img.dimensions() != (w, h) {
+        return None;
+    }
     premul_pixmap(w, h, img.as_raw())
 }
 
@@ -398,17 +410,43 @@ impl Default for RenderOptions {
     }
 }
 
+/// Raster size and effective scale for a `w`×`h` point area: both sides stay within
+/// [`MAX_SIDE`] and the area within [`MAX_PIXELS`], shrinking uniformly to keep the shape.
+fn raster_for(w: f32, h: f32, scale: f32) -> (u32, u32, f32) {
+    let w = if w.is_finite() && w > 0.0 { f64::from(w) } else { 1.0 };
+    let h = if h.is_finite() && h > 0.0 { f64::from(h) } else { 1.0 };
+    let mut scale = if scale.is_finite() && scale > 0.0 { f64::from(scale) } else { 1.0 };
+    let longest = w.max(h);
+    if longest * scale > f64::from(MAX_SIDE) {
+        scale = f64::from(MAX_SIDE) / longest;
+    }
+    let mut pw = (w * scale).ceil().clamp(1.0, f64::from(MAX_SIDE)) as u32;
+    let mut ph = (h * scale).ceil().clamp(1.0, f64::from(MAX_SIDE)) as u32;
+    if u64::from(pw) * u64::from(ph) > MAX_PIXELS {
+        scale *= (MAX_PIXELS as f64 / (f64::from(pw) * f64::from(ph))).sqrt();
+        // Truncate: rounding the two sides up can put the area just over the budget.
+        pw = ((w * scale) as u32).max(1);
+        ph = ((h * scale) as u32).max(1);
+    }
+    (pw, ph, scale as f32)
+}
+
 /// Render a whole page at `scale` pixels per point.
 pub fn render_page(doc: &Document, page: &Page, scale: f32, opts: &RenderOptions) -> Rendered {
-    let scale = if scale.is_finite() && scale > 0.0 { scale } else { 1.0 };
-    let w = ((page.w * scale).ceil() as u32).clamp(1, MAX_SIDE);
-    let h = ((page.h.min(1e6) * scale).ceil() as u32).clamp(1, MAX_SIDE);
+    let (w, h, scale) = raster_for(page.w, page.h.min(1e6), scale);
     render_region(doc, page, w, h, Affine::scale(scale as f64), opts)
 }
 
 /// Render a page into a `w`×`h` raster with `view` (page points → pixels).
-pub fn render_region(doc: &Document, page: &Page, w: u32, h: u32, view: Affine, opts: &RenderOptions) -> Rendered {
-    let (w16, h16) = (w.clamp(1, MAX_SIDE) as u16, h.clamp(1, MAX_SIDE) as u16);
+pub fn render_region(doc: &Document, page: &Page, w: u32, h: u32, mut view: Affine, opts: &RenderOptions) -> Rendered {
+    let (mut w, mut h) = (w.clamp(1, MAX_SIDE), h.clamp(1, MAX_SIDE));
+    if u64::from(w) * u64::from(h) > MAX_PIXELS {
+        let factor = (MAX_PIXELS as f64 / (f64::from(w) * f64::from(h))).sqrt();
+        w = ((w as f64 * factor) as u32).max(1);
+        h = ((h as f64 * factor) as u32).max(1);
+        view = Affine::scale(factor) * view;
+    }
+    let (w16, h16) = (w as u16, h as u16);
     let mut ctx = RenderContext::new_with(w16, h16, vello_cpu::RenderSettings { num_threads: default_threads(), ..Default::default() });
     ctx.set_transform(Affine::IDENTITY);
     ctx.set_paint(color(opts.ink(doc.settings.page_color.unwrap_or(opts.paper)), 1.0));
@@ -933,9 +971,7 @@ pub fn shape_path(kind: ShapeKind, r: kurbo::Rect) -> BezPath {
 
 /// Render the page area (`x`, `y`, `w`×`h` points) at `scale` px/pt — for previews and thumbnails.
 pub fn render_area(doc: &Document, page: &Page, x: f32, y: f32, w: f32, h: f32, scale: f32, opts: &RenderOptions) -> Rendered {
-    let scale = if scale.is_finite() && scale > 0.0 { scale } else { 1.0 };
-    let pw = ((w * scale).ceil() as u32).clamp(1, MAX_SIDE);
-    let ph = ((h * scale).ceil() as u32).clamp(1, MAX_SIDE);
+    let (pw, ph, scale) = raster_for(w, h, scale);
     let view = Affine::scale(scale as f64) * Affine::translate((-x as f64, -y as f64));
     render_region(doc, page, pw, ph, view, opts)
 }
@@ -1069,6 +1105,20 @@ mod tests {
         assert!(!RenderOptions::default().text_darkening);
     }
 
+    /// A BMP header with the given dimensions and no pixel data.
+    fn bmp_header(w: u32, h: u32) -> Vec<u8> {
+        let mut b = vec![0u8; 54];
+        b[0..2].copy_from_slice(b"BM");
+        b[2..6].copy_from_slice(&54u32.to_le_bytes());
+        b[10..14].copy_from_slice(&54u32.to_le_bytes());
+        b[14..18].copy_from_slice(&40u32.to_le_bytes());
+        b[18..22].copy_from_slice(&(w as i32).to_le_bytes());
+        b[22..26].copy_from_slice(&(h as i32).to_le_bytes());
+        b[26..28].copy_from_slice(&1u16.to_le_bytes());
+        b[28..30].copy_from_slice(&24u16.to_le_bytes());
+        b
+    }
+
     #[test]
     fn hostile_scale_is_clamped() {
         let d = Document::new();
@@ -1077,7 +1127,25 @@ mod tests {
         assert_eq!(img.width, 612);
         let big = render_page(&d, &l.pages[0], 1e9, &RenderOptions::default());
         assert!(big.width <= MAX_SIDE);
+        assert!(u64::from(big.width) * u64::from(big.height) <= MAX_PIXELS);
         assert!(decode_pixmap(b"not an image").is_none());
+    }
+
+    #[test]
+    fn page_rasters_keep_their_shape_and_stay_within_the_budget() {
+        let (w, h, scale) = raster_for(14_400.0, 14_400.0, 2.0);
+        assert!(u64::from(w) * u64::from(h) <= MAX_PIXELS);
+        assert!(w.abs_diff(h) <= 1, "{w}×{h}");
+        assert!((f64::from(scale) - f64::from(w) / 14_400.0).abs() < 0.01);
+        assert_eq!(raster_for(612.0, 792.0, 1.0).0, 612);
+        assert_eq!(raster_for(612.0, 792.0, 1.0).1, 792);
+    }
+
+    #[test]
+    fn oversized_pictures_are_rejected_before_decoding() {
+        let huge = bmp_header(30_000, 30_000);
+        assert_eq!(image_size(&huge), Some((30_000, 30_000)));
+        assert!(decode_pixmap(&huge).is_none());
     }
 
     #[test]

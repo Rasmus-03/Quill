@@ -156,7 +156,9 @@ impl FileBrowser {
                 f.push(("All files".into(), vec!["*".into()]));
                 (name.clone(), f)
             }
+            FileDialogRequest::Folder => (String::new(), Vec::new()),
         };
+        let focus_name = !matches!(&req, FileDialogRequest::Folder);
         let mut b = FileBrowser {
             req,
             after,
@@ -169,7 +171,7 @@ impl FileBrowser {
             listing: Ok(Listing::default()),
             selected: None,
             note: Note::None,
-            focus_name: true,
+            focus_name,
         };
         b.navigate(start);
         b
@@ -198,6 +200,20 @@ impl FileBrowser {
     /// pick. Save adds the chosen type's extension to a name without one and asks once more
     /// before replacing a file; Open wants a file that exists.
     pub(crate) fn accept(&mut self) -> Step {
+        if self.folder() {
+            if let Some(dir) = self.selected.take().filter(|p| p.is_dir()) {
+                return Step::Pick(dir);
+            }
+            if self.name.trim().is_empty() {
+                return Step::Pick(self.dir.clone());
+            }
+            let Some(path) = resolve(&self.dir, &self.name) else { return Step::Stay };
+            if path.is_dir() {
+                return Step::Pick(path);
+            }
+            self.note = Note::NotFound(self.name.trim().to_string());
+            return Step::Stay;
+        }
         if let Some(dir) = self.selected.take().filter(|p| p.is_dir()) {
             self.navigate(dir);
             return Step::Stay;
@@ -228,6 +244,8 @@ impl FileBrowser {
                 }
                 Step::Pick(path)
             }
+            // Folder mode returns above; this keeps the match total without a panic path.
+            FileDialogRequest::Folder => Step::Pick(self.dir.clone()),
         }
     }
 
@@ -240,10 +258,15 @@ impl FileBrowser {
         self.note = Note::None;
     }
 
+    fn folder(&self) -> bool {
+        matches!(&self.req, FileDialogRequest::Folder)
+    }
+
     fn title(&self) -> &'static str {
         match self.req {
             FileDialogRequest::Open { .. } => "Open",
             FileDialogRequest::Save { .. } => "Save As",
+            FileDialogRequest::Folder => "Choose Folder",
         }
     }
 
@@ -251,6 +274,7 @@ impl FileBrowser {
         match self.req {
             FileDialogRequest::Open { .. } => "Open",
             FileDialogRequest::Save { .. } => "Save",
+            FileDialogRequest::Folder => "Choose",
         }
     }
 }
@@ -411,28 +435,30 @@ fn body(ui: &mut Ui, b: &mut FileBrowser, t: &Tokens) -> Option<Option<PathBuf>>
     }
     ui.add_space(6.0);
     let mut refilter = false;
-    ui.horizontal(|ui| {
-        let label = ui.label(tl!("File name:"));
-        // The name field takes what the label (longer in some languages) and the type list leave.
-        let width = (ui.available_width() - 170.0).max(120.0);
-        let r = ui.add(egui::TextEdit::singleline(&mut b.name).desired_width(width)).labelled_by(label.id);
-        if b.focus_name {
-            r.request_focus();
-            b.focus_name = false;
-        }
-        if r.changed() {
-            b.selected = None;
-            b.note = Note::None;
-        }
-        let before = b.filter;
-        let current = b.filters.get(b.filter).map(|(l, _)| tl!(l.as_str()).to_string()).unwrap_or_default();
-        egui::ComboBox::from_id_salt("builtin_file_browser_type").selected_text(current).width(150.0).show_ui(ui, |ui| {
-            for (i, (l, _)) in b.filters.iter().enumerate() {
-                ui.selectable_value(&mut b.filter, i, tl!(l.as_str()));
+    if !b.folder() {
+        ui.horizontal(|ui| {
+            let label = ui.label(tl!("File name:"));
+            // The name field takes what the label (longer in some languages) and the type list leave.
+            let width = (ui.available_width() - 170.0).max(120.0);
+            let r = ui.add(egui::TextEdit::singleline(&mut b.name).desired_width(width)).labelled_by(label.id);
+            if b.focus_name {
+                r.request_focus();
+                b.focus_name = false;
             }
+            if r.changed() {
+                b.selected = None;
+                b.note = Note::None;
+            }
+            let before = b.filter;
+            let current = b.filters.get(b.filter).map(|(l, _)| tl!(l.as_str()).to_string()).unwrap_or_default();
+            egui::ComboBox::from_id_salt("builtin_file_browser_type").selected_text(current).width(150.0).show_ui(ui, |ui| {
+                for (i, (l, _)) in b.filters.iter().enumerate() {
+                    ui.selectable_value(&mut b.filter, i, tl!(l.as_str()));
+                }
+            });
+            refilter = b.filter != before;
         });
-        refilter = b.filter != before;
-    });
+    }
     if refilter {
         b.navigate(b.dir.clone());
     }

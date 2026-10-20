@@ -18,3 +18,8 @@ log = { workspace = true }
 
 [dev-dependencies]
 proptest = { workspace = true }
+
+# PDF Reflow (desktop only): the text reflows through `pdf-extract`; `lopdf` (through the same
+# crate) reads the pictures' XObjects and content streams.
+[target.'cfg(not(target_arch = "wasm32"))'.dependencies]
+pdf-extract = "0.12"

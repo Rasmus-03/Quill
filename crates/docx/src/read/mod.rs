@@ -5,6 +5,7 @@ pub(crate) mod diagram;
 mod drawing_color;
 mod embed;
 mod freeform;
+mod img_size;
 mod math;
 mod props;
 mod sdt;

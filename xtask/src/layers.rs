@@ -51,8 +51,8 @@ pub const TABLE: &[(&str, Class)] = &[
     ("ui-egui", Class::Layer(6)),
     ("testkit", Class::Testkit),
     // apps and tooling
-    ("wordcraft", Class::Exempt),
-    ("cli", Class::Exempt),
+    ("quill", Class::Exempt),
+    ("quill-cli", Class::Exempt),
     ("web", Class::Exempt),
     ("xtask", Class::Exempt),
 ];
@@ -247,7 +247,7 @@ mod tests {
             c("wordcraft-doc", &[("wordcraft-geom", Normal, true)]),
             c("wordcraft-engine", &[("wordcraft-doc", Normal, true), ("wordcraft-testkit", Dev, true)]),
             c("wordcraft-ui-egui", &[("wordcraft-engine", Normal, true), ("egui", Normal, false)]),
-            c("wordcraft-cli", &[("wordcraft-ui-egui", Normal, true)]),
+            c("quill-cli", &[("wordcraft-ui-egui", Normal, true)]),
         ];
         assert!(check(&g).is_empty(), "{:?}", check(&g));
     }
@@ -311,7 +311,7 @@ mod tests {
 
     #[test]
     fn apps_and_xtask_exempt() {
-        for app in ["wordcraft", "wordcraft-cli", "wordcraft-web", "xtask"] {
+        for app in ["quill", "quill-cli", "wordcraft-web", "xtask"] {
             assert!(check(&[c(app, &[("egui", Normal, false), ("wordcraft-ui-egui", Normal, true)])]).is_empty());
         }
     }
