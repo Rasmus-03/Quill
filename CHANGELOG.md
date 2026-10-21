@@ -5,6 +5,10 @@
 The first steps of 1.2 (the plan lives in [`docs/release-plan-1.2.md`](docs/release-plan-1.2.md)):
 the build is trustworthy again, and the app carries its own name everywhere a user sees it.
 
+- **Danish school templates of our own**: File › New offers an *Opgaveark* (the subject, the
+  name, the class and the date, the task, room for the answer and for notes), a
+  *Rapportforside* (the title, the author, the subject, the class, the date and the supervisor)
+  and a two-column *Håndout* for a lesson. The text and the layout are ours
 - **The maths tab says what happened, in Danish**. A solve that found nothing now says which
   of the four cases it was: no solution ("Ligningen har ingen løsning"), every number is a
   solution ("Løsningen er alle tal — skriv et uligheds- eller intervalkrav"), only complex roots

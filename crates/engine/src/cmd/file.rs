@@ -119,6 +119,10 @@ fn new(s: &mut Session, v: &Value) -> CmdResult {
         "letter" => crate::sample::letter(),
         "resume" => crate::sample::resume(),
         "report" => crate::sample::report(),
+        // The Danish school templates (Quill's own text, 1.2).
+        "opgaveark" => crate::sample::opgaveark(),
+        "rapportforside" => crate::sample::rapportforside(),
+        "haandout" => crate::sample::haandout(),
         // The Normal template: the region's paper (#838), written in the editing language (the
         // templates' text is English).
         _ => {
