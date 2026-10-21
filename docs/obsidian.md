@@ -60,6 +60,10 @@ The heading and the alias of a link (`[[Note#Heading|Alias]]`) are not part of t
 The **Tags** view lists the tags the vault's notes carry, with the number of notes that carry
 each. A click shows the notes with that tag, and a click on a note opens it.
 
+The index is built once and kept until the vault is read again. A very big vault is cut short
+after 400 ms, so the interface never waits: the notes that were not read have no links yet, and
+a **Refresh** reads them again.
+
 Tags come from two places:
 
 - the frontmatter's `tags:` list, written as `tags: [one, two]` or as a list of `- one` lines;
