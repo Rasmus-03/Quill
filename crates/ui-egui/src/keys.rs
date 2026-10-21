@@ -203,6 +203,15 @@ pub fn canvas_events(app: &mut WordApp, ctx: &egui::Context) {
         return;
     }
     let events = ctx.input(|i| i.events.clone());
+    if app.session.view.focus_mode {
+        // Focus mode: Escape brings the interface back. Everything else belongs to the document.
+        for e in &events {
+            if let egui::Event::Key { key: Key::Escape, pressed: true, .. } = e {
+                let _ = app.run("view.focus", json!({"value": false}));
+                break;
+            }
+        }
+    }
     if app.session.view.read_mode {
         // Read Mode is for navigation and selection, not typing into the document. The ribbon's
         // Edit Document button or Escape returns to Print Layout before editing.

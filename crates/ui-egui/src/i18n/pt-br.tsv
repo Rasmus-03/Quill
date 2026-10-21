@@ -16,7 +16,7 @@
 	1.5 Line Spacing	Espaçamento de 1,5 linha
 	A free, open-source word processor written from scratch in Rust.\nPart of the Crafting Apps from the ArtCraft team.	Um processador de texto gratuito e de código aberto, escrito do zero em Rust.\nFaz parte dos Crafting Apps da equipe ArtCraft.
 	About	Sobre
-	About WordCraft	Sobre o WordCraft
+	About Quill	Sobre o Quill
 	Accept	Aceitar
 	Accept All Changes	Aceitar todas as alterações
 	Accept This Change	Aceitar esta alteração
@@ -273,7 +273,7 @@
 	Copy	Copiar
 	Copy Formatting	Copiar formatação
 	Corrections	Correções
-	Couldn't make WordCraft the default: {error}	Não foi possível tornar o WordCraft o aplicativo padrão: {error}
+	Couldn't make Quill the default: {error}	Não foi possível tornar o Quill o aplicativo padrão: {error}
 	Count words in text boxes and notes	Contar palavras em caixas de texto e notas
 	Cover Page	Capa
 	Create	Criar
@@ -311,15 +311,15 @@
 	Drag a rectangle to draw a table, or a line across cells to split them. Esc stops.	Arraste um retângulo para desenhar uma tabela, ou uma linha sobre as células para dividi-las. Esc encerra.
 	Draw Table	Desenhar tabela
 	Edit Comment	Editar comentário
-	In Default apps, choose WordCraft for the document types you want it to open.	Em Aplicativos padrão, escolha o WordCraft para os tipos de documento que você quer que ele abra.
+	In Default apps, choose Quill for the document types you want it to open.	Em Aplicativos padrão, escolha o Quill para os tipos de documento que você quer que ele abra.
 	Left Margin	Margem esquerda
 	Indents and Spacing	Recuos e espaçamento
 	Line breaking	Quebra de linhas
-	Make WordCraft the default for Word documents…	Tornar o WordCraft o aplicativo padrão para documentos do Word…
+	Make Quill the default for Word documents…	Tornar o Quill o aplicativo padrão para documentos do Word…
 	More templates →	Mais modelos →
 	No templates match your search.	Nenhum modelo corresponde à pesquisa.
-	Opens .docx, .doc, .rtf and .odt files and Word templates with WordCraft from now on.	A partir de agora, arquivos .docx, .doc, .rtf e .odt e modelos do Word abrem no WordCraft.
-	Opens Settings › Default apps, where you choose WordCraft for .docx and the other document types.	Abre Configurações › Aplicativos padrão, onde você escolhe o WordCraft para .docx e os outros tipos de documento.
+	Opens .docx, .doc, .rtf and .odt files and Word templates with Quill from now on.	A partir de agora, arquivos .docx, .doc, .rtf e .odt e modelos do Word abrem no Quill.
+	Opens Settings › Default apps, where you choose Quill for .docx and the other document types.	Abre Configurações › Aplicativos padrão, onde você escolhe o Quill para .docx e os outros tipos de documento.
 	Reopen	Reabrir
 	Right Margin	Margem direita
 	Distribute letters	Distribuir letras
@@ -329,8 +329,8 @@
 	Right (vertical)	Direita (vertical)
 	Ruby text:	Texto ruby:
 	Search for templates	Pesquisar modelos
-	To open Word documents with WordCraft by default: select one in Finder, choose File › Get Info, pick WordCraft under Open with, then click Change All.	Para abrir documentos do Word com o WordCraft por padrão: selecione um no Finder, escolha Arquivo › Obter Informações, selecione o WordCraft em “Abrir com” e clique em “Alterar Tudo”.
-	WordCraft is now the default app for Word documents.	O WordCraft agora é o aplicativo padrão para documentos do Word.
+	To open Word documents with Quill by default: select one in Finder, choose File › Get Info, pick Quill under Open with, then click Change All.	Para abrir documentos do Word com o Quill por padrão: selecione um no Finder, escolha Arquivo › Obter Informações, selecione o Quill em “Abrir com” e clique em “Alterar Tudo”.
+	Quill is now the default app for Word documents.	O Quill agora é o aplicativo padrão para documentos do Word.
 	development build	versão de desenvolvimento
 	Diagonal	Diagonal
 	Diamond	Losango
@@ -953,7 +953,7 @@
 	Word Left	Palavra à esquerda
 	Word Right	Palavra à direita
 	WordArt	Texto artístico
-	WordCraft	WordCraft
+	Quill	Quill
 	Words	Palavras
 	Words only	Somente palavras
 	Wrap Text	Quebrar texto
@@ -1016,7 +1016,7 @@
 	Stopped	Parado
 	Speed	Velocidade
 	Normal speed	Velocidade normal
-	AutoSave documents you have saved in WordCraft	Salvar automaticamente documentos que você salvou no WordCraft
+	AutoSave documents you have saved in Quill	Salvar automaticamente documentos que você salvou no Quill
 	AutoSave failed: {error}. Save the document to turn AutoSave back on.	Falha no salvamento automático: {error}. Salve o documento para reativar o salvamento automático.
 	Couldn't download {name}: {error}	Não foi possível baixar {name}: {error}
 	Do you want to save changes to {name}?	Deseja salvar as alterações em {name}?
@@ -1352,7 +1352,7 @@
 	The document will be saved with a password. Save it to protect it.	O documento será salvo com senha. Salve-o para protegê-lo.
 	The password is removed. Save the document to keep the change.	A senha foi removida. Salve o documento para manter a alteração.
 	The passwords don't match.	As senhas não coincidem.
-	Keep the password somewhere safe: without it nobody, WordCraft included, can open the document. Leave both boxes empty to remove the password.	Guarde a senha em um lugar seguro: sem ela, ninguém, nem o WordCraft, consegue abrir o documento. Deixe as duas caixas vazias para remover a senha.
+	Keep the password somewhere safe: without it nobody, Quill included, can open the document. Leave both boxes empty to remove the password.	Guarde a senha em um lugar seguro: sem ela, ninguém, nem o Quill, consegue abrir o documento. Deixe as duas caixas vazias para remover a senha.
 
 # Interface text routed through translation (#313)
 	Align Top Left	Alinhar acima à esquerda
@@ -1741,7 +1741,7 @@
 	Word document	Documento do Word
 	All files	Todos os arquivos
 	Recipient lists	Listas de destinatários
-	The system file dialog isn't available, so WordCraft shows its own. To get the system dialog, install a file chooser portal (such as xdg-desktop-portal-gtk) or zenity.	A caixa de diálogo de arquivos do sistema não está disponível, então o WordCraft mostra a sua própria. Para usar a do sistema, instale um portal seletor de arquivos (como xdg-desktop-portal-gtk) ou o zenity.
+	The system file dialog isn't available, so Quill shows its own. To get the system dialog, install a file chooser portal (such as xdg-desktop-portal-gtk) or zenity.	A caixa de diálogo de arquivos do sistema não está disponível, então o Quill mostra a sua própria. Para usar a do sistema, instale um portal seletor de arquivos (como xdg-desktop-portal-gtk) ou o zenity.
 	Up one level	Subir um nível
 	Home folder	Pasta pessoal
 	{name} wasn't found.	{name} não foi encontrado.
@@ -1749,8 +1749,8 @@
 	This folder can't be read: {error}	Não é possível ler esta pasta: {error}
 	Showing the first {count} items.	Mostrando os primeiros {count} itens.
 	File name:	Nome do arquivo:
-	Browse in WordCraft…	Procurar no WordCraft…
-	Open a file with WordCraft's own browser when the system file dialog doesn't appear.	Abra um arquivo com o navegador próprio do WordCraft quando a caixa de diálogo de arquivos do sistema não aparecer.
+	Browse in Quill…	Procurar no Quill…
+	Open a file with Quill's own browser when the system file dialog doesn't appear.	Abra um arquivo com o navegador próprio do Quill quando a caixa de diálogo de arquivos do sistema não aparecer.
 	Hide White Space	Ocultar espaço em branco
 	All pages	Todas as páginas
 	Current page	Página atual
@@ -2085,10 +2085,49 @@
 	Region:	Região:
 	Automatic ({region})	Automático ({region})
 	Start-up	Inicialização
-	Show the Start screen when WordCraft starts	Mostrar a tela inicial ao abrir o WordCraft
-	On: WordCraft opens on File › Home, with a blank document, the templates and your recent documents. Off: it opens a blank document.	Ativado: o WordCraft abre em Arquivo › Início, com um documento em branco, os modelos e seus documentos recentes. Desativado: abre um documento em branco.
+	Show the Start screen when Quill starts	Mostrar a tela inicial ao abrir o Quill
+	On: Quill opens on File › Home, with a blank document, the templates and your recent documents. Off: it opens a blank document.	Ativado: o Quill abre em Arquivo › Início, com um documento em branco, os modelos e seus documentos recentes. Desativado: abre um documento em branco.
 	Open Vault	Abrir cofre
 	Refresh Vault	Atualizar cofre
 	Search Vault	Pesquisar no cofre
 	Save to Vault	Salvar no cofre
 	Vault	Cofre
+
+	Connect to Nextcloud	Conectar ao Nextcloud
+	Disconnect from Nextcloud	Desconectar do Nextcloud
+	Nextcloud Status	Status do Nextcloud
+	Nextcloud Files	Arquivos do Nextcloud
+	Open from Nextcloud	Abrir do Nextcloud
+	Save to Nextcloud	Salvar no Nextcloud
+	New Nextcloud Folder	Nova pasta do Nextcloud
+	Delete on Nextcloud	Excluir no Nextcloud
+	Share on Nextcloud	Compartilhar no Nextcloud
+	Search Nextcloud Files	Pesquisar nos arquivos do Nextcloud
+	Nextcloud File Versions	Versões dos arquivos do Nextcloud
+	Wait for Nextcloud	Aguardar o Nextcloud
+	Cloud	Nuvem
+	Nextcloud	Nextcloud
+	Server	Servidor
+	User name	Nome de usuário
+	Connect	Conectar
+	Disconnect	Desconectar
+	New folder	Nova pasta
+	Folder	Pasta
+	Files	Arquivos
+	Status	Status
+	Versions	Versões
+	Save this document to the server as	Salvar este documento no servidor como
+	An app password is safer than your account password.	Uma senha de aplicativo é mais segura que a senha da conta.
+	Don't check the server's certificate	Não verificar o certificado do servidor
+	Notes	Notas
+	Backlinks	Retroligações
+	Tags	Etiquetas
+	Open a note to see the notes that link to it.	Abra uma nota para ver as notas que fazem link para ela.
+	Open an Obsidian vault folder to see the tags its notes carry.	Abra uma pasta do cofre Obsidian para ver as etiquetas das notas.
+	Index Vault Notes	Indexar as notas do cofre
+	Vault Backlinks	Retroligações do cofre
+	Vault Tags	Etiquetas do cofre
+	Insert Note Link	Inserir link para nota
+
+	Paste as Equation	Colar como equação
+	Open Obsidian Vault…	Abrir cofre do Obsidian…

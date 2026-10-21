@@ -14,7 +14,7 @@
 	1.5 Line Spacing	Interligne 1,5
 	A free, open-source word processor written from scratch in Rust.\nPart of the Crafting Apps from the ArtCraft team.	Un traitement de texte gratuit et open source, écrit de zéro en Rust.\nPartie de la suite Crafting Apps de l’équipe ArtCraft.
 	About	À propos
-	About WordCraft	À propos de WordCraft
+	About Quill	À propos de Quill
 	Accept	Accepter
 	Accept All Changes	Accepter toutes les modifications
 	Accept This Change	Accepter cette modification
@@ -914,7 +914,7 @@
 	Word Left	Mot vers la gauche
 	Word Right	Mot vers la droite
 	WordArt	WordArt
-	WordCraft	WordCraft
+	Quill	Quill
 	Words	Mots
 	Words only	Mots uniquement
 	Wrap Text	Habillage du texte
@@ -975,7 +975,7 @@
 	Stopped	Arrêté
 	Speed	Vitesse
 	Normal speed	Vitesse normale
-	AutoSave documents you have saved in WordCraft	Enregistrement automatique des documents que vous avez enregistrés dans WordCraft
+	AutoSave documents you have saved in Quill	Enregistrement automatique des documents que vous avez enregistrés dans Quill
 	AutoSave failed: {error}. Save the document to turn AutoSave back on.	Échec de l’enregistrement automatique : {error}. Enregistrez le document pour réactiver l’enregistrement automatique.
 	Couldn't download {name}: {error}	Impossible de télécharger {name} : {error}
 	Do you want to save changes to {name}?	Voulez-vous enregistrer les modifications apportées à {name} ?
@@ -1280,7 +1280,7 @@
 	The document will be saved with a password. Save it to protect it.	Le document sera enregistré avec un mot de passe. Enregistrez-le pour le protéger.
 	The password is removed. Save the document to keep the change.	Le mot de passe est supprimé. Enregistrez le document pour conserver cette modification.
 	The passwords don't match.	Les mots de passe ne correspondent pas.
-	Keep the password somewhere safe: without it nobody, WordCraft included, can open the document. Leave both boxes empty to remove the password.	Conservez le mot de passe en lieu sûr : sans lui, personne, WordCraft inclus, ne peut ouvrir le document. Laissez les deux zones vides pour supprimer le mot de passe.
+	Keep the password somewhere safe: without it nobody, Quill included, can open the document. Leave both boxes empty to remove the password.	Conservez le mot de passe en lieu sûr : sans lui, personne, Quill inclus, ne peut ouvrir le document. Laissez les deux zones vides pour supprimer le mot de passe.
 	Align Top Left	Aligner en haut à gauche
 	Align Top Center	Aligner en haut au centre
 	Align Top Right	Aligner en haut à droite
@@ -1936,7 +1936,7 @@
 	Word document	Document Word
 	All files	Tous les fichiers
 	Recipient lists	Listes de destinataires
-	The system file dialog isn't available, so WordCraft shows its own. To get the system dialog, install a file chooser portal (such as xdg-desktop-portal-gtk) or zenity.	La boîte de dialogue de fichiers du système n’est pas disponible, WordCraft affiche donc la sienne. Pour utiliser celle du système, installez un portail de sélection de fichiers (comme xdg-desktop-portal-gtk) ou zenity.
+	The system file dialog isn't available, so Quill shows its own. To get the system dialog, install a file chooser portal (such as xdg-desktop-portal-gtk) or zenity.	La boîte de dialogue de fichiers du système n’est pas disponible, Quill affiche donc la sienne. Pour utiliser celle du système, installez un portail de sélection de fichiers (comme xdg-desktop-portal-gtk) ou zenity.
 	Up one level	Dossier parent
 	Home folder	Dossier personnel
 	{name} wasn't found.	{name} est introuvable.
@@ -1944,8 +1944,8 @@
 	This folder can't be read: {error}	Impossible de lire ce dossier : {error}
 	Showing the first {count} items.	Affichage des {count} premiers éléments.
 	File name:	Nom du fichier :
-	Browse in WordCraft…	Parcourir dans WordCraft…
-	Open a file with WordCraft's own browser when the system file dialog doesn't appear.	Ouvrir un fichier avec le navigateur de fichiers intégré à WordCraft lorsque la boîte de dialogue de fichiers du système n’apparaît pas.
+	Browse in Quill…	Parcourir dans Quill…
+	Open a file with Quill's own browser when the system file dialog doesn't appear.	Ouvrir un fichier avec le navigateur de fichiers intégré à Quill lorsque la boîte de dialogue de fichiers du système n’apparaît pas.
 	Hide White Space	Masquer les espaces blancs
 	All pages	Toutes les pages
 	Current page	Page actuelle
@@ -2044,13 +2044,13 @@
 	Use "an" before a vowel sound	Utiliser « an » devant un son voyelle
 	Use "a" before a consonant sound	Utiliser « a » devant un son consonne
 	The spelling and grammar check is complete.	La vérification de l’orthographe et de la grammaire est terminée.
-	Couldn't make WordCraft the default: {error}	Impossible de faire de WordCraft l’application par défaut : {error}
-	In Default apps, choose WordCraft for the document types you want it to open.	Dans Applications par défaut, choisissez WordCraft pour les types de documents qu’il doit ouvrir.
-	Make WordCraft the default for Word documents…	Faire de WordCraft l’application par défaut pour les documents Word…
-	Opens .docx, .doc, .rtf and .odt files and Word templates with WordCraft from now on.	Ouvre désormais les fichiers .docx, .doc, .rtf et .odt ainsi que les modèles Word avec WordCraft.
-	Opens Settings › Default apps, where you choose WordCraft for .docx and the other document types.	Ouvre Paramètres › Applications par défaut, où vous choisissez WordCraft pour .docx et les autres types de documents.
-	To open Word documents with WordCraft by default: select one in Finder, choose File › Get Info, pick WordCraft under Open with, then click Change All.	Pour ouvrir les documents Word avec WordCraft par défaut : sélectionnez-en un dans le Finder, choisissez Fichier › Lire les informations, choisissez WordCraft sous « Ouvrir avec », puis cliquez sur « Tout modifier ».
-	WordCraft is now the default app for Word documents.	WordCraft est désormais l’application par défaut pour les documents Word.
+	Couldn't make Quill the default: {error}	Impossible de faire de Quill l’application par défaut : {error}
+	In Default apps, choose Quill for the document types you want it to open.	Dans Applications par défaut, choisissez Quill pour les types de documents qu’il doit ouvrir.
+	Make Quill the default for Word documents…	Faire de Quill l’application par défaut pour les documents Word…
+	Opens .docx, .doc, .rtf and .odt files and Word templates with Quill from now on.	Ouvre désormais les fichiers .docx, .doc, .rtf et .odt ainsi que les modèles Word avec Quill.
+	Opens Settings › Default apps, where you choose Quill for .docx and the other document types.	Ouvre Paramètres › Applications par défaut, où vous choisissez Quill pour .docx et les autres types de documents.
+	To open Word documents with Quill by default: select one in Finder, choose File › Get Info, pick Quill under Open with, then click Change All.	Pour ouvrir les documents Word avec Quill par défaut : sélectionnez-en un dans le Finder, choisissez Fichier › Lire les informations, choisissez Quill sous « Ouvrir avec », puis cliquez sur « Tout modifier ».
+	Quill is now the default app for Word documents.	Quill est désormais l’application par défaut pour les documents Word.
 	Numerals:	Chiffres :
 	Numerals	Chiffres
 	Hindi	Hindi
@@ -2066,8 +2066,8 @@
 	Undo 1 Action	Annuler 1 action
 	Undo {n} Actions	Annuler {n} actions
 	Start-up	Démarrage
-	Show the Start screen when WordCraft starts	Afficher l'écran d'accueil au démarrage de WordCraft
-	On: WordCraft opens on File › Home, with a blank document, the templates and your recent documents. Off: it opens a blank document.	Activé : WordCraft s'ouvre sur Fichier › Accueil, avec un document vierge, les modèles et vos documents récents. Désactivé : il ouvre un document vierge.
+	Show the Start screen when Quill starts	Afficher l'écran d'accueil au démarrage de Quill
+	On: Quill opens on File › Home, with a blank document, the templates and your recent documents. Off: it opens a blank document.	Activé : Quill s'ouvre sur Fichier › Accueil, avec un document vierge, les modèles et vos documents récents. Désactivé : il ouvre un document vierge.
 	Correct TWo INitial CApitals	Corriger DEux MAjuscules EN début de mot
 	Correct accidental usage of cAPS LOCK key	Corriger l’utilisation accidentelle de la touche vERR. mAJ
 	Region:	Région :
@@ -2088,3 +2088,42 @@
 	Search Vault	Rechercher dans le coffre
 	Save to Vault	Enregistrer dans le coffre
 	Vault	Coffre
+
+	Connect to Nextcloud	Se connecter à Nextcloud
+	Disconnect from Nextcloud	Se déconnecter de Nextcloud
+	Nextcloud Status	État de Nextcloud
+	Nextcloud Files	Fichiers Nextcloud
+	Open from Nextcloud	Ouvrir depuis Nextcloud
+	Save to Nextcloud	Enregistrer dans Nextcloud
+	New Nextcloud Folder	Nouveau dossier Nextcloud
+	Delete on Nextcloud	Supprimer sur Nextcloud
+	Share on Nextcloud	Partager sur Nextcloud
+	Search Nextcloud Files	Rechercher dans les fichiers Nextcloud
+	Nextcloud File Versions	Versions des fichiers Nextcloud
+	Wait for Nextcloud	Attendre Nextcloud
+	Cloud	Cloud
+	Nextcloud	Nextcloud
+	Server	Serveur
+	User name	Nom d'utilisateur
+	Connect	Se connecter
+	Disconnect	Se déconnecter
+	New folder	Nouveau dossier
+	Folder	Dossier
+	Files	Fichiers
+	Status	État
+	Versions	Versions
+	Save this document to the server as	Enregistrer ce document sur le serveur sous
+	An app password is safer than your account password.	Un mot de passe d'application est plus sûr que celui du compte.
+	Don't check the server's certificate	Ne pas vérifier le certificat du serveur
+	Notes	Notes
+	Backlinks	Rétroliens
+	Tags	Étiquettes
+	Open a note to see the notes that link to it.	Ouvrez une note pour voir les notes qui y renvoient.
+	Open an Obsidian vault folder to see the tags its notes carry.	Ouvrez un dossier de coffre Obsidian pour voir les étiquettes de ses notes.
+	Index Vault Notes	Indexer les notes du coffre
+	Vault Backlinks	Rétroliens du coffre
+	Vault Tags	Étiquettes du coffre
+	Insert Note Link	Insérer un lien vers une note
+
+	Paste as Equation	Coller comme équation
+	Open Obsidian Vault…	Ouvrir un coffre Obsidian…

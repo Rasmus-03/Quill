@@ -1,4 +1,4 @@
-//! WordCraft desktop app.
+//! Quill desktop app.
 //!
 //! Usage: `wordcraft [--control <port>] [--sample] [files…]`
 //!
@@ -130,6 +130,46 @@ fn log_dir() -> Option<std::path::PathBuf> {
     Some(prefs_path()?.parent()?.join("logs"))
 }
 
+/// The Nextcloud account, in a file of its own that only the user can read: the app password is
+/// a secret and does not belong in `ui.json`.
+fn cloud_store() -> Option<wordcraft_cloud::SecretStore> {
+    wordcraft_control_key::settings_dir().map(|d| wordcraft_cloud::SecretStore::new(&d))
+}
+
+/// Keep the cloud account between runs, so the next launch reconnects on its own.
+fn save_cloud(account: &wordcraft_ui_egui::CloudAccount) -> Result<(), String> {
+    let Some(store) = cloud_store() else { return Err("no settings folder".to_string()) };
+    let secret = wordcraft_cloud::Secret {
+        server: account.server.clone(),
+        user: account.user.clone(),
+        password: account.password.clone(),
+        insecure: account.insecure,
+    };
+    store.save(&secret).map_err(|e| e.to_string())
+}
+
+/// Reconnect to the server the account was used with last, if there is one.
+fn load_cloud(app: &mut WordApp) {
+    if !prefs_enabled() {
+        return;
+    }
+    let Some(store) = cloud_store() else { return };
+    let Ok(Some(secret)) = store.load() else { return };
+    if secret.server.trim().is_empty() || secret.user.trim().is_empty() {
+        return;
+    }
+    log::info!("cloud: reconnecting to {}", secret.server);
+    let _ = app.run(
+        "cloud.connect",
+        serde_json::json!({
+            "server": secret.server,
+            "user": secret.user,
+            "password": secret.password,
+            "insecure": secret.insecure,
+        }),
+    );
+}
+
 /// `custom-dictionary.txt` in the settings folder: the words Add to Dictionary kept (#40).
 fn user_dict_path() -> Option<std::path::PathBuf> {
     wordcraft_control_key::settings_dir().map(|b| b.join(wordcraft_engine::Session::USER_DICT_FILE))
@@ -205,7 +245,7 @@ fn save_prefs(app: &WordApp) {
 /// Native file dialogs, shown without blocking the window (`file_dialogs`, #94), File › Print
 /// through the system spooler (`print`), the system clipboard's text, formatted copies,
 /// pictures and format names (`clipboard`, #45, #584, #687, #833), the system's animation setting
-/// (`animations`), and making WordCraft the default app for Word documents (`default_apps`, #295).
+/// (`animations`), and making Quill the default app for Word documents (`default_apps`, #295).
 fn services(file_dialog: file_dialogs::Hook, ctx: &egui::Context) -> Services {
     Services {
         file_dialog: Some(file_dialog),
@@ -219,6 +259,7 @@ fn services(file_dialog: file_dialogs::Hook, ctx: &egui::Context) -> Services {
         clipboard_rtf: Some(Box::new(clipboard::rtf)),
         clipboard_formats: Some(Box::new(clipboard::formats)),
         pick_folder: Some(Box::new(|| rfd::FileDialog::new().pick_folder().map(|p| p.to_string_lossy().into_owned()))),
+        save_cloud: Some(Box::new(save_cloud)),
         ..Default::default()
     }
 }
@@ -226,7 +267,7 @@ fn services(file_dialog: file_dialogs::Hook, ctx: &egui::Context) -> Services {
 /// Window, Dock and taskbar icon.
 fn app_icon() -> Option<egui::IconData> {
     #[cfg(target_os = "macos")]
-    let png: &[u8] = include_bytes!("../../../assets/app-icon/wordcraft-macos-512.png");
+    let png: &[u8] = include_bytes!("../../../assets/app-icon/quill-macos-512.png");
     #[cfg(not(target_os = "macos"))]
     let png: &[u8] = include_bytes!("../../../assets/app-icon/hicolor/256x256/apps/io.github.rasmus03.quill.png");
     eframe::icon_data::from_png_bytes(png).map_err(|e| log::warn!("app icon: {e}")).ok()
@@ -263,7 +304,7 @@ fn main() -> eframe::Result {
     if let Some(logger) = logger {
         match log_dir().filter(|_| prefs_enabled()) {
             Some(dir) => match logger.attach_dir(&dir) {
-                Ok(path) => log::info!("WordCraft {} ({}), log file {}", env!("CARGO_PKG_VERSION"), build_sha(), path.display()),
+                Ok(path) => log::info!("Quill {} ({}), log file {}", env!("CARGO_PKG_VERSION"), build_sha(), path.display()),
                 // Standard error only by now (`attach_dir` gave up on the file); unlike `eprintln!`, never panics.
                 Err(e) => log::warn!("no log file: {e}"),
             },
@@ -325,6 +366,7 @@ fn main() -> eframe::Result {
             let mut app = WordApp::new(session, services(file_dialog, &cc.egui_ctx));
             load_prefs(&mut app);
             load_user_dictionary(&mut app);
+            load_cloud(&mut app);
             // A region chosen in File › Options replaces the system's for the first blank
             // document too (#838).
             if !sample && app.session.prefs.region.is_some() {

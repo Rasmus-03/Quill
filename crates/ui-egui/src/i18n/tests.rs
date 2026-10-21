@@ -729,7 +729,7 @@ fn turkish_covers_the_entire_existing_interface_catalog_and_preserves_templates(
         ("Euler's identity", "Euler Özdeşliği"),
         ("Default Paragraph Font", "Varsayılan Paragraf Yazı Tipi"),
         ("CONFIDENTIAL", "GİZLİ"),
-        ("WordCraft", "WordCraft"),
+        ("Quill", "Quill"),
         ("unknown future label", "unknown future label"),
     ] {
         assert_eq!(super::tr(tr, source), expected);
@@ -808,7 +808,7 @@ fn hungarian_covers_the_entire_existing_interface_catalog() {
         ("Save", "Mentés"),
         ("Redo", "Újra"),
         ("UPPERCASE", "NAGYBETŰS"),
-        ("WordCraft", "WordCraft"),
+        ("Quill", "Quill"),
         ("unknown future label", "unknown future label"),
     ] {
         assert_eq!(super::tr(hu, source), expected);
@@ -1161,7 +1161,7 @@ fn bulgarian_covers_the_entire_existing_interface_catalog() {
         ("Heading 1", "Заглавие 1"),
         ("Hyphenation", "Сричкопренасяне"),
         ("Track Changes", "Проследяване на промените"),
-        ("WordCraft", "WordCraft"),
+        ("Quill", "Quill"),
         ("unknown future label", "unknown future label"),
     ] {
         assert_eq!(tr(bg, source), expected, "{source}");

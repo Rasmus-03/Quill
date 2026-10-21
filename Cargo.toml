@@ -4,7 +4,7 @@ members = ["crates/*", "apps/*", "xtask"]
 default-members = ["crates/*", "apps/wordcraft", "apps/wordcraft-cli", "xtask"]
 
 [workspace.package]
-version = "1.0.2"
+version = "1.1.0"
 edition = "2024"
 license = "MIT OR Apache-2.0"
 rust-version = "1.95"
@@ -19,6 +19,7 @@ wordcraft-layout = { path = "crates/layout" }
 wordcraft-docx = { path = "crates/docx" }
 wordcraft-docbin = { path = "crates/docbin" }
 wordcraft-formats = { path = "crates/formats" }
+wordcraft-cloud = { path = "crates/cloud" }
 wordcraft-render = { path = "crates/render" }
 wordcraft-pdf = { path = "crates/pdf" }
 wordcraft-proof = { path = "crates/proof" }
@@ -64,6 +65,7 @@ sha1 = "0.11"
 sha2 = "0.11"
 hmac = "0.13"
 base64 = "0.22"
+percent-encoding = "2"
 getrandom = "0.3"
 zeroize = "1"
 

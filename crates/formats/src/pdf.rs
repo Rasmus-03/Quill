@@ -505,11 +505,7 @@ fn walk_ops(
     let mut ctm = *ctm;
     for op in ops {
         match op.operator.as_str() {
-            "q" => {
-                if stack.len() < 64 {
-                    stack.push(ctm);
-                }
-            }
+            "q" if stack.len() < 64 => stack.push(ctm),
             "Q" => {
                 if let Some(up) = stack.pop() {
                     ctm = up;

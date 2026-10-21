@@ -111,6 +111,26 @@ by the operating system's argument-length limit.
 - A failed save does not clear the document's dirty flag. Save errors are returned to
   the caller and are not silently ignored.
 
+## The cloud (Nextcloud)
+
+- The app password is a secret. It is kept in `nextcloud.json` in the settings folder, written
+  with the user's rights only (`0600` on Unix), and it is never written to the ordinary
+  settings file, never written to a log, and never sent anywhere but the server. Use a
+  Nextcloud **app password** (Settings › Security › Devices), which can be revoked from the
+  server at any time and grants access to the files only.
+- The password is held in memory only for as long as the account is connected, in a
+  zeroizing buffer that is wiped when it is dropped.
+- TLS is verified against the public roots by default. "Don't check the server's certificate"
+  turns the check off (for a self-signed server); with it on, anything on the way to the
+  server can read the traffic, including the password.
+- Redirects are followed at most five times, and the authorization header is not sent to
+  another host.
+- Every request has a timeout, every answer a size limit, and a remote path may not leave the
+  account (`..` is refused).
+- A file that changed on the server after it was read is not overwritten: the server's tag for
+  the version that was read is sent back with the write, and the server refuses the write when
+  it no longer matches.
+
 ## Reporting
 
 Please report security issues privately to the repository maintainers rather than in a

@@ -12,6 +12,58 @@ use wordcraft_doc::{InlineObject, Pos};
 use super::{delete_selection, sel_result, split_para};
 use crate::{CmdError, CmdResult, CommandSpec, MathEdit, Selection, Session, p};
 
+/// A formula written in LaTeX, the way a Markdown note writes it: `$x^2$` or `$$…$$`.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct LatexMath {
+    /// The formula itself, without the dollars.
+    pub latex: String,
+    /// Is it a display formula (on a line of its own)?
+    pub display: bool,
+}
+
+/// The formula in a text, when the whole text is one: `$x^2$` or `$$…$$`.
+///
+/// The dollars have to wrap the whole text, so a price ("$5 and $10") is not a formula.
+pub fn latex_math(text: &str) -> Option<LatexMath> {
+    let t = text.trim();
+    let (inner, display) = if let Some(inner) = t.strip_prefix("$$").and_then(|r| r.strip_suffix("$$")) {
+        (inner, true)
+    } else {
+        (t.strip_prefix('$')?.strip_suffix('$')?, false)
+    };
+    let inner = inner.trim();
+    if inner.is_empty() || inner.contains('$') {
+        return None;
+    }
+    if !display && inner.contains(['\n', '\r']) {
+        return None;
+    }
+    Some(LatexMath { latex: inner.to_string(), display })
+}
+
+/// Is this text a formula worth offering as an equation?
+///
+/// A price is not: the text must hold something LaTeX-ish (a command, a power, a subscript, a
+/// group) or be a single name.
+pub fn looks_like_latex_math(text: &str) -> bool {
+    let Some(math) = latex_math(text) else { return false };
+    let latex = math.latex;
+    if latex.contains(['\\', '^', '_', '{', '}']) {
+        return true;
+    }
+    // A single name ("x", "n") is a formula too.
+    !latex.is_empty() && latex.chars().all(|c| c.is_alphabetic())
+}
+
+/// Insert an equation written in LaTeX at the caret.
+pub fn insert_latex(s: &mut Session, latex: &str, display: bool, edit: bool) -> CmdResult {
+    let nodes = parse_latex(latex);
+    if nodes.is_empty() {
+        return Err(CmdError::Failed("the formula could not be read".into()));
+    }
+    insert_nodes_as_equation(s, nodes, &json!({"display": display, "edit": edit}))
+}
+
 fn editing(s: &Session) -> Option<&'static str> {
     if s.math.is_none() { Some("not editing an equation") } else { None }
 }

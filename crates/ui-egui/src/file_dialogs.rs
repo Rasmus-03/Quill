@@ -305,6 +305,9 @@ impl WordApp {
 
     /// Ask for an Obsidian vault folder through the same non-blocking dialog path as other files.
     pub(crate) fn open_vault_dialog(&mut self) {
+        // The vault's notes are found in the Navigation pane's Vault tab.
+        self.ui.nav_tab = "vault".into();
+        self.session.view.nav_pane = true;
         let _ = self.ask_file(FileDialogRequest::Folder, AfterPick::VaultOpen);
     }
 

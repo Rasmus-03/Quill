@@ -28,7 +28,7 @@
 	A password is required to open this document.	K otevření tohoto dokumentu je vyžadováno heslo.
 	A table of contents	Obsah
 	About	O aplikaci
-	About WordCraft	O aplikaci WordCraft
+	About Quill	O aplikaci Quill
 	Accent	Diakritika
 	Accept	Přijmout
 	Accept All Changes	Přijmout všechny změny
@@ -106,7 +106,7 @@
 	Automatic Table 1 (3 levels)	Automatický obsah 1 (3 úrovně)
 	Automatic Table 2 (2 levels)	Automatický obsah 2 (2 úrovně)
 	AutoSave	Automatické ukládání
-	AutoSave documents you have saved in WordCraft	Automaticky ukládat dokumenty uložené ve WordCraftu
+	AutoSave documents you have saved in Quill	Automaticky ukládat dokumenty uložené ve Quillu
 	AutoSave failed: {error}. Save the document to turn AutoSave back on.	Automatické ukládání selhalo: {error}. Uložením dokumentu automatické ukládání znovu zapnete.
 	AutoSave isn't available in the browser: it can't write to your files. Save downloads a copy.	Automatické ukládání není v prohlížeči dostupné, protože nemůže zapisovat do vašich souborů. Příkaz Uložit stáhne kopii.
 	AutoSave only keeps .docx, .odt and .rtf files; {name} can't keep all formatting. Save as .docx to turn on AutoSave.	Automatické ukládání podporuje pouze soubory .docx, .odt a .rtf; formát {name} nedokáže zachovat veškeré formátování. Pro zapnutí automatického ukládání uložte dokument jako .docx.
@@ -577,7 +577,7 @@
 	Keep Lines Together	Svázat řádky
 	Keep lines together	Svázat řádky
 	Keep Text Only	Zachovat pouze text
-	Keep the password somewhere safe: without it nobody, WordCraft included, can open the document. Leave both boxes empty to remove the password.	Heslo si bezpečně uložte: bez něj dokument nikdo (včetně aplikace WordCraft) neotevře. Chcete-li heslo odebrat, ponechte obě pole prázdná.
+	Keep the password somewhere safe: without it nobody, Quill included, can open the document. Leave both boxes empty to remove the password.	Heslo si bezpečně uložte: bez něj dokument nikdo (včetně aplikace Quill) neotevře. Chcete-li heslo odebrat, ponechte obě pole prázdná.
 	Keep with Next	Svázat s následujícím
 	Keep with next	Svázat s následujícím
 	Keeps the fonts and formatting of the copied text.	Zachová písma a formátování zkopírovaného textu.
@@ -1244,7 +1244,7 @@
 	Word Left	O slovo vlevo
 	Word Right	O slovo vpravo
 	WordArt	WordArt
-	WordCraft	WordCraft
+	Quill	Quill
 	Words	Slova
 	Words only	Pouze slova
 	Wrap Text	Obtékání textu
@@ -1918,7 +1918,7 @@
 	Word document	Dokument Word
 	All files	Všechny soubory
 	Recipient lists	Seznamy příjemců
-	The system file dialog isn't available, so WordCraft shows its own. To get the system dialog, install a file chooser portal (such as xdg-desktop-portal-gtk) or zenity.	Systémový dialog pro práci se soubory není k dispozici, proto WordCraft zobrazuje vlastní. Chcete-li používat systémový dialog, nainstalujte portál pro výběr souborů (například xdg-desktop-portal-gtk) nebo zenity.
+	The system file dialog isn't available, so Quill shows its own. To get the system dialog, install a file chooser portal (such as xdg-desktop-portal-gtk) or zenity.	Systémový dialog pro práci se soubory není k dispozici, proto Quill zobrazuje vlastní. Chcete-li používat systémový dialog, nainstalujte portál pro výběr souborů (například xdg-desktop-portal-gtk) nebo zenity.
 	Up one level	O úroveň výš
 	Home folder	Domovská složka
 	{name} wasn't found.	{name} nebyl nalezen.
@@ -1926,8 +1926,8 @@
 	This folder can't be read: {error}	Tuto složku nelze přečíst: {error}
 	Showing the first {count} items.	Zobrazuje se prvních {count} položek.
 	File name:	Název souboru:
-	Browse in WordCraft…	Procházet ve WordCraftu…
-	Open a file with WordCraft's own browser when the system file dialog doesn't appear.	Otevřít soubor pomocí vlastního prohlížeče souborů WordCraftu, když se systémový dialog pro práci se soubory nezobrazí.
+	Browse in Quill…	Procházet ve Quillu…
+	Open a file with Quill's own browser when the system file dialog doesn't appear.	Otevřít soubor pomocí vlastního prohlížeče souborů Quillu, když se systémový dialog pro práci se soubory nezobrazí.
 	Hide White Space	Skrýt prázdné místo
 	All pages	Všechny stránky
 	Current page	Aktuální stránka
@@ -2055,15 +2055,15 @@
 	Undo 1 Action	Vrátit 1 akci
 	Undo {n} Actions	Vrátit akce: {n}
 	Start-up	Spuštění
-	Show the Start screen when WordCraft starts	Při spuštění WordCraftu zobrazit úvodní obrazovku
-	On: WordCraft opens on File › Home, with a blank document, the templates and your recent documents. Off: it opens a blank document.	Zapnuto: WordCraft se otevře na kartě Soubor › Domů s prázdným dokumentem, šablonami a nedávnými dokumenty. Vypnuto: otevře prázdný dokument.
-	Couldn't make WordCraft the default: {error}	WordCraft se nepodařilo nastavit jako výchozí: {error}
-	In Default apps, choose WordCraft for the document types you want it to open.	Ve Výchozích aplikacích vyberte WordCraft pro typy dokumentů, které má otevírat.
-	Make WordCraft the default for Word documents…	Nastavit WordCraft jako výchozí pro dokumenty Word…
-	Opens .docx, .doc, .rtf and .odt files and Word templates with WordCraft from now on.	Soubory .docx, .doc, .rtf a .odt a šablony Wordu se od teď otevírají ve WordCraftu.
-	Opens Settings › Default apps, where you choose WordCraft for .docx and the other document types.	Otevře Nastavení › Výchozí aplikace, kde zvolíte WordCraft pro .docx a další typy dokumentů.
-	To open Word documents with WordCraft by default: select one in Finder, choose File › Get Info, pick WordCraft under Open with, then click Change All.	Chcete-li dokumenty Word otevírat ve WordCraftu jako výchozí: vyberte jeden ve Finderu, zvolte Soubor › Informace, v části „Otevřít v aplikaci“ vyberte WordCraft a klikněte na „Změnit vše“.
-	WordCraft is now the default app for Word documents.	WordCraft je nyní výchozí aplikací pro dokumenty Word.
+	Show the Start screen when Quill starts	Při spuštění Quillu zobrazit úvodní obrazovku
+	On: Quill opens on File › Home, with a blank document, the templates and your recent documents. Off: it opens a blank document.	Zapnuto: Quill se otevře na kartě Soubor › Domů s prázdným dokumentem, šablonami a nedávnými dokumenty. Vypnuto: otevře prázdný dokument.
+	Couldn't make Quill the default: {error}	Quill se nepodařilo nastavit jako výchozí: {error}
+	In Default apps, choose Quill for the document types you want it to open.	Ve Výchozích aplikacích vyberte Quill pro typy dokumentů, které má otevírat.
+	Make Quill the default for Word documents…	Nastavit Quill jako výchozí pro dokumenty Word…
+	Opens .docx, .doc, .rtf and .odt files and Word templates with Quill from now on.	Soubory .docx, .doc, .rtf a .odt a šablony Wordu se od teď otevírají ve Quillu.
+	Opens Settings › Default apps, where you choose Quill for .docx and the other document types.	Otevře Nastavení › Výchozí aplikace, kde zvolíte Quill pro .docx a další typy dokumentů.
+	To open Word documents with Quill by default: select one in Finder, choose File › Get Info, pick Quill under Open with, then click Change All.	Chcete-li dokumenty Word otevírat ve Quillu jako výchozí: vyberte jeden ve Finderu, zvolte Soubor › Informace, v části „Otevřít v aplikaci“ vyberte Quill a klikněte na „Změnit vše“.
+	Quill is now the default app for Word documents.	Quill je nyní výchozí aplikací pro dokumenty Word.
 	Numerals:	Číslice:
 	Numerals	Číslice
 	Hindi	Hindské
@@ -2085,3 +2085,42 @@
 	Search Vault	Hledat v trezoru
 	Save to Vault	Uložit do trezoru
 	Vault	Trezor
+
+	Connect to Nextcloud	Připojit k Nextcloudu
+	Disconnect from Nextcloud	Odpojit od Nextcloudu
+	Nextcloud Status	Stav Nextcloudu
+	Nextcloud Files	Soubory v Nextcloudu
+	Open from Nextcloud	Otevřít z Nextcloudu
+	Save to Nextcloud	Uložit do Nextcloudu
+	New Nextcloud Folder	Nová složka v Nextcloudu
+	Delete on Nextcloud	Smazat v Nextcloudu
+	Share on Nextcloud	Sdílet v Nextcloudu
+	Search Nextcloud Files	Hledat v souborech Nextcloudu
+	Nextcloud File Versions	Verze souborů v Nextcloudu
+	Wait for Nextcloud	Čekat na Nextcloud
+	Cloud	Cloud
+	Nextcloud	Nextcloud
+	Server	Server
+	User name	Uživatelské jméno
+	Connect	Připojit
+	Disconnect	Odpojit
+	New folder	Nová složka
+	Folder	Složka
+	Files	Soubory
+	Status	Stav
+	Versions	Verze
+	Save this document to the server as	Uložit tento dokument na server jako
+	An app password is safer than your account password.	Heslo pro aplikaci je bezpečnější než heslo účtu.
+	Don't check the server's certificate	Neověřovat certifikát serveru
+	Notes	Poznámky
+	Backlinks	Opačné odkazy
+	Tags	Štítky
+	Open a note to see the notes that link to it.	Otevřete poznámku a uvidíte poznámky, které na ni odkazují.
+	Open an Obsidian vault folder to see the tags its notes carry.	Otevřete složku úložiště Obsidian, abyste viděli štítky jeho poznámek.
+	Index Vault Notes	Indexovat poznámky úložiště
+	Vault Backlinks	Opačné odkazy v úložišti
+	Vault Tags	Štítky v úložišti
+	Insert Note Link	Vložit odkaz na poznámku
+
+	Paste as Equation	Vložit jako rovnici
+	Open Obsidian Vault…	Otevřít úložiště Obsidian…

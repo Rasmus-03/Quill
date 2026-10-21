@@ -1,0 +1,31 @@
+[package]
+name = "wordcraft-cloud"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish = false
+description = "WordCraft cloud files: a Nextcloud/WebDAV client (list, open, save, share, search) that never blocks the editor"
+
+[lints]
+workspace = true
+
+[features]
+# A small Nextcloud-shaped server, so other crates can test against one.
+testkit = []
+# Type-checks the browser build on a machine without the wasm target.
+wasm-check = []
+
+[dependencies]
+serde = { workspace = true }
+serde_json = { workspace = true }
+quick-xml = { workspace = true }
+base64 = { workspace = true }
+percent-encoding = { workspace = true }
+zeroize = { workspace = true }
+thiserror = { workspace = true }
+log = { workspace = true }
+
+# The HTTP client is desktop-only: the browser build has no sockets of its own, so the cloud
+# commands answer with a plain "not available here" there.
+[target.'cfg(not(target_arch = "wasm32"))'.dependencies]
+ureq = { version = "3", default-features = false, features = ["rustls", "gzip"] }

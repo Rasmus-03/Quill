@@ -5057,3 +5057,36 @@ fn select_all_in_an_equation_selects_the_equation() {
     assert!(m.anchor.is_some(), "the equation's contents are highlighted");
     assert!(m.anchor != Some(m.pos), "something is highlighted, not a collapsed caret");
 }
+
+/// A formula pasted from a note becomes an equation when the user asks for it: the Paste Options
+/// button offers "Paste as Equation", and the text is read as LaTeX.
+#[test]
+fn a_formula_pastes_as_an_equation() {
+    let mut s = Session::new(wordcraft_doc::Document::new());
+    let r = run(&mut s, "edit.paste", json!({"text": "$x^2 + 1$"}));
+    assert_eq!(r.get("latex").and_then(|l| l.get("latex")).and_then(|l| l.as_str()), Some("x^2 + 1"), "{r}");
+    assert_eq!(r.get("latex").and_then(|l| l.get("display")).and_then(|l| l.as_bool()), Some(false), "{r}");
+    // The text is in the document as text for now.
+    assert!(s.doc.plain_text(wordcraft_doc::StoryRef::Body).contains("x^2"), "the text is there");
+
+    // Pasted as an equation, the formula is an equation object.
+    let mut s = Session::new(wordcraft_doc::Document::new());
+    run(&mut s, "edit.pasteAsEquation", json!({"text": "$x^2 + 1$"}));
+    // The equation's linear form stands in for the formula in the text.
+    let text = s.doc.plain_text(wordcraft_doc::StoryRef::Body);
+    assert_eq!(text, "x^2+1", "the formula is the equation's linear form");
+    let para = s.doc.para_at(&s.sel.focus).expect("a paragraph");
+    assert!(para.objects.iter().any(|o| matches!(o, wordcraft_doc::InlineObject::Equation { .. })), "the document holds an equation");
+}
+
+/// A price is not a formula, and the text that is not a formula is refused.
+#[test]
+fn a_price_is_not_a_formula() {
+    assert!(crate::cmd::equation::latex_math("It costs $5 and $10").is_none());
+    assert!(crate::cmd::equation::latex_math("$5").is_none());
+    assert!(crate::cmd::equation::latex_math("plain text").is_none());
+    assert!(crate::cmd::equation::latex_math("$x^2$").is_some());
+    let mut s = Session::new(wordcraft_doc::Document::new());
+    let e = s.run("edit.pasteAsEquation", &json!({"text": "It costs $5 and $10"})).expect_err("not a formula");
+    assert!(e.to_string().contains("not a formula"), "{e}");
+}

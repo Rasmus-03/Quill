@@ -13,7 +13,7 @@
 	1.5 Line Spacing	Reavahe 1,5
 	A free, open-source word processor written from scratch in Rust.\nPart of the Crafting Apps from the ArtCraft team.	Tasuta avatud lähtekoodiga tekstitöötlusprogramm, mis on kirjutatud Rustis.\nArtCrafti meeskonna Crafting Appsi osa.
 	About	Teave
-	About WordCraft	WordCrafti teave
+	About Quill	Quilli teave
 	Accept	Nõustu
 	Accept All Changes	Nõustu kõigi muudatustega
 	Accept This Change	Nõustu selle muudatusega
@@ -878,7 +878,7 @@
 	Word document (*.docx)	Wordi dokument (*.docx)
 	Word XML Document (*.xml)	Wordi XML-dokument (*.xml)
 	WordArt	WordArt
-	WordCraft	WordCraft
+	Quill	Quill
 	Words	Sõnad
 	Words only	Ainult sõnad
 	Wrap Text	Mähi tekst
@@ -943,7 +943,7 @@
 	Stopped	Lõpetatud
 	Speed	Kiirus
 	Normal speed	Tavaline kiirus
-	AutoSave documents you have saved in WordCraft	Salvesta WordCraftis salvestatud dokumendid automaatselt
+	AutoSave documents you have saved in Quill	Salvesta Quillis salvestatud dokumendid automaatselt
 	AutoSave failed: {error}. Save the document to turn AutoSave back on.	Automaatsalvestus ebaõnnestus: {error}. Selle uuesti sisse lülitamiseks salvesta dokument.
 	Couldn't download {name}: {error}	Faili {name} allalaadimine ebaõnnestus: {error}
 	Do you want to save changes to {name}?	Kas soovid faili {name} muudatused salvestada?
@@ -1207,7 +1207,7 @@
 	The document will be saved with a password. Save it to protect it.	Dokument salvestatakse parooliga. Kaitsmiseks salvesta see.
 	The password is removed. Save the document to keep the change.	Parool on eemaldatud. Muudatuse säilitamiseks salvesta dokument.
 	The passwords don't match.	Paroolid ei ühti.
-	Keep the password somewhere safe: without it nobody, WordCraft included, can open the document. Leave both boxes empty to remove the password.	Hoia parooli kindlas kohas: ilma selleta ei saa keegi, ka WordCraft, dokumenti avada. Parooli eemaldamiseks jäta mõlemad väljad tühjaks.
+	Keep the password somewhere safe: without it nobody, Quill included, can open the document. Leave both boxes empty to remove the password.	Hoia parooli kindlas kohas: ilma selleta ei saa keegi, ka Quill, dokumenti avada. Parooli eemaldamiseks jäta mõlemad väljad tühjaks.
 	Align Top Left	Joonda üles vasakule
 	Align Top Center	Joonda üles keskele
 	Align Top Right	Joonda üles paremale
@@ -1621,13 +1621,13 @@
 	Hindi	Hindi
 	Context	Kontekst
 	System	Süsteem
-	Couldn't make WordCraft the default: {error}	WordCrafti ei õnnestunud vaikerakenduseks määrata: {error}
-	In Default apps, choose WordCraft for the document types you want it to open.	Vali jaotises „Vaikerakendused“ WordCraft nende dokumenditüüpide jaoks, mida see peaks avama.
-	Make WordCraft the default for Word documents…	Määra WordCraft Wordi dokumentide vaikerakenduseks…
-	Opens .docx, .doc, .rtf and .odt files and Word templates with WordCraft from now on.	Edaspidi avatakse .docx-, .doc-, .rtf- ja .odt-failid ning Wordi mallid WordCraftiga.
-	Opens Settings › Default apps, where you choose WordCraft for .docx and the other document types.	Avab Sätted › Vaikerakendused, kus saad valida WordCrafti .docx-i ja teiste dokumenditüüpide jaoks.
-	To open Word documents with WordCraft by default: select one in Finder, choose File › Get Info, pick WordCraft under Open with, then click Change All.	Wordi dokumentide vaikimisi avamiseks WordCraftiga vali Finderis üks dokument, vali Fail › Hangi teave, vali jaotises „Ava rakendusega“ WordCraft ja klõpsa „Muuda kõiki“.
-	WordCraft is now the default app for Word documents.	WordCraft on nüüd Wordi dokumentide vaikerakendus.
+	Couldn't make Quill the default: {error}	Quilli ei õnnestunud vaikerakenduseks määrata: {error}
+	In Default apps, choose Quill for the document types you want it to open.	Vali jaotises „Vaikerakendused“ Quill nende dokumenditüüpide jaoks, mida see peaks avama.
+	Make Quill the default for Word documents…	Määra Quill Wordi dokumentide vaikerakenduseks…
+	Opens .docx, .doc, .rtf and .odt files and Word templates with Quill from now on.	Edaspidi avatakse .docx-, .doc-, .rtf- ja .odt-failid ning Wordi mallid Quilliga.
+	Opens Settings › Default apps, where you choose Quill for .docx and the other document types.	Avab Sätted › Vaikerakendused, kus saad valida Quilli .docx-i ja teiste dokumenditüüpide jaoks.
+	To open Word documents with Quill by default: select one in Finder, choose File › Get Info, pick Quill under Open with, then click Change All.	Wordi dokumentide vaikimisi avamiseks Quilliga vali Finderis üks dokument, vali Fail › Hangi teave, vali jaotises „Ava rakendusega“ Quill ja klõpsa „Muuda kõiki“.
+	Quill is now the default app for Word documents.	Quill on nüüd Wordi dokumentide vaikerakendus.
 	Templates	Mallid
 	Templates and Add-ins	Mallid ja lisandmoodulid
 	Attach Template	Manusta mall
@@ -1730,7 +1730,7 @@
 	Word document	Wordi dokument
 	All files	Kõik failid
 	Recipient lists	Adressaatide loendid
-	The system file dialog isn't available, so WordCraft shows its own. To get the system dialog, install a file chooser portal (such as xdg-desktop-portal-gtk) or zenity.	Süsteemi failidialoog pole saadaval, seega näitab WordCraft enda oma. Süsteemi dialoogi saamiseks paigalda failivalija portaal (näiteks xdg-desktop-portal-gtk) või zenity.
+	The system file dialog isn't available, so Quill shows its own. To get the system dialog, install a file chooser portal (such as xdg-desktop-portal-gtk) or zenity.	Süsteemi failidialoog pole saadaval, seega näitab Quill enda oma. Süsteemi dialoogi saamiseks paigalda failivalija portaal (näiteks xdg-desktop-portal-gtk) või zenity.
 	Up one level	Taseme võrra üles
 	Home folder	Kodukaust
 	{name} wasn't found.	{name} ei leitud.
@@ -1738,8 +1738,8 @@
 	This folder can't be read: {error}	Seda kausta ei saa lugeda: {error}
 	Showing the first {count} items.	Kuvatud on ainult esimesed kirjed: {count}.
 	File name:	Faili nimi:
-	Browse in WordCraft…	Sirvi WordCraftis…
-	Open a file with WordCraft's own browser when the system file dialog doesn't appear.	Ava fail WordCrafti enda failisirvijaga, kui süsteemi failidialoog ei ilmu.
+	Browse in Quill…	Sirvi Quillis…
+	Open a file with Quill's own browser when the system file dialog doesn't appear.	Ava fail Quilli enda failisirvijaga, kui süsteemi failidialoog ei ilmu.
 	Hide White Space	Peida tühi ala lehtede vahel
 	All pages	Kõik leheküljed
 	Current page	Praegune lehekülg
@@ -2107,10 +2107,49 @@
 	Region:	Piirkond:
 	Automatic ({region})	Automaatne ({region})
 	Start-up	Käivitamine
-	Show the Start screen when WordCraft starts	Näita WordCrafti käivitamisel avakuva
-	On: WordCraft opens on File › Home, with a blank document, the templates and your recent documents. Off: it opens a blank document.	Sees: WordCraft avaneb vaates Fail › Avaleht, kus on tühi dokument, mallid ja hiljutised dokumendid. Väljas: avaneb tühi dokument.
+	Show the Start screen when Quill starts	Näita Quilli käivitamisel avakuva
+	On: Quill opens on File › Home, with a blank document, the templates and your recent documents. Off: it opens a blank document.	Sees: Quill avaneb vaates Fail › Avaleht, kus on tühi dokument, mallid ja hiljutised dokumendid. Väljas: avaneb tühi dokument.
 	Open Vault	Ava hoidla
 	Refresh Vault	Värskenda hoidlat
 	Search Vault	Otsi hoidlast
 	Save to Vault	Salvesta hoidlasse
 	Vault	Hoidla
+
+	Connect to Nextcloud	Ühendus Nextcloudiga
+	Disconnect from Nextcloud	Ühenduse katkestamine Nextcloudiga
+	Nextcloud Status	Nextcloudi olek
+	Nextcloud Files	Nextcloudi failid
+	Open from Nextcloud	Avamine Nextcloudist
+	Save to Nextcloud	Salvestamine Nextcloudi
+	New Nextcloud Folder	Uus Nextcloudi kaust
+	Delete on Nextcloud	Kustutamine Nextcloudis
+	Share on Nextcloud	Jagamine Nextcloudis
+	Search Nextcloud Files	Nextcloudi failide otsimine
+	Nextcloud File Versions	Nextcloudi failide versioonid
+	Wait for Nextcloud	Ootamine Nextcloudi
+	Cloud	Pilv
+	Nextcloud	Nextcloud
+	Server	Server
+	User name	Kasutajanimi
+	Connect	Ühenda
+	Disconnect	Ühenduse katkestamine
+	New folder	Uus kaust
+	Folder	Kaust
+	Files	Failid
+	Status	Olek
+	Versions	Versioonid
+	Save this document to the server as	Salvesta see dokument serverisse kui
+	An app password is safer than your account password.	Rakenduse parool on turvalisem kui konto parool.
+	Don't check the server's certificate	Ära kontrolli serveri sertifikaati
+	Notes	Märkmed
+	Backlinks	Tagasiühendused
+	Tags	Sildid
+	Open a note to see the notes that link to it.	Avage märkme, et näha märkmed, mis sellele viitavad.
+	Open an Obsidian vault folder to see the tags its notes carry.	Ava Obsidiani hoidla kaust, et näha selle märkmede sildid.
+	Index Vault Notes	Indekseri hoidla märkmed
+	Vault Backlinks	Hoidla tagasiühendused
+	Vault Tags	Hoidla sildid
+	Insert Note Link	Märkme lingi sisestamine
+
+	Paste as Equation	Kleebi võrrandina
+	Open Obsidian Vault…	Ava Obsidiani hoidla…

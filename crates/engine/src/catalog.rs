@@ -30,6 +30,8 @@ File|Backstage|Version History|file.versions
 File|Backstage|Recover Unsaved|file.recover
 File|Backstage|New from Template|file.newFromTemplate
 File|Backstage|Save as Template|file.saveTemplate
+File|Backstage|Open from OneDrive|cloud.open
+File|Backstage|Save to OneDrive|cloud.save
 Quick Access|Toolbar|Undo|edit.undo
 Quick Access|Toolbar|Undo List|edit.undoTo
 Quick Access|Toolbar|Redo|edit.redo

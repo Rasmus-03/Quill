@@ -13,7 +13,7 @@ use crate::{WordApp, paste_picture};
 
 /// The commands that paste the clipboard.
 pub(crate) fn is_paste(id: &str) -> bool {
-    matches!(id, "edit.paste" | "edit.pasteText" | "edit.pasteMerge" | "edit.pasteSpecial")
+    matches!(id, "edit.paste" | "edit.pasteText" | "edit.pasteMerge" | "edit.pasteSpecial" | "edit.pasteAsEquation")
 }
 
 /// Most format names an error lists.
