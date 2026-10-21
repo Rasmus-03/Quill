@@ -1,5 +1,37 @@
 # Changelog
 
+## Unreleased
+
+The first steps of 1.2 (the plan lives in [`docs/release-plan-1.2.md`](docs/release-plan-1.2.md)):
+the build is trustworthy again, and the app carries its own name everywhere a user sees it.
+
+- **The macOS and Windows packages build again**. Since the rename to Quill, the packaging
+  scripts still asked cargo for the old `wordcraft` packages and copied an icon that no longer
+  existed, so neither platform could be packaged at all. The bundle is `Quill.app`, the artifacts
+  are `quill-…`, the MSI registers the app as Quill, and the disk image's window knows the new
+  name
+- **The CI matrix asks for packages that exist**. The Windows and macOS jobs named a package
+  that was gone, so they failed before a single test ran; a new check (`cargo xtask pkg-names`)
+  reads the workflows and the packaging scripts and fails when one names a package that isn't in
+  the workspace
+- **The whole test suite runs in CI**, not just the library tests: the .docx round-trip and
+  hostile-input suites, the binaries' own tests and the integration tests. Running it here found
+  a bug the old job hid — a paragraph whose text is only hashes was read back as an empty
+  heading and lost its text
+- **The repository's own gates run in CI**: every asset needs a row in ATTRIBUTION.md, the crate
+  layering is enforced, and the browser build of every layer still compiles
+- **Quill says Quill**: the release workflow, the web page's title, the app's and the command
+  line tool's messages, the print title and the packaging output. The internal crate names and
+  the build variables keep theirs, and `docs/releasing.md` says why
+- **The 19 interface languages keep their translations**: the English text of about sixteen
+  strings was renamed to Quill, but the catalogs still carried the old wording as their key, so
+  those strings fell back to English in every language. The catalogs are re-keyed, so the German,
+  French, Polish, Russian, Serbian, Turkish, Ukrainian, Bulgarian, Chinese, Czech, Spanish,
+  Estonian, Hungarian and Italian interfaces are complete again
+- **Files Quill writes say Quill**: the PDF, ODT, HTML, RTF and LaTeX exports, the .docx
+  "Application" property and a new document's author carry the Quill name, and the MCP server
+  introduces itself as Quill
+
 ## 1.1.0 — Nextcloud, Obsidian depth and Focus mode
 
 A release about the places your writing lives: a Nextcloud server, an Obsidian vault, and the
@@ -14,6 +46,13 @@ page in front of you.
   settings file, and the next launch reconnects on its own. A Markdown file on the server is an
   Obsidian note: frontmatter, wikilinks and embeds survive the round trip, and its images are
   written beside it. See [docs/cloud.md](docs/cloud.md)
+- **Add an Obsidian vault from File › Open**: "Open Obsidian Vault…" asks for the folder and
+  shows its notes in the Navigation pane beside the document, where they can be searched and
+  opened
+- **Paste equations**: a formula written in a note (`$x^2$`, `$$…$$`) can be pasted into the
+  document as a real equation — the Paste Options button offers "Paste as Equation" after the
+  paste, and the ribbon's Paste menu has the same entry. A price ("$5 and $10") is not a formula
+  and is left alone
 - **Obsidian, deeper**: the vault pane has three views now — the notes, the notes that link to
   the open one (backlinks), and the tags the notes carry. Tags come from the frontmatter's
   `tags:` list and from the `#tags` in the note's own text. Insert › Link writes a link to a

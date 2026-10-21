@@ -286,6 +286,9 @@ fn open_page(app: &mut WordApp, ui: &mut Ui) {
     if ui.button(egui::RichText::new(tl!("Nextcloud")).font(medium(14.0))).clicked() {
         open_cloud_tab(app);
     }
+    if ui.button(egui::RichText::new(tl!("Open Obsidian Vault…")).font(medium(14.0))).clicked() {
+        app.open_vault_dialog();
+    }
     ui.add_space(18.0);
     open_list(app, ui);
 }

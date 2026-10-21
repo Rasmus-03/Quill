@@ -17,7 +17,7 @@
 	1.5 Line Spacing	1.5 倍行距
 	A free, open-source word processor written from scratch in Rust.\nPart of the Crafting Apps from the ArtCraft team.	一款用 Rust 从零编写的免费开源文字处理软件。\n属于 ArtCraft 团队的 Crafting Apps 系列。
 	About	关于
-	About WordCraft	关于 WordCraft
+	About Quill	关于 Quill
 	Accept	接受
 	Accept All Changes	接受所有修订
 	Accept This Change	接受此修订
@@ -75,7 +75,7 @@
 	Automatic Table 1 (3 levels)	自动目录 1（3 级）
 	Automatic Table 2 (2 levels)	自动目录 2（2 级）
 	AutoSave	自动保存
-	AutoSave documents you have saved in WordCraft	自动保存在 WordCraft 中保存过的文档
+	AutoSave documents you have saved in Quill	自动保存在 Quill 中保存过的文档
 	AutoSave failed: {error}. Save the document to turn AutoSave back on.	自动保存失败：{error}。重新保存文档后将恢复自动保存。
 	Balloons	批注框
 	Bottom Margin	下边距
@@ -89,7 +89,7 @@
 	Click to switch back to inserting	单击以切换回插入模式
 	Color only	仅颜色
 	Compress punctuation at the start of a line	压缩行首标点
-	Couldn't make WordCraft the default: {error}	无法将 WordCraft 设为默认应用：{error}
+	Couldn't make Quill the default: {error}	无法将 Quill 设为默认应用：{error}
 	Custom dictionary	自定义词典
 	Dark page (white text on black)	深色页面（黑底白字）
 	Drag a rectangle to draw a table, or a line across cells to split them. Esc stops.	拖出矩形以绘制表格，或拖出穿过单元格的线条以拆分单元格。按 Esc 结束。
@@ -118,7 +118,7 @@
 	Inside:	内侧：
 	Latin text font:	拉丁文字字体：
 	Left border	左框线
-	In Default apps, choose WordCraft for the document types you want it to open.	请在“默认应用”中，为希望由 WordCraft 打开的文档类型选择 WordCraft。
+	In Default apps, choose Quill for the document types you want it to open.	请在“默认应用”中，为希望由 Quill 打开的文档类型选择 Quill。
 	Left Margin	左边距
 	Indents and Spacing	缩进和间距
 	Legal style numbering	正规形式编号
@@ -139,9 +139,9 @@
 	Number format	编号格式
 	Number style for this level:	此级别的编号样式：
 	Outside border	外侧框线
-	Make WordCraft the default for Word documents…	将 WordCraft 设为 Word 文档的默认应用…
-	Opens .docx, .doc, .rtf and .odt files and Word templates with WordCraft from now on.	今后用 WordCraft 打开 .docx、.doc、.rtf、.odt 文件和 Word 模板。
-	Opens Settings › Default apps, where you choose WordCraft for .docx and the other document types.	打开“设置 › 默认应用”，在其中为 .docx 及其他文档类型选择 WordCraft。
+	Make Quill the default for Word documents…	将 Quill 设为 Word 文档的默认应用…
+	Opens .docx, .doc, .rtf and .odt files and Word templates with Quill from now on.	今后用 Quill 打开 .docx、.doc、.rtf、.odt 文件和 Word 模板。
+	Opens Settings › Default apps, where you choose Quill for .docx and the other document types.	打开“设置 › 默认应用”，在其中为 .docx 及其他文档类型选择 Quill。
 	Overtype	改写
 	Overtype (typing replaces the characters after the caret)	改写（键入的内容替换插入点后的字符）
 	Page display	页面显示
@@ -338,8 +338,8 @@
 	Delete Style	删除样式
 	Delete Table	删除表格
 	Design	设计
-	To open Word documents with WordCraft by default: select one in Finder, choose File › Get Info, pick WordCraft under Open with, then click Change All.	要默认用 WordCraft 打开 Word 文档：在访达中选中一个文档，选择“文件 › 显示简介”，在“打开方式”中选择 WordCraft，然后点按“全部更改”。
-	WordCraft is now the default app for Word documents.	WordCraft 现在是 Word 文档的默认应用。
+	To open Word documents with Quill by default: select one in Finder, choose File › Get Info, pick Quill under Open with, then click Change All.	要默认用 Quill 打开 Word 文档：在访达中选中一个文档，选择“文件 › 显示简介”，在“打开方式”中选择 Quill，然后点按“全部更改”。
+	Quill is now the default app for Word documents.	Quill 现在是 Word 文档的默认应用。
 	development build	开发版本
 	Diagonal	斜式
 	Diamond	菱形
@@ -965,7 +965,7 @@
 	Word Left	左移一个单词
 	Word Right	右移一个单词
 	WordArt	艺术字
-	WordCraft	WordCraft
+	Quill	Quill
 	Words	字数
 	Words only	仅字词
 	Wrap Text	环绕文字
@@ -1352,7 +1352,7 @@
 	The document will be saved with a password. Save it to protect it.	文档将使用密码保存。保存文档以保护它。
 	The password is removed. Save the document to keep the change.	密码已删除。保存文档以保留此更改。
 	The passwords don't match.	两次输入的密码不一致。
-	Keep the password somewhere safe: without it nobody, WordCraft included, can open the document. Leave both boxes empty to remove the password.	请妥善保管密码：没有密码，任何人（包括 WordCraft）都无法打开文档。两个框都留空可删除密码。
+	Keep the password somewhere safe: without it nobody, Quill included, can open the document. Leave both boxes empty to remove the password.	请妥善保管密码：没有密码，任何人（包括 Quill）都无法打开文档。两个框都留空可删除密码。
 
 # Interface text routed through translation (#313)
 	Align Top Left	靠上左对齐
@@ -1741,7 +1741,7 @@
 	Word document	Word 文档
 	All files	所有文件
 	Recipient lists	收件人列表
-	The system file dialog isn't available, so WordCraft shows its own. To get the system dialog, install a file chooser portal (such as xdg-desktop-portal-gtk) or zenity.	系统文件对话框不可用，因此 WordCraft 显示自己的对话框。要使用系统对话框，请安装文件选择器门户（例如 xdg-desktop-portal-gtk）或 zenity。
+	The system file dialog isn't available, so Quill shows its own. To get the system dialog, install a file chooser portal (such as xdg-desktop-portal-gtk) or zenity.	系统文件对话框不可用，因此 Quill 显示自己的对话框。要使用系统对话框，请安装文件选择器门户（例如 xdg-desktop-portal-gtk）或 zenity。
 	Up one level	向上一级
 	Home folder	主文件夹
 	{name} wasn't found.	未找到 {name}。
@@ -1749,8 +1749,8 @@
 	This folder can't be read: {error}	无法读取此文件夹：{error}
 	Showing the first {count} items.	仅显示前 {count} 项。
 	File name:	文件名:
-	Browse in WordCraft…	在 WordCraft 中浏览…
-	Open a file with WordCraft's own browser when the system file dialog doesn't appear.	当系统文件对话框没有出现时，使用 WordCraft 自带的浏览器打开文件。
+	Browse in Quill…	在 Quill 中浏览…
+	Open a file with Quill's own browser when the system file dialog doesn't appear.	当系统文件对话框没有出现时，使用 Quill 自带的浏览器打开文件。
 	Hide White Space	隐藏空白
 	All pages	所有页面
 	Current page	当前页
@@ -2085,8 +2085,8 @@
 	Region:	区域：
 	Automatic ({region})	自动（{region}）
 	Start-up	启动
-	Show the Start screen when WordCraft starts	启动 WordCraft 时显示开始屏幕
-	On: WordCraft opens on File › Home, with a blank document, the templates and your recent documents. Off: it opens a blank document.	开：WordCraft 打开时显示“文件 › 开始”，其中有空白文档、模板和最近使用的文档。关：直接打开空白文档。
+	Show the Start screen when Quill starts	启动 Quill 时显示开始屏幕
+	On: Quill opens on File › Home, with a blank document, the templates and your recent documents. Off: it opens a blank document.	开：Quill 打开时显示“文件 › 开始”，其中有空白文档、模板和最近使用的文档。关：直接打开空白文档。
 	Open Vault	打开仓库
 	Refresh Vault	刷新仓库
 	Search Vault	搜索仓库
@@ -2128,3 +2128,6 @@
 	Vault Backlinks	保管库中的反向链接
 	Vault Tags	保管库中的标签
 	Insert Note Link	插入笔记链接
+
+	Paste as Equation	粘贴为公式
+	Open Obsidian Vault…	打开 Obsidian 保管库…

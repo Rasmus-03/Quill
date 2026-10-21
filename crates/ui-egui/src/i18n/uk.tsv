@@ -16,7 +16,7 @@
 	1.5 Line Spacing	Міжрядковий інтервал 1,5
 	A free, open-source word processor written from scratch in Rust.\nPart of the Crafting Apps from the ArtCraft team.	Безкоштовний текстовий процесор із відкритим кодом, написаний з нуля мовою Rust.\nЧастина Crafting Apps від команди ArtCraft.
 	About	Про програму
-	About WordCraft	Про WordCraft
+	About Quill	Про Quill
 	Accept	Прийняти
 	Accept All Changes	Прийняти всі зміни
 	Accept This Change	Прийняти цю зміну
@@ -280,7 +280,7 @@
 	Copy	Копіювати
 	Copy Formatting	Копіювати форматування
 	Corrections	Виправлення
-	Couldn't make WordCraft the default: {error}	Не вдалося зробити WordCraft типовою програмою: {error}
+	Couldn't make Quill the default: {error}	Не вдалося зробити Quill типовою програмою: {error}
 	Count words in text boxes and notes	Рахувати слова в текстових полях і виносках
 	Cover Page	Титульна сторінка
 	Create	Створити
@@ -318,15 +318,15 @@
 	Drag a rectangle to draw a table, or a line across cells to split them. Esc stops.	Перетягніть прямокутник, щоб намалювати таблицю, або лінію через клітинки, щоб їх розділити. Esc завершує.
 	Draw Table	Намалювати таблицю
 	Edit Comment	Редагувати коментар
-	In Default apps, choose WordCraft for the document types you want it to open.	У програмах за замовчуванням виберіть WordCraft для типів документів, які він має відкривати.
+	In Default apps, choose Quill for the document types you want it to open.	У програмах за замовчуванням виберіть Quill для типів документів, які він має відкривати.
 	Left Margin	Ліве поле
 	Indents and Spacing	Відступи й інтервали
 	Line breaking	Розрив рядків
-	Make WordCraft the default for Word documents…	Зробити WordCraft типовою програмою для документів Word…
+	Make Quill the default for Word documents…	Зробити Quill типовою програмою для документів Word…
 	More templates →	Більше шаблонів →
 	No templates match your search.	Немає шаблонів, що відповідають пошуку.
-	Opens .docx, .doc, .rtf and .odt files and Word templates with WordCraft from now on.	Відтепер файли .docx, .doc, .rtf, .odt і шаблони Word відкриватимуться у WordCraft.
-	Opens Settings › Default apps, where you choose WordCraft for .docx and the other document types.	Відкриває Параметри › Програми за замовчуванням, де ви вибираєте WordCraft для .docx та інших типів документів.
+	Opens .docx, .doc, .rtf and .odt files and Word templates with Quill from now on.	Відтепер файли .docx, .doc, .rtf, .odt і шаблони Word відкриватимуться у Quill.
+	Opens Settings › Default apps, where you choose Quill for .docx and the other document types.	Відкриває Параметри › Програми за замовчуванням, де ви вибираєте Quill для .docx та інших типів документів.
 	Reopen	Відкрити знову
 	Right Margin	Праве поле
 	Distribute letters	Розподілити літери
@@ -336,8 +336,8 @@
 	Right (vertical)	Праворуч (вертикально)
 	Ruby text:	Текст рубі:
 	Search for templates	Пошук шаблонів
-	To open Word documents with WordCraft by default: select one in Finder, choose File › Get Info, pick WordCraft under Open with, then click Change All.	Щоб документи Word типово відкривалися у WordCraft: виберіть документ у Finder, оберіть Файл › Отримати інфо, виберіть WordCraft у розділі «Відкривати за допомогою» і натисніть «Змінити все».
-	WordCraft is now the default app for Word documents.	WordCraft тепер типова програма для документів Word.
+	To open Word documents with Quill by default: select one in Finder, choose File › Get Info, pick Quill under Open with, then click Change All.	Щоб документи Word типово відкривалися у Quill: виберіть документ у Finder, оберіть Файл › Отримати інфо, виберіть Quill у розділі «Відкривати за допомогою» і натисніть «Змінити все».
+	Quill is now the default app for Word documents.	Quill тепер типова програма для документів Word.
 	development build	Збірка для розробки
 	Diagonal	Діагональ
 	Diamond	Ромб
@@ -981,7 +981,7 @@
 	Word Left	На слово ліворуч
 	Word Right	На слово праворуч
 	WordArt	WordArt
-	WordCraft	WordCraft
+	Quill	Quill
 	Words	Слова
 	Words only	Лише слова
 	Wrap Text	Обтікання текстом
@@ -1044,7 +1044,7 @@
 	Stopped	Зупинено
 	Speed	Швидкість
 	Normal speed	Звичайна швидкість
-	AutoSave documents you have saved in WordCraft	Автоматично зберігати документи, збережені у WordCraft
+	AutoSave documents you have saved in Quill	Автоматично зберігати документи, збережені у Quill
 	AutoSave failed: {error}. Save the document to turn AutoSave back on.	Не вдалося виконати автозбереження: {error}. Збережіть документ, щоб знову ввімкнути автозбереження.
 	Couldn't download {name}: {error}	Не вдалося завантажити {name}: {error}
 	Do you want to save changes to {name}?	Зберегти зміни в {name}?
@@ -1352,7 +1352,7 @@
 	The document will be saved with a password. Save it to protect it.	Документ буде збережено з паролем. Збережіть його, щоб захистити.
 	The password is removed. Save the document to keep the change.	Пароль видалено. Збережіть документ, щоб зберегти зміну.
 	The passwords don't match.	Паролі не збігаються.
-	Keep the password somewhere safe: without it nobody, WordCraft included, can open the document. Leave both boxes empty to remove the password.	Зберігайте пароль у надійному місці: без нього ніхто, зокрема WordCraft, не зможе відкрити документ. Залиште обидва поля порожніми, щоб видалити пароль.
+	Keep the password somewhere safe: without it nobody, Quill included, can open the document. Leave both boxes empty to remove the password.	Зберігайте пароль у надійному місці: без нього ніхто, зокрема Quill, не зможе відкрити документ. Залиште обидва поля порожніми, щоб видалити пароль.
 
 # Interface text routed through translation (#313)
 	Align Top Left	Вирівняти вгорі ліворуч
@@ -1741,7 +1741,7 @@
 	Word document	Документ Word
 	All files	Усі файли
 	Recipient lists	Списки одержувачів
-	The system file dialog isn't available, so WordCraft shows its own. To get the system dialog, install a file chooser portal (such as xdg-desktop-portal-gtk) or zenity.	Системне діалогове вікно файлів недоступне, тож WordCraft показує власне. Щоб отримати системне вікно, установіть портал вибору файлів (наприклад, xdg-desktop-portal-gtk) або zenity.
+	The system file dialog isn't available, so Quill shows its own. To get the system dialog, install a file chooser portal (such as xdg-desktop-portal-gtk) or zenity.	Системне діалогове вікно файлів недоступне, тож Quill показує власне. Щоб отримати системне вікно, установіть портал вибору файлів (наприклад, xdg-desktop-portal-gtk) або zenity.
 	Up one level	На рівень вище
 	Home folder	Домашня тека
 	{name} wasn't found.	{name} не знайдено.
@@ -1749,8 +1749,8 @@
 	This folder can't be read: {error}	Не вдається прочитати цю теку: {error}
 	Showing the first {count} items.	Показано лише перші елементи: {count}.
 	File name:	Ім'я файлу:
-	Browse in WordCraft…	Огляд у WordCraft…
-	Open a file with WordCraft's own browser when the system file dialog doesn't appear.	Відкрити файл власним оглядачем WordCraft, коли системне діалогове вікно файлів не з'являється.
+	Browse in Quill…	Огляд у Quill…
+	Open a file with Quill's own browser when the system file dialog doesn't appear.	Відкрити файл власним оглядачем Quill, коли системне діалогове вікно файлів не з'являється.
 	Hide White Space	Приховати порожній простір
 	All pages	Усі сторінки
 	Current page	Поточна сторінка
@@ -2085,8 +2085,8 @@
 	Region:	Регіон:
 	Automatic ({region})	Автоматично ({region})
 	Start-up	Запуск
-	Show the Start screen when WordCraft starts	Показувати початковий екран під час запуску WordCraft
-	On: WordCraft opens on File › Home, with a blank document, the templates and your recent documents. Off: it opens a blank document.	Увімкнено: WordCraft відкривається на сторінці Файл › Основне з порожнім документом, шаблонами та нещодавніми документами. Вимкнено: відкривається порожній документ.
+	Show the Start screen when Quill starts	Показувати початковий екран під час запуску Quill
+	On: Quill opens on File › Home, with a blank document, the templates and your recent documents. Off: it opens a blank document.	Увімкнено: Quill відкривається на сторінці Файл › Основне з порожнім документом, шаблонами та нещодавніми документами. Вимкнено: відкривається порожній документ.
 	Open Vault	Відкрити сховище
 	Refresh Vault	Оновити сховище
 	Search Vault	Пошук у сховищі
@@ -2128,3 +2128,6 @@
 	Vault Backlinks	Зворотні посилання у сховищі
 	Vault Tags	Мітки у сховищі
 	Insert Note Link	Вставлення посилання на нотатку
+
+	Paste as Equation	Вставити як формулу
+	Open Obsidian Vault…	Відкрити сховище Obsidian…

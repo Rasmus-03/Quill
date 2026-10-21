@@ -16,8 +16,9 @@ the notes carry.
 
 ## Opening a vault
 
-**Open Vault…** in the Navigation pane's **Vault** tab asks for a folder (the desktop app's
-folder picker). The folder is remembered, and the notes in it are listed.
+**File › Open › Open Obsidian Vault…** (or **Open Vault…** in the Navigation pane's **Vault**
+tab) asks for a folder — the desktop app's folder picker. The folder is remembered, and its
+notes are listed in the pane beside the document, where they can be searched and opened.
 
 A vault may also be a folder on a Nextcloud server: the server's folders are ordinary folders
 once the desktop client has synchronised them, and Quill reads them as a vault.
@@ -89,6 +90,10 @@ and the note points at them there; the folder's name is a setting.
 | `vault.backlinks` | The notes that link to a note (`note?`). |
 | `vault.tags` | The tags the notes carry. |
 | `vault.insertLink` | Write a link to a note at the caret (`target`, `label?`). |
+
+A formula written in a note (`$x^2$`) can be pasted into the document as an equation: the
+Paste Options button offers **Paste as Equation**, and the ribbon's Paste menu has the same
+entry. See [`docs/wordmat-fane.md`](wordmat-fane.md).
 
 ## What Quill does not do
 

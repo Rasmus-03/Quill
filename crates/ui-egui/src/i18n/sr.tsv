@@ -22,7 +22,7 @@
 	A free, open-source word processor written from scratch in Rust.\nPart of the Crafting Apps from the ArtCraft team.	Бесплатан, отворени обрађивач текста написан од нуле у Rust-у.\nДео Crafting Apps пакета тима ArtCraft.
 	A password is required to open this document.	За отварање овог документа потребна је лозинка.
 	About	О програму
-	About WordCraft	О WordCraft-у
+	About Quill	О Quill-у
 	Accept	Прихвати
 	Accept All Changes	Прихвати све измене
 	Accept This Change	Прихвати ову измену
@@ -84,7 +84,7 @@
 	Automatic Table 1 (3 levels)	Аутоматска табела 1 (3 нивоа)
 	Automatic Table 2 (2 levels)	Аутоматска табела 2 (2 нивоа)
 	AutoSave	Аутоматско чување
-	AutoSave documents you have saved in WordCraft	Аутоматски чувај документе које сте већ сачували у WordCraft-у
+	AutoSave documents you have saved in Quill	Аутоматски чувај документе које сте већ сачували у Quill-у
 	AutoSave failed: {error}. Save the document to turn AutoSave back on.	Аутоматско чување неуспело: {error}. Сачувајте документ да бисте га поново укључили.
 	Balloons	Облачићи
 	Bottom Margin	Доња маргина
@@ -108,7 +108,7 @@
 	Color: {color}	Боја: {color}
 	Compress punctuation at the start of a line	Сажми интерпункцију на почетку реда
 	Confirm password:	Потврдите лозинку:
-	Couldn't make WordCraft the default: {error}	WordCraft није могао да постане подразумевана апликација: {error}
+	Couldn't make Quill the default: {error}	Quill није могао да постане подразумевана апликација: {error}
 	Custom dictionary	Прилагођени речник
 	Dark page (white text on black)	Тамна страница (бео текст на црном)
 	Drag a rectangle to draw a table, or a line across cells to split them. Esc stops.	Превуците правоугаоник да нацртате табелу или линију преко ћелија да их поделите. Esc завршава.
@@ -153,10 +153,10 @@
 	Number format	Формат броја
 	Number style for this level:	Стил броја за овај ниво:
 	Outside border	Спољна ивица
-	In Default apps, choose WordCraft for the document types you want it to open.	У подразумеваним апликацијама изаберите WordCraft за врсте докумената које желите да отвара.
-	Make WordCraft the default for Word documents…	Постави WordCraft као подразумевану апликацију за Word документе…
-	Opens .docx, .doc, .rtf and .odt files and Word templates with WordCraft from now on.	Од сада ће се .docx, .doc, .rtf и .odt датотеке и Word шаблони отварати у WordCraft-у.
-	Opens Settings › Default apps, where you choose WordCraft for .docx and the other document types.	Отвара Подешавања › Подразумеване апликације, где бирате WordCraft за .docx и друге врсте докумената.
+	In Default apps, choose Quill for the document types you want it to open.	У подразумеваним апликацијама изаберите Quill за врсте докумената које желите да отвара.
+	Make Quill the default for Word documents…	Постави Quill као подразумевану апликацију за Word документе…
+	Opens .docx, .doc, .rtf and .odt files and Word templates with Quill from now on.	Од сада ће се .docx, .doc, .rtf и .odt датотеке и Word шаблони отварати у Quill-у.
+	Opens Settings › Default apps, where you choose Quill for .docx and the other document types.	Отвара Подешавања › Подразумеване апликације, где бирате Quill за .docx и друге врсте докумената.
 	Overtype	Преписивање
 	Overtype (typing replaces the characters after the caret)	Преписивање (откуцано замењује знакове после курсора)
 	Page display	Приказ стране
@@ -182,7 +182,7 @@
 	Glow Colors	Боје сјаја
 	Hide from style lists	Сакриј са листа стилова
 	Indents and Spacing	Увлачења и размаци
-	Keep the password somewhere safe: without it nobody, WordCraft included, can open the document. Leave both boxes empty to remove the password.	Чувајте лозинку на сигурном месту: без ње нико, па ни WordCraft, не може да отвори документ. Оставите оба поља празна да бисте уклонили лозинку.
+	Keep the password somewhere safe: without it nobody, Quill included, can open the document. Leave both boxes empty to remove the password.	Чувајте лозинку на сигурном месту: без ње нико, па ни Quill, не може да отвори документ. Оставите оба поља празна да бисте уклонили лозинку.
 	Line breaking	Прелом редова
 	Linked style (paragraph and character)	Повезани стил (пасус и знакови)
 	Manage Styles	Управљање стиловима
@@ -378,8 +378,8 @@
 	Delete Style	Обриши стил
 	Delete Table	Обриши табелу
 	Design	Дизајн
-	To open Word documents with WordCraft by default: select one in Finder, choose File › Get Info, pick WordCraft under Open with, then click Change All.	Да би се Word документи подразумевано отварали у WordCraft-у: изаберите један у Finder-у, изаберите Датотека › Прикажи информације, под „Отвори помоћу” изаберите WordCraft, па кликните „Промени све”.
-	WordCraft is now the default app for Word documents.	WordCraft је сада подразумевана апликација за Word документе.
+	To open Word documents with Quill by default: select one in Finder, choose File › Get Info, pick Quill under Open with, then click Change All.	Да би се Word документи подразумевано отварали у Quill-у: изаберите један у Finder-у, изаберите Датотека › Прикажи информације, под „Отвори помоћу” изаберите Quill, па кликните „Промени све”.
+	Quill is now the default app for Word documents.	Quill је сада подразумевана апликација за Word документе.
 	development build	развојна верзија
 	Diagonal	Дијагонално
 	Diamond	Дијамант
@@ -1017,7 +1017,7 @@
 	Word Left	Реч лево
 	Word Right	Реч десно
 	WordArt	WordArt
-	WordCraft	WordCraft
+	Quill	Quill
 	Words	Речи
 	Words only	Само речи
 	Wrap Text	Преломи текст
@@ -1743,7 +1743,7 @@
 	Word document	Word документ
 	All files	Све датотеке
 	Recipient lists	Листе прималаца
-	The system file dialog isn't available, so WordCraft shows its own. To get the system dialog, install a file chooser portal (such as xdg-desktop-portal-gtk) or zenity.	Системски дијалог за датотеке није доступан, па WordCraft приказује свој. Да бисте добили системски дијалог, инсталирајте портал за избор датотека (на пример xdg-desktop-portal-gtk) или zenity.
+	The system file dialog isn't available, so Quill shows its own. To get the system dialog, install a file chooser portal (such as xdg-desktop-portal-gtk) or zenity.	Системски дијалог за датотеке није доступан, па Quill приказује свој. Да бисте добили системски дијалог, инсталирајте портал за избор датотека (на пример xdg-desktop-portal-gtk) или zenity.
 	Up one level	Један ниво горе
 	Home folder	Лична фасцикла
 	{name} wasn't found.	{name} није пронађен.
@@ -1751,8 +1751,8 @@
 	This folder can't be read: {error}	Ова фасцикла не може да се прочита: {error}
 	Showing the first {count} items.	Приказане су само прве ставке: {count}.
 	File name:	Име датотеке:
-	Browse in WordCraft…	Потражи у WordCraft-у…
-	Open a file with WordCraft's own browser when the system file dialog doesn't appear.	Отворите датотеку помоћу WordCraft-овог прегледача када се системски дијалог за датотеке не појави.
+	Browse in Quill…	Потражи у Quill-у…
+	Open a file with Quill's own browser when the system file dialog doesn't appear.	Отворите датотеку помоћу Quill-овог прегледача када се системски дијалог за датотеке не појави.
 	Hide White Space	Сакриј празан простор
 	All pages	Све странице
 	Current page	Тренутна страница
@@ -2087,8 +2087,8 @@
 	Region:	Регион:
 	Automatic ({region})	Аутоматски ({region})
 	Start-up	Покретање
-	Show the Start screen when WordCraft starts	Прикажи почетни екран при покретању програма WordCraft
-	On: WordCraft opens on File › Home, with a blank document, the templates and your recent documents. Off: it opens a blank document.	Укључено: WordCraft се отвара на Фајл › Почетак, са празним документом, шаблонима и недавним документима. Искључено: отвара празан документ.
+	Show the Start screen when Quill starts	Прикажи почетни екран при покретању програма Quill
+	On: Quill opens on File › Home, with a blank document, the templates and your recent documents. Off: it opens a blank document.	Укључено: Quill се отвара на Фајл › Почетак, са празним документом, шаблонима и недавним документима. Искључено: отвара празан документ.
 	Open Vault	Отвори трезор
 	Refresh Vault	Освежи трезор
 	Search Vault	Претражи трезор
@@ -2130,3 +2130,6 @@
 	Vault Backlinks	Повратне везе у складишту
 	Vault Tags	Ознаке у складишту
 	Insert Note Link	Уметање везе ка белешци
+
+	Paste as Equation	Уметање као формула
+	Open Obsidian Vault…	Отварање складишта Obsidian…

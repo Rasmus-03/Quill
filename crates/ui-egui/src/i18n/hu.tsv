@@ -20,7 +20,7 @@
 	A free, open-source word processor written from scratch in Rust.\nPart of the Crafting Apps from the ArtCraft team.	Ingyenes, nyílt forráskódú szövegszerkesztő, az alapoktól Rustban írva.\nA Crafting Apps családba tartozik, az ArtCraft csapatától.
 	AaBbCcDd	AaÁáBbCc
 	About	Névjegy
-	About WordCraft	A WordCraft névjegye
+	About Quill	A Quill névjegye
 	Accept	Elfogadás
 	Accept All Changes	Összes módosítás elfogadása
 	Accept This Change	E módosítás elfogadása
@@ -815,7 +815,7 @@
 	Word Left	Szó balra
 	Word Right	Szó jobbra
 	WordArt	WordArt
-	WordCraft	WordCraft
+	Quill	Quill
 	Words	Szavak
 	Words only	Csak szavak
 	Wrap Text	Szöveg körbefuttatása
@@ -832,7 +832,7 @@
 	Show documents with their colours inverted, like View › Switch Modes. Saving, printing and PDFs are unchanged.	A dokumentumok fordított színekkel jelennek meg, mint a Nézet › Módváltás esetén. A mentés, a nyomtatás és a PDF változatlan marad.
 	Only web (http, https) and email (mailto) links can be followed	Csak webes (http, https) és e-mail (mailto) link nyitható meg
 	Apply Styles	Stílusok alkalmazása
-	AutoSave documents you have saved in WordCraft	A WordCraftban mentett dokumentumok automatikus mentése
+	AutoSave documents you have saved in Quill	A Quillban mentett dokumentumok automatikus mentése
 	AutoSave failed: {error}. Save the document to turn AutoSave back on.	Az automatikus mentés sikertelen: {error}. Az újbóli bekapcsolásához mentsd a dokumentumot.
 	Bottom Margin	Alsó margó
 	Edit Comment	Megjegyzés szerkesztése
@@ -1532,7 +1532,7 @@
 	The document will be saved with a password. Save it to protect it.	A dokumentum jelszóval lesz mentve. A védelemhez mentsd.
 	The password is removed. Save the document to keep the change.	A jelszó eltávolítva. A módosítás megtartásához mentsd a dokumentumot.
 	The passwords don't match.	A két jelszó nem egyezik.
-	Keep the password somewhere safe: without it nobody, WordCraft included, can open the document. Leave both boxes empty to remove the password.	Tartsd biztonságos helyen a jelszót: nélküle senki, még a WordCraft sem tudja megnyitni a dokumentumot. A jelszó eltávolításához hagyd üresen mindkét mezőt.
+	Keep the password somewhere safe: without it nobody, Quill included, can open the document. Leave both boxes empty to remove the password.	Tartsd biztonságos helyen a jelszót: nélküle senki, még a Quill sem tudja megnyitni a dokumentumot. A jelszó eltávolításához hagyd üresen mindkét mezőt.
 	{cols}×{rows} Table	{cols}×{rows} táblázat
 	Name	Név
 	PRs	PR-ek
@@ -2290,7 +2290,7 @@
 	Word document	Word-dokumentum
 	All files	Minden fájl
 	Recipient lists	Címzettlisták
-	The system file dialog isn't available, so WordCraft shows its own. To get the system dialog, install a file chooser portal (such as xdg-desktop-portal-gtk) or zenity.	A rendszer fájlpárbeszédablaka nem érhető el, ezért a WordCraft a sajátját mutatja. A rendszer párbeszédablakához telepíts egy fájlválasztó portált (például xdg-desktop-portal-gtk) vagy a zenity programot.
+	The system file dialog isn't available, so Quill shows its own. To get the system dialog, install a file chooser portal (such as xdg-desktop-portal-gtk) or zenity.	A rendszer fájlpárbeszédablaka nem érhető el, ezért a Quill a sajátját mutatja. A rendszer párbeszédablakához telepíts egy fájlválasztó portált (például xdg-desktop-portal-gtk) vagy a zenity programot.
 	Up one level	Egy szinttel feljebb
 	Home folder	Saját mappa
 	{name} wasn't found.	Nem található: {name}
@@ -2298,8 +2298,8 @@
 	This folder can't be read: {error}	Ez a mappa nem olvasható: {error}
 	Showing the first {count} items.	Az első {count} elem látható.
 	File name:	Fájlnév:
-	Browse in WordCraft…	Tallózás a WordCraftban…
-	Open a file with WordCraft's own browser when the system file dialog doesn't appear.	Fájl megnyitása a WordCraft saját tallózójával, ha a rendszer fájlpárbeszédablaka nem jelenik meg.
+	Browse in Quill…	Tallózás a Quillban…
+	Open a file with Quill's own browser when the system file dialog doesn't appear.	Fájl megnyitása a Quill saját tallózójával, ha a rendszer fájlpárbeszédablaka nem jelenik meg.
 	Hide White Space	Üres terület elrejtése
 	All pages	Minden oldal
 	Current page	Aktuális oldal
@@ -2434,13 +2434,13 @@
 	Use "an" before a vowel sound	Magánhangzóval kezdődő szó előtt „an” áll
 	Use "a" before a consonant sound	Mássalhangzóval kezdődő szó előtt „a” áll
 	The spelling and grammar check is complete.	A helyesírás- és nyelvhelyesség-ellenőrzés befejeződött.
-	Couldn't make WordCraft the default: {error}	Nem sikerült a WordCraftot alapértelmezetté tenni: {error}
-	In Default apps, choose WordCraft for the document types you want it to open.	Az Alapértelmezett alkalmazások között válassza a WordCraftot azokhoz a dokumentumtípusokhoz, amelyeket meg kell nyitnia.
-	Make WordCraft the default for Word documents…	A WordCraft legyen az alapértelmezett a Word-dokumentumokhoz…
-	Opens .docx, .doc, .rtf and .odt files and Word templates with WordCraft from now on.	Mostantól a .docx, .doc, .rtf és .odt fájlok, valamint a Word-sablonok a WordCrafttal nyílnak meg.
-	Opens Settings › Default apps, where you choose WordCraft for .docx and the other document types.	Megnyitja a Beállítások › Alapértelmezett alkalmazások lapot, ahol a WordCraftot választhatja a .docx és a többi dokumentumtípus számára.
-	To open Word documents with WordCraft by default: select one in Finder, choose File › Get Info, pick WordCraft under Open with, then click Change All.	Ha a Word-dokumentumokat alapértelmezés szerint a WordCrafttal szeretné megnyitni: jelöljön ki egyet a Finderben, válassza a Fájl › Információ parancsot, a „Megnyitás ezzel” alatt válassza a WordCraftot, majd kattintson az „Összes módosítása” gombra.
-	WordCraft is now the default app for Word documents.	Mostantól a WordCraft az alapértelmezett alkalmazás a Word-dokumentumokhoz.
+	Couldn't make Quill the default: {error}	Nem sikerült a Quillot alapértelmezetté tenni: {error}
+	In Default apps, choose Quill for the document types you want it to open.	Az Alapértelmezett alkalmazások között válassza a Quillot azokhoz a dokumentumtípusokhoz, amelyeket meg kell nyitnia.
+	Make Quill the default for Word documents…	A Quill legyen az alapértelmezett a Word-dokumentumokhoz…
+	Opens .docx, .doc, .rtf and .odt files and Word templates with Quill from now on.	Mostantól a .docx, .doc, .rtf és .odt fájlok, valamint a Word-sablonok a Quilltal nyílnak meg.
+	Opens Settings › Default apps, where you choose Quill for .docx and the other document types.	Megnyitja a Beállítások › Alapértelmezett alkalmazások lapot, ahol a Quillot választhatja a .docx és a többi dokumentumtípus számára.
+	To open Word documents with Quill by default: select one in Finder, choose File › Get Info, pick Quill under Open with, then click Change All.	Ha a Word-dokumentumokat alapértelmezés szerint a Quilltal szeretné megnyitni: jelöljön ki egyet a Finderben, válassza a Fájl › Információ parancsot, a „Megnyitás ezzel” alatt válassza a Quillot, majd kattintson az „Összes módosítása” gombra.
+	Quill is now the default app for Word documents.	Mostantól a Quill az alapértelmezett alkalmazás a Word-dokumentumokhoz.
 	Numerals:	Számjegyek:
 	Numerals	Számjegyek
 	Hindi	Hindi
@@ -2456,8 +2456,8 @@
 	Undo 1 Action	1 művelet visszavonása
 	Undo {n} Actions	{n} művelet visszavonása
 	Start-up	Indítás
-	Show the Start screen when WordCraft starts	Kezdőképernyő megjelenítése a WordCraft indításakor
-	On: WordCraft opens on File › Home, with a blank document, the templates and your recent documents. Off: it opens a blank document.	Be: a WordCraft a Fájl › Kezdőlap oldalon nyílik meg, üres dokumentummal, a sablonokkal és a legutóbbi dokumentumokkal. Ki: üres dokumentumot nyit meg.
+	Show the Start screen when Quill starts	Kezdőképernyő megjelenítése a Quill indításakor
+	On: Quill opens on File › Home, with a blank document, the templates and your recent documents. Off: it opens a blank document.	Be: a Quill a Fájl › Kezdőlap oldalon nyílik meg, üres dokumentummal, a sablonokkal és a legutóbbi dokumentumokkal. Ki: üres dokumentumot nyit meg.
 	Correct TWo INitial CApitals	KÉt KEzdő NAgybetű javítása
 	Correct accidental usage of cAPS LOCK key	A cAPS LOCK billentyű véletlen használatának javítása
 	Region:	Régió:
@@ -2525,3 +2525,6 @@
 	Vault Backlinks	Visszautaló hivatkozások a tárban
 	Vault Tags	A tár címkéi
 	Insert Note Link	Jegyzet-hivatkozás beszúrása
+
+	Paste as Equation	Beillesztés egyenletként
+	Open Obsidian Vault…	Obsidian-tár megnyitása…
