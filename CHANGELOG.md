@@ -5,6 +5,13 @@
 The first steps of 1.2 (the plan lives in [`docs/release-plan-1.2.md`](docs/release-plan-1.2.md)):
 the build is trustworthy again, and the app carries its own name everywhere a user sees it.
 
+- **The maths tab says what happened, in Danish**. A solve that found nothing now says which
+  of the four cases it was: no solution ("Ligningen har ingen løsning"), every number is a
+  solution ("Løsningen er alle tal — skriv et uligheds- eller intervalkrav"), only complex roots
+  ("Kun komplekse løsninger — søg i C") or Maxima could not solve it symbolically ("Kan ikke
+  løses symbolsk — prøv numerisk løsning"). A division by zero and a pole in the solution are
+  told apart too. The tab's labels, groups, dialogs and messages are Danish throughout, and the
+  command ids (`math.beregn`, `math.enhed`, `math.isoler`) are unchanged
 - **The macOS and Windows packages build again**. Since the rename to Quill, the packaging
   scripts still asked cargo for the old `wordcraft` packages and copied an icon that no longer
   existed, so neither platform could be packaged at all. The bundle is `Quill.app`, the artifacts

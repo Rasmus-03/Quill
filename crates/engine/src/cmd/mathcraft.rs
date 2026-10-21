@@ -99,7 +99,7 @@ fn run_maxima(batch_string: &str) -> Result<(String, String), String> {
     #[cfg(target_arch = "wasm32")]
     {
         let _ = batch_string;
-        return Err("Maxima needs the desktop app".to_string());
+        return Err("Maxima findes kun i skrivebordsappen".to_string());
     }
     #[cfg(not(target_arch = "wasm32"))]
     {
@@ -164,7 +164,7 @@ fn run_maxima(batch_string: &str) -> Result<(String, String), String> {
             .stdout(std::process::Stdio::piped())
             .stderr(std::process::Stdio::piped())
             .spawn()
-            .map_err(|e| format!("cannot start Maxima ({} missing? install it, e.g. `sudo pacman -S maxima`): {e}", maxima_bin()))?;
+            .map_err(|e| format!("Maxima kan ikke startes ({} mangler? installér den, f.eks. `sudo pacman -S maxima`): {e}", maxima_bin()))?;
         // Feed the batch on its own thread: the wait loop below must stay
         // free to enforce the timeout even if Maxima never reads stdin.
         if use_stdin {
@@ -200,7 +200,7 @@ fn run_maxima(batch_string: &str) -> Result<(String, String), String> {
                 let _ = child.wait();
                 let _ = join_bounded(drain_out, MAXIMA_DRAIN_GRACE);
                 let _ = join_bounded(drain_err, MAXIMA_DRAIN_GRACE);
-                return Err("Maxima produced too much output; simplify the expression".to_string());
+                return Err("Maxima producerede for meget output — forenklem udtrykket".to_string());
             }
             match child.try_wait() {
                 Ok(Some(s)) => break s,
@@ -209,7 +209,7 @@ fn run_maxima(batch_string: &str) -> Result<(String, String), String> {
                     let _ = child.wait();
                     let _ = join_bounded(drain_out, MAXIMA_DRAIN_GRACE);
                     let _ = join_bounded(drain_err, MAXIMA_DRAIN_GRACE);
-                    return Err("Maxima did not answer within 30 seconds; simplify the expression".to_string());
+                    return Err("Maxima svarede ikke inden for 30 sekunder — forenklem udtrykket".to_string());
                 }
                 Ok(None) => std::thread::sleep(Duration::from_millis(50)),
                 Err(_) => {
@@ -224,13 +224,13 @@ fn run_maxima(batch_string: &str) -> Result<(String, String), String> {
         let bytes = join_bounded(drain_out, MAXIMA_DRAIN_GRACE);
         let err_bytes = join_bounded(drain_err, MAXIMA_DRAIN_GRACE);
         if overflow.load(Ordering::Relaxed) {
-            return Err("Maxima produced too much output; simplify the expression".to_string());
+            return Err("Maxima producerede for meget output — forenklem udtrykket".to_string());
         }
         if !status.success() {
             // 127 is the shell's "command not found": with the Unix `sh`
             // wrapper Maxima itself can no longer fail at spawn().
             if status.code() == Some(127) {
-                return Err(format!("cannot start Maxima ({} missing? install it, e.g. `sudo pacman -S maxima`)", maxima_bin()));
+                return Err(format!("Maxima kan ikke startes ({} mangler? installér den, f.eks. `sudo pacman -S maxima`)", maxima_bin()));
             }
             return Err("Maxima fejlede".to_string());
         }
@@ -644,10 +644,10 @@ fn valid_ident(name: &str) -> Option<String> {
 /// Unlike [`valid_ident`], this also refuses known process/file/Lisp names and
 /// the internal output variables.
 pub(crate) fn check_var_name(name: &str) -> Result<String, CmdError> {
-    let name = valid_ident(name).ok_or_else(|| err("Bad variable name: use letters, digits and _ (e.g. x or x_1)".to_string()))?;
+    let name = valid_ident(name).ok_or_else(|| err("Ugyldigt variabelnavn — brug bogstaver, tal og _ (f.eks. x eller x_1)".to_string()))?;
     let lower = name.to_ascii_lowercase();
     if DENIED_MAXIMA_NAMES.contains(&lower.as_str()) || matches!(lower.as_str(), "linel" | "display2d" | "mc_res") {
-        return Err(err(format!("\"{name}\" is not allowed as a variable name")));
+        return Err(err(format!("\"{name}\" må ikke bruges som variabelnavn")));
     }
     Ok(name)
 }
@@ -669,7 +669,7 @@ pub(crate) fn check_maxima_safe(part: &str) -> Result<(), CmdError> {
 /// document may use `f(x)` after the user defined `f(x) := …`.
 pub(crate) fn check_maxima_safe_with(part: &str, defined: &[String]) -> Result<(), CmdError> {
     if part.len() > MAX_MAXIMA_EXPR_BYTES {
-        return Err(err(format!("The expression is longer than {MAX_MAXIMA_EXPR_BYTES} bytes")));
+        return Err(err(format!("Udtrykket er længere end {MAX_MAXIMA_EXPR_BYTES} byte")));
     }
     let mut i = 0;
     while i < part.len() {
@@ -679,12 +679,12 @@ pub(crate) fn check_maxima_safe_with(part: &str, defined: &[String]) -> Result<(
             continue;
         }
         if !maxima_source_char(c) {
-            return Err(err(format!("\"{c}\" is not allowed in a calculation (use Maxima command for raw Maxima)")));
+            return Err(err(format!("\"{c}\" må ikke bruges i en beregning (brug Maxima-kommando til rå Maxima)")));
         }
         // Maxima removes block comments before tokenising, so `system/**/(…)`
         // would otherwise hide the call from the function-name check.
         if c == '/' && part[i + c.len_utf8()..].starts_with('*') {
-            return Err(err("Comments are not allowed in a calculation (use Maxima command for raw Maxima)".to_string()));
+            return Err(err("Kommentarer må ikke bruges i en beregning (brug Maxima-kommando til rå Maxima)".to_string()));
         }
         if c.is_alphabetic() || c == '_' {
             let start = i;
@@ -700,7 +700,7 @@ pub(crate) fn check_maxima_safe_with(part: &str, defined: &[String]) -> Result<(
             let name = &part[start..i];
             let lower = name.to_ascii_lowercase();
             if DENIED_MAXIMA_NAMES.contains(&lower.as_str()) {
-                return Err(err(format!("\"{name}\" is not allowed here (use Maxima command for raw Maxima)")));
+                return Err(err(format!("\"{name}\" må ikke bruges her (brug Maxima-kommando til rå Maxima)")));
             }
             let mut j = i;
             while j < part.len() {
@@ -712,7 +712,7 @@ pub(crate) fn check_maxima_safe_with(part: &str, defined: &[String]) -> Result<(
                 }
             }
             if part[j..].starts_with('(') && !maxima_function_allowed(&lower, name, defined) {
-                return Err(err(format!("\"{name}\" is not allowed here (use Maxima command for raw Maxima)")));
+                return Err(err(format!("\"{name}\" må ikke bruges her (brug Maxima-kommando til rå Maxima)")));
             }
             continue;
         }
@@ -727,52 +727,52 @@ pub(crate) fn check_maxima_safe_with(part: &str, defined: &[String]) -> Result<(
 fn check_definition(stmt: &str, defined: &[String]) -> Result<String, CmdError> {
     let stmt = stmt.trim().trim_end_matches(';').trim();
     if stmt.is_empty() {
-        return Err(err("Empty definition".to_string()));
+        return Err(err("Definitionen er tom".to_string()));
     }
     if stmt.len() > MAX_DEFINITION_BYTES {
-        return Err(err(format!("The definition is longer than {MAX_DEFINITION_BYTES} bytes")));
+        return Err(err(format!("Definitionen er længere end {MAX_DEFINITION_BYTES} byte")));
     }
     let (lhs, rhs) = if let Some(k) = stmt.find(":=") {
         (&stmt[..k], &stmt[k + 2..])
     } else if let Some(k) = stmt.find(':') {
         (&stmt[..k], &stmt[k + 1..])
     } else {
-        return Err(err("A definition needs := or :".to_string()));
+        return Err(err("En definition skal bruge := eller :".to_string()));
     };
     let lhs = lhs.trim();
     let name = if let Some(open) = lhs.find('(') {
         if !lhs.ends_with(')') || lhs[open + 1..lhs.len() - 1].contains(['(', ')']) {
-            return Err(err("Bad definition name".to_string()));
+            return Err(err("Ugyldigt definitionsnavn".to_string()));
         }
-        let name = valid_ident(&lhs[..open]).ok_or_else(|| err("Bad definition name".to_string()))?;
+        let name = valid_ident(&lhs[..open]).ok_or_else(|| err("Ugyldigt definitionsnavn".to_string()))?;
         let args = lhs[open + 1..lhs.len() - 1].trim();
         if !args.is_empty() {
             let parts = split_top(args);
             if parts.len() > MAX_DEF_ARGS {
-                return Err(err(format!("A definition may take at most {MAX_DEF_ARGS} arguments")));
+                return Err(err(format!("En definition må have højst {MAX_DEF_ARGS} argumenter")));
             }
             let mut seen = Vec::new();
             for a in parts {
-                let a = valid_ident(&a).ok_or_else(|| err("Bad argument name in definition".to_string()))?;
+                let a = valid_ident(&a).ok_or_else(|| err("Ugyldigt argumentnavn i definitionen".to_string()))?;
                 if seen.contains(&a) {
-                    return Err(err(format!("Duplicate argument \"{a}\" in definition")));
+                    return Err(err(format!("Argumentet \"{a}\" findes allerede i definitionen")));
                 }
                 seen.push(a);
             }
         }
         name
     } else {
-        valid_ident(lhs).ok_or_else(|| err("Bad definition name".to_string()))?
+        valid_ident(lhs).ok_or_else(|| err("Ugyldigt definitionsnavn".to_string()))?
     };
     let lower = name.to_ascii_lowercase();
     if DENIED_MAXIMA_NAMES.contains(&lower.as_str())
         || SAFE_MAXIMA_FUNCTIONS.contains(&lower.as_str())
         || matches!(lower.as_str(), "linel" | "display2d" | "mc_res")
     {
-        return Err(err(format!("\"{name}\" is reserved and cannot be redefined")));
+        return Err(err(format!("\"{name}\" er reserveret og kan ikke defineres igen")));
     }
     if rhs.trim().is_empty() {
-        return Err(err("The definition has no right-hand side".to_string()));
+        return Err(err("Definitionen mangler højre side".to_string()));
     }
     let mut allowed = defined.to_vec();
     if !allowed.iter().any(|n| n == &name) {
@@ -809,7 +809,7 @@ pub(crate) fn batch(prelude: &[String], defs: &[String], cmd: &str) -> Result<St
     b.push_str(cmd.trim().trim_end_matches(';'));
     b.push_str(");print(\"MC>>>\",MC_RES);");
     if b.len() > MAX_MAXIMA_BATCH_BYTES {
-        return Err(format!("Maxima input is longer than {} bytes", MAX_MAXIMA_BATCH_BYTES));
+        return Err(format!("Maximas input er længere end {} byte", MAX_MAXIMA_BATCH_BYTES));
     }
     let (out, stderr) = run_maxima(&b)?;
     let full = join_output_lines(&out)?;
@@ -849,12 +849,12 @@ fn join_output_lines(text: &str) -> Result<String, String> {
             break;
         }
         if i >= OUTPUT_LINE_LIMIT {
-            return Err("Maxima output too large".to_string());
+            return Err("Maximas svar er for stort".to_string());
         }
         full.push_str(l.trim());
     }
     if full.is_empty() {
-        return Err("Maxima produced an empty result".to_string());
+        return Err("Maxima gav intet resultat".to_string());
     }
     Ok(full)
 }
@@ -989,6 +989,79 @@ pub(crate) fn err(msg: String) -> CmdError {
     CmdError::Failed(msg)
 }
 
+/// What a solve produced.
+///
+/// The four cases are told apart, so the message says what happened and what to do next
+/// (the maths tab is a Danish school feature: the messages are Danish).
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum SolveOutcome {
+    /// A solution, or several.
+    Solved,
+    /// The equation has no solution at all.
+    NoSolution,
+    /// Every number is a solution.
+    AllNumbers,
+    /// The solutions are complex; there is no real one.
+    ComplexOnly,
+    /// Maxima could not solve it symbolically.
+    NotSymbolic,
+}
+
+impl SolveOutcome {
+    /// What the user is told.
+    pub fn message(self) -> &'static str {
+        match self {
+            SolveOutcome::Solved => "",
+            SolveOutcome::NoSolution => "Ligningen har ingen løsning",
+            SolveOutcome::AllNumbers => "Løsningen er alle tal — skriv et uligheds- eller intervalkrav",
+            SolveOutcome::ComplexOnly => "Kun komplekse løsninger — søg i C",
+            SolveOutcome::NotSymbolic => "Kan ikke løses symbolsk — prøv numerisk løsning",
+        }
+    }
+}
+
+/// What Maxima's answer means.
+fn classify_solve(answer: &str, error: &str) -> SolveOutcome {
+    if !error.trim().is_empty() {
+        // Maxima could not solve it symbolically.
+        return SolveOutcome::NotSymbolic;
+    }
+    let answer = answer.trim();
+    if answer.is_empty() || answer == "[]" {
+        return SolveOutcome::NoSolution;
+    }
+    if roots_all_complex(answer) {
+        return SolveOutcome::ComplexOnly;
+    }
+    SolveOutcome::Solved
+}
+
+/// Are all the roots in Maxima's answer complex? ("[x = %i, x = -%i]")
+fn roots_all_complex(answer: &str) -> bool {
+    let answer = answer.trim().trim_start_matches('[').trim_end_matches(']');
+    let roots: Vec<&str> = answer.split(',').map(str::trim).filter(|r| !r.is_empty()).collect();
+    !roots.is_empty() && roots.iter().all(|r| r.contains("%i") || r.contains("%I"))
+}
+
+/// Is the equation an identity, so that every number is a solution? ("x = x")
+fn is_identity(eq: &str) -> bool {
+    let Some((lhs, rhs)) = eq.split_once('=') else { return false };
+    let side = |s: &str| s.chars().filter(|c| !c.is_whitespace()).collect::<String>();
+    !lhs.trim().is_empty() && side(lhs) == side(rhs)
+}
+
+/// What the user is told when the solve failed.
+fn solve_failure_message(error: &str) -> String {
+    let e = error.to_lowercase();
+    if e.contains("division by 0") || e.contains("divide by zero") || e.contains("division by zero") {
+        return "Der kan ikke divideres med nul".to_string();
+    }
+    if e.contains("pole") || e.contains("singular") {
+        return "Løsningen har et punkt, hvor der divideres med nul".to_string();
+    }
+    SolveOutcome::NotSymbolic.message().to_string()
+}
+
 /// Session definitions (Definér) plus MATHCRAFT_DEFS env seed
 /// (`;`-separated Maxima statements), prepended to every batch.
 ///
@@ -1086,7 +1159,7 @@ pub(crate) fn pick_var(s: &Session, v: &Value, eq: &str) -> Result<VarPick, CmdE
 /// Ask the UI variable picker (no-op headless), then stop this turn.
 pub(crate) fn ask_var(s: &mut Session, command: &str, vars: Vec<String>) -> CmdResult {
     s.ui_requests.push(json!({"open": "mathVarPicker", "command": command, "vars": vars}));
-    s.status = "Pick a variable in the dialog…".to_string();
+    s.status = "Vælg en variabel i vinduet…".to_string();
     sel_result(s)
 }
 /// Input the WordMat way: selected text, else the equation object at the
@@ -1144,7 +1217,7 @@ pub(crate) fn math_input(s: &mut Session) -> Result<(String, Target), CmdError> 
         // else) operates on the equation, so it survives as OMML.
         if let Some((at, end)) = sole_equation(s) {
             strip_answer_in_eq(s, &at);
-            let para = s.doc.para_at(&at).ok_or_else(|| err("Place the cursor in an equation or select text first".to_string()))?;
+            let para = s.doc.para_at(&at).ok_or_else(|| err("Sæt markøren i en ligning, eller markér tekst først".to_string()))?;
             let text = para.object_at(at.off).map(|o| o.plain_text().to_string()).unwrap_or_default();
             if !text.trim().is_empty() {
                 return Ok((strip_trailing_eq(&text), Target::Doc(Some((at, end)))));
@@ -1170,21 +1243,21 @@ pub(crate) fn math_input(s: &mut Session) -> Result<(String, Target), CmdError> 
     if s.math.is_some() {
         s.run("equation.exit", &json!({"before": true}))?;
     }
-    let at = equation_at_caret(s).ok_or_else(|| err("Place the cursor in an equation or select text first".to_string()))?;
+    let at = equation_at_caret(s).ok_or_else(|| err("Sæt markøren i en ligning, eller markér tekst først".to_string()))?;
     // Update semantics: drop a previous green answer (plus its " = ")
     // so re-running recomputes instead of stacking answers.
     strip_answer_in_eq(s, &at);
-    let para = s.doc.para_at(&at).ok_or_else(|| err("Place the cursor in an equation or select text first".to_string()))?;
+    let para = s.doc.para_at(&at).ok_or_else(|| err("Sæt markøren i en ligning, eller markér tekst først".to_string()))?;
     match para.object_at(at.off) {
         Some(InlineObject::Equation { .. }) => {
             let text = para.object_at(at.off).map(|o| o.plain_text().to_string()).unwrap_or_default();
             if text.trim().is_empty() {
-                return Err(err("The equation is empty".to_string()));
+                return Err(err("Ligningen er tom".to_string()));
             }
             let end = Pos { off: at.off + OBJ.len_utf8(), ..at.clone() };
             Ok((strip_trailing_eq(&text), Target::Doc(Some((at, end)))))
         }
-        _ => Err(err("Place the cursor in an equation or select text first".to_string())),
+        _ => Err(err("Sæt markøren i en ligning, eller markér tekst først".to_string())),
     }
 }
 
@@ -1525,9 +1598,9 @@ fn apply_result(s: &mut Session, target: Target, input: &str, result: &str) -> C
             // Replace the highlighted part inside the equation, still
             // editing; the green result lands where the highlight was.
             if !math_del_anchor(s) {
-                return Err(err("Lost the selection; select again".to_string()));
+                return Err(err("Markeringen gik tabt — markér igen".to_string()));
             }
-            let m = s.math.clone().ok_or_else(|| err("Left the equation".to_string()))?;
+            let m = s.math.clone().ok_or_else(|| err("Du forlod ligningen".to_string()))?;
             let show = pretty_answer(result);
             let mut ans = parse_linear(&show);
             paint_green(&mut ans);
@@ -1617,7 +1690,7 @@ fn split_qty(input: &str) -> Result<(String, String), String> {
         }
     }
     if !digits {
-        return Err("no number found; select e.g. \"5 km/h to m/s\"".to_string());
+        return Err("intet tal fundet — markér f.eks. \"5 km/h to m/s\"".to_string());
     }
     let num: String = t[..i].chars().filter(|c| *c != ' ').collect();
     let rest = t[i..].trim();
@@ -1631,7 +1704,7 @@ fn split_qty(input: &str) -> Result<(String, String), String> {
             }
         }
     }
-    Err("no unit found; select e.g. \"5 km/h to m/s\"".to_string())
+    Err("ingen enhed fundet — markér f.eks. \"5 km/h to m/s\"".to_string())
 }
 
 /// Convert units: `5 km/h to m/s` → `25/18 ` m/s`.
@@ -1646,14 +1719,14 @@ fn enhed(s: &mut Session, v: &Value) -> CmdResult {
     check_maxima_safe_with(&unit_to, &def_names(s))?;
     let (n, u) = match qty.split_once(' ') {
         Some((n, u)) => (n, u),
-        None => return Err(err("no unit found".to_string())),
+        None => return Err(err("ingen enhed fundet".to_string())),
     };
     let float = v.get("float").and_then(Value::as_bool).unwrap_or(false);
     let base = format!("(({n} ` ({u})) `` ({unit_to}))");
     let cmd = if float { format!("float({base})") } else { base };
     match batch(&unit_prelude(), &defs(s), &cmd) {
         Ok(r) => apply_result(s, target, input.trim(), &r),
-        Err(e) => Err(err(format!("Could not convert units: {e}"))),
+        Err(e) => Err(err(format!("Kunne ikke omregne enheder: {e}"))),
     }
 }
 
@@ -1968,7 +2041,7 @@ fn unary(s: &mut Session, maxima_fn: &str, what: &str) -> CmdResult {
     check_maxima_safe_with(&expr, &def_names(s))?;
     match batch(&base_prelude(), &defs(s), &format!("{maxima_fn}({expr})")) {
         Ok(r) => apply_result(s, target, input.trim(), &r),
-        Err(e) => Err(err(format!("Could not {what}: {e}"))),
+        Err(e) => Err(err(format!("Kunne ikke {what}: {e}"))),
     }
 }
 
@@ -1980,7 +2053,7 @@ fn unary_shallow(s: &mut Session, maxima_fn: &str, what: &str) -> CmdResult {
     check_maxima_safe_with(&expr, &def_names(s))?;
     match batch(&base_prelude(), &defs(s), &format!("{maxima_fn}({expr})")) {
         Ok(r) => apply_result(s, target, input.trim(), &r),
-        Err(e) => Err(err(format!("Could not {what}: {e}"))),
+        Err(e) => Err(err(format!("Kunne ikke {what}: {e}"))),
     }
 }
 
@@ -2001,7 +2074,7 @@ fn simplify_best(s: &mut Session, _: &Value) -> CmdResult {
     }
     match best {
         Some(r) => apply_result(s, target, input.trim(), &r),
-        None => Err(err("Could not simplify".to_string())),
+        None => Err(err("Kunne ikke forenkle".to_string())),
     }
 }
 
@@ -2012,7 +2085,7 @@ fn diff_int(s: &mut Session, v: &Value, maxima_fn: &str, what: &str) -> CmdResul
     check_maxima_safe_with(&expr, &def_names(s))?;
     match batch(&base_prelude(), &defs(s), &format!("{maxima_fn}({expr},{var})")) {
         Ok(r) => apply_result(s, target, input.trim(), &r),
-        Err(e) => Err(err(format!("Could not {what}: {e}"))),
+        Err(e) => Err(err(format!("Kunne ikke {what}: {e}"))),
     }
 }
 
@@ -2070,7 +2143,7 @@ fn beregn(s: &mut Session, v: &Value) -> CmdResult {
         }
     }
     if out.is_empty() {
-        return Err(err(format!("Could not calculate: {last_err}")));
+        return Err(err(format!("Kunne ikke beregne: {last_err}")));
     }
     apply_result(s, target, input.trim(), &trim_float_zeros(&out.join(" or ")))
 }
@@ -2172,7 +2245,7 @@ fn trin(s: &mut Session, v: &Value) -> CmdResult {
     // Same gate as beregn: the rewrite must never hide hostile names.
     check_maxima_safe_with(raw, &allowed)?;
     if matches!(target, Target::Math) {
-        return Err(err("Show steps works on the equation in the document; leave the equation editor first".to_string()));
+        return Err(err("Vis trin virker på ligningen i dokumentet — forlad ligningsredigeringen først".to_string()));
     }
     let expr = dots_ctx(raw, &allowed);
     check_maxima_safe_with(&expr, &allowed)?;
@@ -2186,10 +2259,10 @@ fn trin(s: &mut Session, v: &Value) -> CmdResult {
         }
     }
     if is_inequality(&expr) || !expr.contains('=') {
-        return Err(err("Show steps takes one equation; use Calculate for expressions (and solve linear/quadratic equations)".to_string()));
+        return Err(err("Vis trin tager én ligning — brug Beregn til udtryk (og Løs til lineære og kvadratiske ligninger)".to_string()));
     }
     let Some((lhs, rhs)) = expr.split_once('=') else {
-        return Err(err("Show steps takes one equation".to_string()));
+        return Err(err("Vis trin tager én ligning".to_string()));
     };
     let var = match pick_var(s, v, &expr)? {
         VarPick::One(v) => v,
@@ -2201,11 +2274,11 @@ fn trin(s: &mut Session, v: &Value) -> CmdResult {
         "block([e: expand({lhs}) - ({rhs}), A, B, C], A: coeff(e, {var}, 2), B: coeff(e, {var}, 1), C: coeff(e, {var}, 0), if A=0 and B=0 then NONE else if A=0 then [0, B, C, NONE] else [A, B/A, C/A, (B/A)^2-4*(C/A)])"
     );
     let val = batch(&base_prelude(), &defs(s), &coef_cmd).map_err(err)?;
-    let inner = val.trim().strip_prefix('[').ok_or_else(|| err("unexpected coefficient form".to_string()))?;
-    let inner = inner.strip_suffix(']').ok_or_else(|| err("unexpected coefficient form".to_string()))?;
+    let inner = val.trim().strip_prefix('[').ok_or_else(|| err("uventet koefficientform".to_string()))?;
+    let inner = inner.strip_suffix(']').ok_or_else(|| err("uventet koefficientform".to_string()))?;
     let parts = split_top(inner);
     if parts.len() != 4 || parts[0].trim() == "NONE" {
-        return Err(err("No linear or quadratic form in this variable; use Isolate".to_string()));
+        return Err(err("Ingen lineær eller kvadratisk form i denne variabel — brug Isoler".to_string()));
     }
     let (a, p, q, d2) = (parts[0].trim(), parts[1].trim(), parts[2].trim(), parts[3].trim());
     // The verified answer — steps must agree with it or not show.
@@ -2216,7 +2289,7 @@ fn trin(s: &mut Session, v: &Value) -> CmdResult {
         let k = neg_coeff(q);
         let roots = answer_roots(&var, &ans_raw);
         let Some([root]) = roots.as_deref().map(AsRef::as_ref) else {
-            return Err(err("Real solve disagrees with the linear form; use Isolate".to_string()));
+            return Err(err("Den reelle løsning er ikke i overensstemmelse med den lineære form — brug Isoler".to_string()));
         };
         let answer = pretty_answer(root);
         let (steps, _last) = linear_steps_text(raw, &var, m, &k, &answer);
@@ -2224,7 +2297,7 @@ fn trin(s: &mut Session, v: &Value) -> CmdResult {
     } else {
         let d_pos = !d2.starts_with('-');
         let d_zero = d2 == "0";
-        let roots = answer_roots(&var, &ans_raw).ok_or_else(|| err("unexpected solve form".to_string()))?;
+        let roots = answer_roots(&var, &ans_raw).ok_or_else(|| err("uventet løsningsform".to_string()))?;
         let expected = if d_zero {
             1
         } else if d_pos {
@@ -2233,7 +2306,7 @@ fn trin(s: &mut Session, v: &Value) -> CmdResult {
             0
         };
         if roots.len() != expected {
-            return Err(err("Real solve disagrees with the discriminant; use Isolate".to_string()));
+            return Err(err("Den reelle løsning er ikke i overensstemmelse med diskriminanten — brug Isoler".to_string()));
         }
         let shown: Vec<String> = roots.iter().map(|r| pretty_answer(r)).collect();
         let answer = if shown.is_empty() { "no real solution".to_string() } else { shown.join(" eller ") };
@@ -2274,18 +2347,18 @@ fn apply_steps(s: &mut Session, steps: &str, answer: &str) -> CmdResult {
     push_math_history(s, answer);
     // Fresh typing after our answer starts default, not green.
     s.pending = Some(CharProps::default());
-    s.status = "Steps shown".to_string();
+    s.status = "Trinene er vist".to_string();
     sel_result(s)
 }
 
 /// Historik: ask the UI to show the session's past answers (newest first).
 fn historik(s: &mut Session, _: &Value) -> CmdResult {
     if s.math_history.is_empty() {
-        return Err(err("No previous result; Calculate something first".to_string()));
+        return Err(err("Ingen tidligere resultat — beregn noget først".to_string()));
     }
     let items: Vec<Value> = s.math_history.iter().take(12).map(|r| json!({ "text": r })).collect();
     s.ui_requests.push(json!({ "open": "mathHistoryPicker", "items": items }));
-    s.status = "Pick a previous result…".to_string();
+    s.status = "Vælg et tidligere resultat…".to_string();
     sel_result(s)
 }
 
@@ -2294,12 +2367,12 @@ fn historik(s: &mut Session, _: &Value) -> CmdResult {
 fn historik_insat(s: &mut Session, v: &Value) -> CmdResult {
     let t = v.get("text").and_then(Value::as_str).unwrap_or("").trim();
     if t.is_empty() {
-        return Err(err("No history item chosen".to_string()));
+        return Err(err("Intet valgt i historikken".to_string()));
     }
     check_maxima_safe_with(t, &def_names(s))?;
     replace_selection(s, t)?;
     s.math_last = Some(t.to_string());
-    s.status = "Inserted result".to_string();
+    s.status = "Resultatet er indsat".to_string();
     sel_result(s)
 }
 
@@ -2316,7 +2389,7 @@ fn maxima_cmd(s: &mut Session, v: &Value) -> CmdResult {
     if let Some(c) = v.get("cmd").and_then(Value::as_str) {
         let cmd = c.trim();
         if cmd.is_empty() {
-            return Err(err("Empty Maxima command".to_string()));
+            return Err(err("Maxima-kommandoen er tom".to_string()));
         }
         return match batch(&base_prelude(), &defs(s), cmd) {
             Ok(r) => {
@@ -2385,7 +2458,7 @@ fn formler(s: &mut Session, _: &Value) -> CmdResult {
         }));
     }
     s.ui_requests.push(json!({"open": "mathFormulaPicker", "groups": groups}));
-    s.status = "Pick a formula in the dialog…".to_string();
+    s.status = "Vælg en formel i vinduet…".to_string();
     sel_result(s)
 }
 
@@ -2393,7 +2466,7 @@ fn formler(s: &mut Session, _: &Value) -> CmdResult {
 fn formel(s: &mut Session, v: &Value) -> CmdResult {
     let t = v.get("template").and_then(Value::as_str).unwrap_or("").trim();
     if t.is_empty() {
-        return Err(err("Empty formula template".to_string()));
+        return Err(err("Formelskabelonen er tom".to_string()));
     }
     s.run("insert.equation", &json!({"linear": t}))
 }
@@ -2429,23 +2502,23 @@ fn gem(s: &mut Session, v: &Value) -> CmdResult {
     let (name, linear) = match (v.get("name").and_then(Value::as_str), found) {
         (Some(n), Some(l)) if !n.trim().is_empty() => (n.trim().to_string(), l),
         (Some(n), None) if !n.trim().is_empty() => {
-            return Err(err("No equation to save".to_string()));
+            return Err(err("Ingen ligning at gemme".to_string()));
         }
         (_, Some(l)) => {
             let name: String = l.chars().take(28).collect();
             (name, l)
         }
-        _ => return Err(err("No equation to save".to_string())),
+        _ => return Err(err("Ingen ligning at gemme".to_string())),
     };
     let linear = linear.trim().to_string();
     if linear.is_empty() {
-        return Err(err("No equation to save".to_string()));
+        return Err(err("Ingen ligning at gemme".to_string()));
     }
     if let Some(i) = s.prefs.saved_equations.iter().position(|e| e.linear == linear) {
         s.prefs.saved_equations.remove(i);
-        s.status = format!("Removed {name}");
+        s.status = format!("{name} er slettet");
     } else {
-        s.status = format!("Saved {name}");
+        s.status = format!("{name} er gemt");
         s.prefs.saved_equations.push(crate::session::SavedEquation { name, linear });
     }
     sel_result(s)
@@ -2453,7 +2526,7 @@ fn gem(s: &mut Session, v: &Value) -> CmdResult {
 fn forrige(s: &mut Session, _: &Value) -> CmdResult {
     let last = s.math_last.clone().unwrap_or_default();
     if last.trim().is_empty() {
-        return Err(err("No previous result yet".to_string()));
+        return Err(err("Ingen tidligere resultat endnu".to_string()));
     }
     replace_selection(s, &last)?;
     let end = s.sel.focus.clone();
@@ -2546,6 +2619,10 @@ fn solve_plain(s: &mut Session, v: &Value) -> CmdResult {
     for e in expand_pm(&expr) {
         check_maxima_safe_with(&e, &allowed)?;
         let eq = if e.contains('=') || is_inequality(&e) { e } else { format!("{e}=0") };
+        // An identity ("x = x"): every number is a solution.
+        if !is_inequality(&eq) && is_identity(&eq) {
+            return Err(err(SolveOutcome::AllNumbers.message().to_string()));
+        }
         let var = match pick_var(s, v, &eq)? {
             VarPick::One(var) => var,
             VarPick::Many(vars) => return ask_var(s, "math.solve", vars),
@@ -2571,7 +2648,12 @@ fn solve_plain(s: &mut Session, v: &Value) -> CmdResult {
         }
     }
     if out.is_empty() {
-        return Err(err(format!("Could not solve: {last_err}")));
+        // What happened: no solution, or Maxima could not solve it symbolically.
+        return Err(err(solve_failure_message(&last_err)));
+    }
+    // Only complex roots: say so, instead of showing a formula with no real answer.
+    if classify_solve(&out.join(" or "), "") == SolveOutcome::ComplexOnly {
+        return Err(err(SolveOutcome::ComplexOnly.message().to_string()));
     }
     apply_result(s, target, input.trim(), &out.join(" or "))
 }
@@ -2713,7 +2795,7 @@ fn taylor(s: &mut Session, _: &Value) -> CmdResult {
     // The order is a plain non-negative integer; Maxima's taylor() would
     // otherwise accept arbitrary code in this argument.
     let n = p.get(3).cloned().unwrap_or_else(|| "6".to_string());
-    let order: usize = n.trim().parse().map_err(|_| err("Taylor order must be a whole number".to_string()))?;
+    let order: usize = n.trim().parse().map_err(|_| err("Taylor-rækkens orden skal være et heltal".to_string()))?;
     if order > 1000 {
         return Err(err("Taylor order must be at most 1000".to_string()));
     }
@@ -2824,28 +2906,32 @@ fn undefine(s: &mut Session, v: &Value) -> CmdResult {
         .unwrap_or_else(|| s.selected_text().split(":=").next().unwrap_or("").trim().to_string());
     if name.is_empty() {
         s.math_defs.clear();
-        s.status = "Cleared all definitions".to_string();
+        s.status = "Alle definitioner er slettet".to_string();
     } else {
         let before = s.math_defs.len();
         s.math_defs.retain(|d| def_lhs(d) != name);
-        s.status = if s.math_defs.len() < before { format!("Removed definition {name}") } else { format!("No definition named {name}") };
+        s.status = if s.math_defs.len() < before {
+            format!("Definitionen {name} er slettet")
+        } else {
+            format!("Der findes ingen definition ved navn {name}")
+        };
     }
     sel_result(s)
 }
 
 /// The WordMat tab layout (also the migration source for old prefs).
 const LAYOUT_WORDMAT: &[(&str, &[&str])] = &[
-    ("Calculate", &["math.beregn", "math.trin", "math.simplify", "math.factor", "math.expand", "math.diff", "math.integrate"]),
-    ("Solve", &["math.solve", "math.solvenum", "math.isoler", "math.solvede", "math.nyligning"]),
-    ("Define", &["math.define", "math.undefine"]),
-    ("Units", &["math.enhed", "math.numeric"]),
+    ("Beregn", &["math.beregn", "math.trin", "math.simplify", "math.factor", "math.expand", "math.diff", "math.integrate"]),
+    ("Løs", &["math.solve", "math.solvenum", "math.isoler", "math.solvede", "math.nyligning"]),
+    ("Definer", &["math.define", "math.undefine"]),
+    ("Enheder", &["math.enhed", "math.numeric"]),
     ("LaTeX", &["math.latex"]),
     ("Matrix", &["math.determinant", "math.invers", "math.egenvaerdier", "math.ligningssystem"]),
-    ("Statistics", &["math.middel", "math.spredning"]),
+    ("Statistik", &["math.middel", "math.spredning"]),
     ("Calculus", &["math.diff", "math.integrate", "math.graense", "math.taylor"]),
-    ("Formulas", &["math.formler", "math.gem"]),
-    ("Graph", &["math.graf"]),
-    ("More", &["math.maxima", "math.forrige", "math.exakt", "math.decimal", "equation.number"]),
+    ("Formler", &["math.formler", "math.gem"]),
+    ("Graf", &["math.graf"]),
+    ("Mere", &["math.maxima", "math.forrige", "math.exakt", "math.decimal", "equation.number"]),
 ];
 
 /// First-run setup: create the Math tab with all math groups when
@@ -2911,44 +2997,45 @@ pub fn ensure_wordmat_tab(session: &mut Session) {
 
 pub fn specs() -> Vec<CommandSpec> {
     vec![
-        CommandSpec::new("math.nyligning", "New equation", "Math › Solve", nyligning).key("Alt+M").params("{}"),
-        CommandSpec::new("math.beregn", "Calculate", "Math › Calculate", beregn).key("Alt+B").params("{}"),
-        CommandSpec::new("math.trin", "Show steps", "Math › Calculate", trin).params("{}"),
-        CommandSpec::new("math.solve", "Solve equation", "Math › Solve", solve_plain).params(r#"{"var"?: variable, default "x"}"#),
-        CommandSpec::new("math.solvenum", "Solve numeric", "Math › Solve", solvenum).params(r#"{"var"?: variable, default "x"}"#),
-        CommandSpec::new("math.isoler", "Isolate", "Math › Solve", isoler).key("Alt+L").params(r#"{"var"?: variable to isolate, default "x"}"#),
-        CommandSpec::new("math.solvede", "Solve ODE", "Math › Solve", solvede).params(r#"{"dep"?: default "y", "indep"?: default "x"}"#),
-        CommandSpec::new("math.define", "Define", "Math › Define", define).params(r#"{"name"?, "value"?}"#),
-        CommandSpec::new("math.undefine", "Delete definitions", "Math › Define", undefine).params(r#"{"name"?: empty clears all}"#),
-        CommandSpec::new("math.enhed", "Units", "Math › Units", enhed).params(r#"{"float"?: true for decimals}"#),
-        CommandSpec::new("math.numeric", "Decimal", "Math › Units", |s, _| unary(s, "float", "evaluere")).params("{}"),
-        CommandSpec::new("math.simplify", "Simplify", "Math › Rewrite", simplify_best).params("{}"),
-        CommandSpec::new("math.diff", "Differentiate", "Math › Calculate", |s, v| diff_int(s, v, "diff", "differentiere"))
+        CommandSpec::new("math.nyligning", "Ny ligning", "Math › Løs", nyligning).key("Alt+M").params("{}"),
+        CommandSpec::new("math.beregn", "Beregn", "Math › Beregn", beregn).key("Alt+B").params("{}"),
+        CommandSpec::new("math.trin", "Vis trin", "Math › Beregn", trin).params("{}"),
+        CommandSpec::new("math.solve", "Løs ligning", "Math › Løs", solve_plain).params(r#"{"var"?: variable, default "x"}"#),
+        CommandSpec::new("math.solvenum", "Løs numerisk", "Math › Løs", solvenum).params(r#"{"var"?: variable, default "x"}"#),
+        CommandSpec::new("math.isoler", "Isoler", "Math › Løs", isoler).key("Alt+L").params(r#"{"var"?: variable to isolate, default "x"}"#),
+        CommandSpec::new("math.solvede", "Løs differentialligning", "Math › Løs", solvede).params(r#"{"dep"?: default "y", "indep"?: default "x"}"#),
+        CommandSpec::new("math.define", "Definer", "Math › Definer", define).params(r#"{"name"?, "value"?}"#),
+        CommandSpec::new("math.undefine", "Slet definitioner", "Math › Definer", undefine).params(r#"{"name"?: empty clears all}"#),
+        CommandSpec::new("math.enhed", "Enheder", "Math › Enheder", enhed).params(r#"{"float"?: true for decimals}"#),
+        CommandSpec::new("math.numeric", "Decimal", "Math › Enheder", |s, _| unary(s, "float", "evaluere")).params("{}"),
+        CommandSpec::new("math.simplify", "Forenkl", "Math › Omskriv", simplify_best).params("{}"),
+        CommandSpec::new("math.diff", "Differentier", "Math › Beregn", |s, v| diff_int(s, v, "diff", "differentiere"))
             .params(r#"{"var"?: variable, default "x"}"#),
-        CommandSpec::new("math.integrate", "Antiderivative", "Math › Calculate", |s, v| diff_int(s, v, "integrate", "integrere"))
+        CommandSpec::new("math.integrate", "Stamfunktion", "Math › Beregn", |s, v| diff_int(s, v, "integrate", "integrere"))
             .params(r#"{"var"?: variable, default "x"}"#),
-        CommandSpec::new("math.expand", "Expand", "Math › Rewrite", |s, _| unary(s, "expand", "udvide")).params("{}"),
-        CommandSpec::new("math.factor", "Factor", "Math › Rewrite", |s, _| unary(s, "factor", "faktorisere")).params("{}"),
-        CommandSpec::new("math.latex", "To LaTeX", "Math › LaTeX", |s, _| unary_tex(s, &Value::Null)).params("{}"),
+        CommandSpec::new("math.expand", "Udvid", "Math › Omskriv", |s, _| unary(s, "expand", "udvide")).params("{}"),
+        CommandSpec::new("math.factor", "Faktorisér", "Math › Omskriv", |s, _| unary(s, "factor", "faktorisere")).params("{}"),
+        CommandSpec::new("math.latex", "Til LaTeX", "Math › LaTeX", |s, _| unary_tex(s, &Value::Null)).params("{}"),
         CommandSpec::new("math.determinant", "Determinant", "Math › Matrix", |s, _| unary_shallow(s, "determinant", "beregne determinant"))
             .params("{}"),
         CommandSpec::new("math.invers", "Inverse", "Math › Matrix", |s, _| unary_shallow(s, "invert", "invertere")).params("{}"),
-        CommandSpec::new("math.egenvaerdier", "Eigenvalues", "Math › Matrix", |s, _| unary_shallow(s, "eigenvalues", "eigenvalues")).params("{}"),
-        CommandSpec::new("math.ligningssystem", "Solve system", "Math › Matrix", ligningssystem).params("{}"),
-        CommandSpec::new("math.graense", "Limit", "Math › Calculus", graense).params("{}"),
-        CommandSpec::new("math.taylor", "Taylor series", "Math › Calculus", taylor).params("{}"),
-        CommandSpec::new("math.middel", "Mean", "Math › Statistics", |s, _| stats_op(s, "mean", "mean")).params("{}"),
-        CommandSpec::new("math.spredning", "Standard deviation", "Math › Statistics", |s, _| stats_op(s, "std", "spredning")).params("{}"),
-        CommandSpec::new("math.maxima", "Maxima command", "Math › More", maxima_cmd)
+        CommandSpec::new("math.egenvaerdier", "Eigenværdier", "Math › Matrix", |s, _| unary_shallow(s, "eigenvalues", "eigenvalues")).params("{}"),
+        CommandSpec::new("math.ligningssystem", "Løs ligningssystem", "Math › Matrix", ligningssystem).params("{}"),
+        CommandSpec::new("math.graense", "Grænseværdi", "Math › Calculus", graense).params("{}"),
+        CommandSpec::new("math.taylor", "Taylor-række", "Math › Calculus", taylor).params("{}"),
+        CommandSpec::new("math.middel", "Gennemsnit", "Math › Statistik", |s, _| stats_op(s, "mean", "mean")).params("{}"),
+        CommandSpec::new("math.spredning", "Standardafvigelse", "Math › Statistik", |s, _| stats_op(s, "std", "spredning")).params("{}"),
+        CommandSpec::new("math.maxima", "Maxima-kommando", "Math › Mere", maxima_cmd)
             .params(r#"{"cmd"?: raw Maxima code; runs directly with the user's local privileges and is NOT sandboxed — never pass untrusted text}"#),
-        CommandSpec::new("math.forrige", "Previous result", "Math › More", forrige).params("{}"),
-        CommandSpec::new("math.historik", "History", "Math › More", historik).params("{}"),
-        CommandSpec::new("math.inserthistorik", "Insert history item", "Math › More", historik_insat).params(r#"{"text": chosen previous answer}"#),
-        CommandSpec::new("math.formler", "Formula collection", "Math › Formulas", formler).params("{}"),
-        CommandSpec::new("math.formel", "Insert formula", "Math › Formulas", formel).params(r#"{"template": formula linear text}"#),
-        CommandSpec::new("math.gem", "Save equation", "Math › Formulas", gem).params(r#"{"name"?: label}"#),
-        CommandSpec::new("math.exakt", "Exact", "Math › More", exakt).params("{}"),
-        CommandSpec::new("math.decimal", "Decimal", "Math › More", decimal).params("{}"),
+        CommandSpec::new("math.forrige", "Forrige resultat", "Math › Mere", forrige).params("{}"),
+        CommandSpec::new("math.historik", "Historik", "Math › Mere", historik).params("{}"),
+        CommandSpec::new("math.inserthistorik", "Indsæt fra historikken", "Math › Mere", historik_insat)
+            .params(r#"{"text": chosen previous answer}"#),
+        CommandSpec::new("math.formler", "Formelsamling", "Math › Formler", formler).params("{}"),
+        CommandSpec::new("math.formel", "Indsæt formel", "Math › Formler", formel).params(r#"{"template": formula linear text}"#),
+        CommandSpec::new("math.gem", "Gem ligning", "Math › Formler", gem).params(r#"{"name"?: label}"#),
+        CommandSpec::new("math.exakt", "Exact", "Math › Mere", exakt).params("{}"),
+        CommandSpec::new("math.decimal", "Decimal", "Math › Mere", decimal).params("{}"),
     ]
 }
 
@@ -2992,6 +3079,47 @@ mod tests {
         run(s, "select.all", json!({}));
     }
 
+    /// The four outcomes of a solve are told apart, so the message says what happened and what
+    /// to do next (the maths tab is a Danish school feature).
+    #[test]
+    fn the_four_outcomes_are_told_apart() {
+        // No solution: Maxima answers with an empty list.
+        assert_eq!(classify_solve("[]", ""), SolveOutcome::NoSolution);
+        assert_eq!(classify_solve("", ""), SolveOutcome::NoSolution);
+        // Only complex roots: there is no real answer.
+        assert_eq!(classify_solve("[x = %i, x = -%i]", ""), SolveOutcome::ComplexOnly);
+        // A real solution, even with one complex root.
+        assert_eq!(classify_solve("[x = 0, x = %i]", ""), SolveOutcome::Solved);
+        assert_eq!(classify_solve("[x = -2, x = 2]", ""), SolveOutcome::Solved);
+        // Maxima could not solve it symbolically.
+        assert_eq!(classify_solve("", "algsys: tried and failed"), SolveOutcome::NotSymbolic);
+    }
+
+    /// Every number is a solution when the equation is an identity.
+    #[test]
+    fn an_identity_has_every_number_as_a_solution() {
+        assert!(is_identity("x = x"));
+        assert!(is_identity("2*x=2*x"));
+        assert!(is_identity("x^2 = x^2"));
+        assert!(!is_identity("x = -x"));
+        assert!(!is_identity("x = 0"));
+        assert!(!is_identity("x + 1 = x"));
+    }
+
+    /// Each message says what happened, in Danish.
+    #[test]
+    fn the_outcome_messages_are_danish_and_say_the_next_step() {
+        assert!(SolveOutcome::NoSolution.message().contains("ingen løsning"));
+        assert!(SolveOutcome::AllNumbers.message().contains("alle tal"));
+        assert!(SolveOutcome::AllNumbers.message().contains("uligheds-"));
+        assert!(SolveOutcome::ComplexOnly.message().contains("komplekse"));
+        assert!(SolveOutcome::NotSymbolic.message().contains("symbolsk"));
+        assert!(SolveOutcome::NotSymbolic.message().contains("numerisk"));
+        // A division by zero is told apart from a solve that failed.
+        assert_eq!(solve_failure_message("division by 0"), "Der kan ikke divideres med nul");
+        assert_eq!(solve_failure_message("algsys: tried and failed"), SolveOutcome::NotSymbolic.message());
+    }
+
     // Needs Maxima in PATH; slow (spawns Maxima), so ignored by default.
     #[test]
     #[ignore]
@@ -3016,7 +3144,7 @@ mod tests {
         let mut s = s();
         run(&mut s, "text.insert", json!({"text": "x", "raw": true}));
         let err = s.run("math.isoler", &json!({})).unwrap_err();
-        assert!(err.to_string().contains("Place the cursor in an equation"));
+        assert!(err.to_string().contains("Sæt markøren i en ligning"));
     }
 
     #[test]
@@ -3205,7 +3333,7 @@ mod tests {
             for command in ["math.beregn", "math.graf", "math.maxima"] {
                 select_all(&mut s, &evil);
                 let err = s.run(command, &json!({})).unwrap_err();
-                assert!(err.to_string().contains("not allowed"), "{command} on {evil}: {err}");
+                assert!(err.to_string().contains("må ikke bruges"), "{command} on {evil}: {err}");
             }
         }
         assert!(!pwned.exists(), "a document expression executed a shell command");
@@ -3234,7 +3362,7 @@ mod tests {
         run(&mut s, "math.define", json!({"name": "f(x)", "value": "x^2"}));
         assert_eq!(s.math_defs.len(), 1);
         let err = s.run("math.define", &json!({"name": "f(x)", "value": "system(\"id\")"})).unwrap_err();
-        assert!(err.to_string().contains("not allowed"), "{err}");
+        assert!(err.to_string().contains("må ikke bruges"), "{err}");
         assert_eq!(s.math_defs, vec!["f(x) := x^2".to_string()]);
     }
 
@@ -3258,7 +3386,7 @@ mod tests {
     fn hostile_graph_variable_is_rejected_without_maxima() {
         let mut s = s();
         let err = s.run("math.graf", &json!({"spec": "x^2, -5, 5", "var": "x), system(\"touch /tmp/opencode/pwned\")"})).unwrap_err();
-        assert!(err.to_string().contains("variable"), "{err}");
+        assert!(err.to_string().contains("variabel"), "{err}");
         // The spec itself is interpolated into listofvars() by pick_var
         // (mathgraf's probe), before the per-curve check in graf(): it must
         // be rejected there, with no shell side effect, in both the
@@ -3267,10 +3395,10 @@ mod tests {
         let path = pwned.to_string_lossy();
         let spec = format!("x),system(\"touch {path}\"),(x");
         let err = s.run("math.graf", &json!({"spec": spec})).unwrap_err();
-        assert!(err.to_string().contains("not allowed"), "{err}");
+        assert!(err.to_string().contains("må ikke bruges"), "{err}");
         select_all(&mut s, &spec);
         let err = s.run("math.graf", &json!({})).unwrap_err();
-        assert!(err.to_string().contains("not allowed"), "{err}");
+        assert!(err.to_string().contains("må ikke bruges"), "{err}");
         assert!(!pwned.exists(), "the graph spec executed a shell command");
     }
 
@@ -3279,10 +3407,10 @@ mod tests {
         let mut s = s();
         select_all(&mut s, "sin(x)/x, x), system(\"id\"), 0");
         let err = s.run("math.graense", &json!({})).unwrap_err();
-        assert!(err.to_string().contains("not allowed") || err.to_string().contains("variable"), "{err}");
+        assert!(err.to_string().contains("må ikke bruges") || err.to_string().contains("variabel"), "{err}");
         select_all(&mut s, "exp(x), x, 0, 1+1");
         let err = s.run("math.taylor", &json!({})).unwrap_err();
-        assert!(err.to_string().contains("whole number"), "{err}");
+        assert!(err.to_string().contains("heltal"), "{err}");
     }
 
     #[test]
@@ -3294,7 +3422,7 @@ mod tests {
         assert!(join_output_lines("MC>>>").is_err());
         // Never-balanced output hits the explicit limit, not silent truncation.
         let big = "MC>>> [[[[[\n".to_string() + &"x\n".repeat(5000);
-        assert_eq!(join_output_lines(&big).unwrap_err(), "Maxima output too large");
+        assert_eq!(join_output_lines(&big).unwrap_err(), "Maximas svar er for stort");
     }
 
     #[test]
@@ -3302,29 +3430,29 @@ mod tests {
         let mut s = s();
         select_all(&mut s, "system(\"id\")");
         let err = s.run("math.beregn", &json!({})).unwrap_err();
-        assert!(err.to_string().contains("not allowed"));
+        assert!(err.to_string().contains("må ikke bruges"));
         select_all(&mut s, "loadfile(\"/tmp/x.mac\")");
         let err = s.run("math.isoler", &json!({"var": "x"})).unwrap_err();
-        assert!(err.to_string().contains("not allowed"));
+        assert!(err.to_string().contains("må ikke bruges"));
         // The raw Maxima command on a DOCUMENT selection is also gated:
         // a received .docx must not smuggle code past it.
         select_all(&mut s, "system(\"id\")");
         let err = s.run("math.maxima", &json!({})).unwrap_err();
-        assert!(err.to_string().contains("not allowed"));
+        assert!(err.to_string().contains("må ikke bruges"));
         // Bypass attempts through the real command paths: suppressed-case
         // and token-splitting tricks must fail like their plain forms.
         select_all(&mut s, "SYSTEM(\"id\")");
         let err = s.run("math.maxima", &json!({})).unwrap_err();
-        assert!(err.to_string().contains("not allowed"));
+        assert!(err.to_string().contains("må ikke bruges"));
         select_all(&mut s, "sconcat(\"sy\",\"stem\")(\"id\")");
         let err = s.run("math.beregn", &json!({})).unwrap_err();
-        assert!(err.to_string().contains("not allowed"));
+        assert!(err.to_string().contains("må ikke bruges"));
         select_all(&mut s, "writefile(\"/tmp/x\")");
         let err = s.run("math.maxima", &json!({})).unwrap_err();
-        assert!(err.to_string().contains("not allowed"));
+        assert!(err.to_string().contains("må ikke bruges"));
         select_all(&mut s, "LOAD(\"/tmp/x.mac\")");
         let err = s.run("math.beregn", &json!({})).unwrap_err();
-        assert!(err.to_string().contains("not allowed"));
+        assert!(err.to_string().contains("må ikke bruges"));
     }
 
     #[test]
@@ -3354,7 +3482,7 @@ mod tests {
         // Checked before any process starts, so this needs no Maxima.
         let cmd = "1".repeat(MAX_MAXIMA_BATCH_BYTES);
         let err = batch(&[], &[], &cmd).unwrap_err();
-        assert!(err.contains("longer than"), "{err}");
+        assert!(err.contains("længere end"), "{err}");
     }
 
     #[test]
@@ -3467,7 +3595,7 @@ mod tests {
     fn forrige_errors_without_result() {
         let mut s = s();
         let err = s.run("math.forrige", &json!({})).unwrap_err();
-        assert!(err.to_string().contains("No previous result"));
+        assert!(err.to_string().contains("Ingen tidligere resultat"));
     }
 
     #[test]
@@ -3655,7 +3783,7 @@ mod tests {
         let _ = ask_var(&mut s, "math.isoler", vec!["x".to_string(), "y".to_string()]);
         assert_eq!(s.ui_requests.len(), 1);
         assert!(s.ui_requests[0].get("open").and_then(Value::as_str) == Some("mathVarPicker"));
-        assert!(s.status.contains("Pick a variable"));
+        assert!(s.status.contains("Vælg en variabel"));
     }
 
     #[test]
@@ -3740,7 +3868,7 @@ mod tests {
     fn historik_errors_without_result() {
         let mut s = s();
         let err = s.run("math.historik", &json!({})).unwrap_err();
-        assert!(err.to_string().contains("No previous result"));
+        assert!(err.to_string().contains("Ingen tidligere resultat"));
     }
 
     #[test]
@@ -3766,7 +3894,7 @@ mod tests {
         assert_eq!(text(&s), "5*1 8");
         assert_eq!(s.math_last.as_deref(), Some("8"));
         let err = s.run("math.inserthistorik", &json!({"text": ""})).unwrap_err();
-        assert!(err.to_string().contains("No history item"));
+        assert!(err.to_string().contains("Intet valgt i historikken"));
     }
 
     #[test]
@@ -3817,17 +3945,17 @@ mod tests {
 
         ensure_wordmat_tab(&mut s);
         let calc = |s: &Session| {
-            s.ribbon.tabs.iter().find(|t| t.name == "Math").unwrap().groups.iter().find(|g| g.name == "Calculate").unwrap().commands.clone()
+            s.ribbon.tabs.iter().find(|t| t.name == "Math").unwrap().groups.iter().find(|g| g.name == "Beregn").unwrap().commands.clone()
         };
         let cmds = calc(&s);
         assert!(cmds.contains(&"math.beregn".to_string()), "kept old: {cmds:?}");
         assert!(cmds.contains(&"math.trin".to_string()), "picked up: {cmds:?}");
         // Missing groups (History under More) materialize as themselves.
-        assert!(s.ribbon.tabs.iter().find(|t| t.name == "Math").unwrap().groups.iter().any(|g| g.name == "More"));
+        assert!(s.ribbon.tabs.iter().find(|t| t.name == "Math").unwrap().groups.iter().any(|g| g.name == "Mere"));
         assert_eq!(s.ribbon.math_layout_version, MATH_LAYOUT_VERSION);
 
         // After the upgrade: a deliberate removal never comes back.
-        let _ = s.ribbon.remove("Math", Some("Calculate"), Some("math.trin"));
+        let _ = s.ribbon.remove("Math", Some("Beregn"), Some("math.trin"));
         ensure_wordmat_tab(&mut s);
         assert!(!calc(&s).contains(&"math.trin".to_string()));
         // Idempotence: no duplicates on repeated runs.

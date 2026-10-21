@@ -68,7 +68,8 @@ pub fn run(root: &Path, opts: &Options) -> Result<String, String> {
 
     // The scratch folders a crashed test left behind.
     let keep = Duration::from_secs(opts.keep_temp_hours.saturating_mul(3600));
-    total.add(remove_old_in(&temp_dir(), &["quill-", "wordcraft-"], keep));
+    // Only this project's own scratch folders (the tests' names), never someone else's.
+    total.add(remove_old_in(&temp_dir(), &["quill-clean-test-", "quill-cloud-secret-", "wordcraft-vault-test-"], keep));
 
     // The half-written files a killed save left behind.
     total.add(remove_old_in(root, &[".wordcraft-save-"], Duration::from_secs(3600)));

@@ -471,7 +471,9 @@ fn cloud_files(app: &mut WordApp, ui: &mut Ui) {
     let version = app.session.cloud.capabilities.as_ref().map(|c| c.version.clone()).unwrap_or_default();
     let account = app.session.cloud.account.as_ref().map(|a| a.display_name.clone()).unwrap_or_default();
     let folder = app.session.cloud.folder.clone();
-    let files = app.session.cloud.files.clone();
+    let mut files = app.session.cloud.files.clone();
+    // Folders first, then the files, each in name order.
+    files.sort_by(|a, b| b.is_dir.cmp(&a.is_dir).then_with(|| a.name.to_lowercase().cmp(&b.name.to_lowercase())));
     let hits = app.session.cloud.hits.clone();
     let versions = app.session.cloud.versions.clone();
     let link = app.session.cloud.link.clone();

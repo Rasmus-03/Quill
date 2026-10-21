@@ -83,6 +83,42 @@ fn a_note_on_the_server_is_an_obsidian_note() {
     assert!(source.is_some(), "the note keeps its own source");
 }
 
+/// The tag for the version that was read travels with the document, so a write cannot
+/// overwrite a file that changed on the server.
+#[test]
+fn the_server_tag_travels_with_the_document() {
+    let mock = Mock::start();
+    let mut s = s();
+    connect(&mut s, &mock);
+    run(&mut s, "cloud.open", json!({"path": "Docs/hello.txt"}));
+    run(&mut s, "cloud.wait", json!({"ms": 10000}));
+    let status = run(&mut s, "cloud.status", json!({}));
+    assert_eq!(status["document"]["etag"], json!("\"etag-1\""), "{status}");
+    // Saving sends the tag back, so the server refuses the write if the file changed.
+    run(&mut s, "text.insert", json!({"text": "More."}));
+    run(&mut s, "cloud.save", json!({}));
+    run(&mut s, "cloud.wait", json!({"ms": 10000}));
+    let seen = mock.seen();
+    assert!(seen.iter().any(|r| r.to_ascii_lowercase().contains("if-match: \"etag-1\"")), "{seen:?}");
+}
+
+/// File > Save on a document from the server writes it back to the server.
+#[test]
+fn saving_a_document_from_the_server_writes_it_back() {
+    let mock = Mock::start();
+    let mut s = s();
+    connect(&mut s, &mock);
+    run(&mut s, "cloud.open", json!({"path": "Docs/hello.txt"}));
+    run(&mut s, "cloud.wait", json!({"ms": 10000}));
+    run(&mut s, "text.insert", json!({"text": "More."}));
+    let before = mock.seen().len();
+    run(&mut s, "file.save", json!({}));
+    run(&mut s, "cloud.wait", json!({"ms": 10000}));
+    let seen = mock.seen();
+    assert!(seen.len() > before, "the document was written to the server");
+    assert!(seen[before..].iter().any(|r| r.starts_with("PUT /remote.php/dav/files/rasmus/Docs/hello.txt")), "{seen:?}");
+}
+
 #[test]
 fn a_public_link_is_made() {
     let mock = Mock::start();

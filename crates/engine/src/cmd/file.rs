@@ -188,6 +188,13 @@ fn encrypt(s: &mut Session, v: &Value) -> CmdResult {
 }
 
 fn save(s: &mut Session, v: &Value) -> CmdResult {
+    // A document that was opened from the server goes back to the server, not to a file here.
+    if p::str(v, "path").is_none()
+        && s.path.is_none()
+        && let Some(document) = s.cloud.document.clone()
+    {
+        return crate::cloud::save_to(s, &document.path, v);
+    }
     let path = match p::str(v, "path").map(std::path::PathBuf::from).or_else(|| s.path.clone()) {
         Some(p) => p,
         None => {

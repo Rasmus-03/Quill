@@ -64,6 +64,8 @@ pub const MAX_LINKS_PER_NOTE: usize = 2000;
 pub const MAX_TAGS_PER_NOTE: usize = 200;
 /// Most notes one index reads.
 const MAX_INDEX_FILES: usize = 5000;
+/// How long one index may read notes, so the interface never waits on a big vault.
+const MAX_INDEX_MILLIS: u64 = 400;
 /// Largest note one index reads.
 const MAX_INDEX_BYTES: u64 = 2 * 1024 * 1024;
 
@@ -257,14 +259,16 @@ impl Vault {
 
     /// Read every note and work out what links to what.
     ///
-    /// Every note is read once. A vault that is too large to read is cut short, and the notes
-    /// that were not read simply have no links.
+    /// Every note is read once. A vault that is too large to read is cut short — after
+    /// [`MAX_INDEX_MILLIS`] so the interface never waits on a big vault — and the notes that
+    /// were not read simply have no links.
     fn build_index(&self) -> NoteIndex {
         let mut index = NoteIndex::default();
         let Some(root) = self.root.as_ref() else { return index };
         let mut scanned = 0usize;
+        let deadline = std::time::Instant::now() + std::time::Duration::from_millis(MAX_INDEX_MILLIS);
         for file in self.files.iter() {
-            if scanned >= MAX_INDEX_FILES {
+            if scanned >= MAX_INDEX_FILES || std::time::Instant::now() >= deadline {
                 break;
             }
             if file.size > MAX_INDEX_BYTES {

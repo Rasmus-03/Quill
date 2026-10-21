@@ -210,12 +210,12 @@ impl Session {
                     }
                     Answer::Account(account) => self.cloud.account = Some(account),
                     Answer::Listing(files) => self.cloud.files = files,
-                    Answer::Bytes(bytes) => {
+                    Answer::Bytes { bytes, etag } => {
                         let path = match waiting {
                             Some(Pending::Open { path }) => path,
                             _ => String::new(),
                         };
-                        self.open_cloud_file(path, bytes);
+                        self.open_cloud_file(path, bytes, etag);
                     }
                     Answer::Saved { path, etag } => {
                         if let Some(Pending::Saved { depth }) = waiting {
@@ -241,7 +241,7 @@ impl Session {
     }
 
     /// Open a file that came from the server.
-    fn open_cloud_file(&mut self, path: String, bytes: Vec<u8>) {
+    fn open_cloud_file(&mut self, path: String, bytes: Vec<u8>, etag: String) {
         if path.is_empty() {
             return;
         }
@@ -261,7 +261,9 @@ impl Session {
         self.set_document(doc);
         self.path = None;
         self.dirty = false;
-        self.cloud.document = Some(CloudDocument { path, name, etag: String::new() });
+        // The tag for the version that was read: a save sends it back, so the server refuses
+        // the write when the file changed in the meantime.
+        self.cloud.document = Some(CloudDocument { path, name, etag });
     }
 }
 
@@ -367,6 +369,15 @@ fn save(s: &mut Session, v: &Value) -> CmdResult {
     if path.is_empty() {
         return Err(CmdError::Failed("there is no file on the server to save into".into()));
     }
+    save_to(s, &path, v)
+}
+
+/// Write the document to the server, at `path`.
+///
+/// The write goes to a worker thread and the answer comes later, so the document is still
+/// marked as changed until the server has taken it.
+pub fn save_to(s: &mut Session, path: &str, v: &Value) -> CmdResult {
+    let path = path.to_string();
     let files = cloud_files(s, &path, v)?;
     let etag = s.cloud.document.as_ref().filter(|d| d.path == path).map(|d| d.etag.clone());
     // The images first: a note never points at a file that is not there yet.

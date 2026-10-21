@@ -22,7 +22,7 @@ const IMG_H: u32 = 600;
 const COLORS: [[u8; 3]; 3] = [[37, 99, 235], [220, 38, 38], [22, 163, 74]];
 
 pub fn specs() -> Vec<CommandSpec> {
-    vec![CommandSpec::new("math.graf", "Plot graph", "Math › Graph", graf).params(r#"{"spec"?: "f(x)=x^2, -5, 5", "var"?: variable, "width"?: pt}"#)]
+    vec![CommandSpec::new("math.graf", "Tegn graf", "Math › Graf", graf).params(r#"{"spec"?: "f(x)=x^2, -5, 5", "var"?: variable, "width"?: pt}"#)]
 }
 
 /// One parsed curve: display text (Danish, original) and Maxima expression.
@@ -68,7 +68,7 @@ fn is_number(t: &str) -> bool {
 fn parse_spec(raw: &str) -> Result<(Vec<String>, f64, f64), String> {
     let t = raw.trim();
     if t.is_empty() {
-        return Err("Select e.g. \"x^2, -5, 5\" first".to_string());
+        return Err("Markér f.eks. \"x^2, -5, 5\" først".to_string());
     }
     let comma_parts = split_top(t);
     let mut range = None;
@@ -87,17 +87,17 @@ fn parse_spec(raw: &str) -> Result<(Vec<String>, f64, f64), String> {
     }
     let curves: Vec<String> = split_curves(&curve_text).into_iter().map(|c| c.trim().to_string()).filter(|c| !c.is_empty()).collect();
     if curves.is_empty() {
-        return Err("Select e.g. \"x^2, -5, 5\" first".to_string());
+        return Err("Markér f.eks. \"x^2, -5, 5\" først".to_string());
     }
     if curves.len() > 3 {
-        return Err("At most 3 graphs at a time (separate with ;)".to_string());
+        return Err("Højst 3 grafer ad gangen (adskil med ;)".to_string());
     }
     let (from, to) = range.unwrap_or((-10.0, 10.0));
     if !from.is_finite() || !to.is_finite() || from >= to {
-        return Err("The range must be two numbers with from < to, e.g. \"x^2, -5, 5\"".to_string());
+        return Err("Intervallet skal være to tal med fra < til, f.eks. \"x^2, -5, 5\"".to_string());
     }
     if to - from < 1e-9 {
-        return Err("The range is too small".to_string());
+        return Err("Intervallet er for lille".to_string());
     }
     Ok((curves, from, to))
 }
@@ -170,7 +170,7 @@ fn build_spec(s: &mut Session, v: &Value, raw: &str, from_param: bool) -> Result
     for c in &curves_raw {
         let (h, e) = strip_prefix(c);
         if e.is_empty() {
-            return Err(err(format!("\"{c}\" is not a function expression; use e.g. \"x^2, -5, 5\"")));
+            return Err(err(format!("\"{c}\" er ikke et funktionsudtryk — brug f.eks. \"x^2, -5, 5\"")));
         }
         if hint.is_none() {
             hint = h;
@@ -237,7 +237,7 @@ fn parse_points(s: &str) -> Result<Vec<Option<(f64, f64)>>, String> {
     };
     skip_ws(&mut i);
     if b.get(i) != Some(&b'[') {
-        return Err("Could not read points from Maxima".to_string());
+        return Err("Kunne ikke læse punkterne fra Maxima".to_string());
     }
     i += 1;
     let mut pts = Vec::new();
@@ -247,7 +247,7 @@ fn parse_points(s: &str) -> Result<Vec<Option<(f64, f64)>>, String> {
             break;
         }
         if b.get(i) != Some(&b'[') {
-            return Err("Could not read points from Maxima".to_string());
+            return Err("Kunne ikke læse punkterne fra Maxima".to_string());
         }
         i += 1;
         skip_ws(&mut i);
@@ -264,7 +264,7 @@ fn parse_points(s: &str) -> Result<Vec<Option<(f64, f64)>>, String> {
             if nested {
                 skip_ws(&mut i);
                 if b.get(i) != Some(&b']') {
-                    return Err("Could not read points from Maxima".to_string());
+                    return Err("Kunne ikke læse punkterne fra Maxima".to_string());
                 }
                 i += 1;
             }
@@ -273,19 +273,19 @@ fn parse_points(s: &str) -> Result<Vec<Option<(f64, f64)>>, String> {
             let x = parse_num(&s, &mut i)?;
             skip_ws(&mut i);
             if b.get(i) != Some(&b',') {
-                return Err("Could not read points from Maxima".to_string());
+                return Err("Kunne ikke læse punkterne fra Maxima".to_string());
             }
             i += 1;
             let y = parse_num(&s, &mut i)?;
             skip_ws(&mut i);
             if b.get(i) != Some(&b']') {
-                return Err("Could not read points from Maxima".to_string());
+                return Err("Kunne ikke læse punkterne fra Maxima".to_string());
             }
             i += 1;
             if nested {
                 skip_ws(&mut i);
                 if b.get(i) != Some(&b']') {
-                    return Err("Could not read points from Maxima".to_string());
+                    return Err("Kunne ikke læse punkterne fra Maxima".to_string());
                 }
                 i += 1;
             }
@@ -300,7 +300,7 @@ fn parse_points(s: &str) -> Result<Vec<Option<(f64, f64)>>, String> {
         }
     }
     if pts.is_empty() {
-        return Err("No points (is the range valid?)".to_string());
+        return Err("Ingen punkter (er intervallet gyldigt?)".to_string());
     }
     Ok(pts)
 }
@@ -584,7 +584,7 @@ fn graf(s: &mut Session, v: &Value) -> CmdResult {
         match sample(&pre, &d, &spec.var, &c.expr, spec.from, spec.to) {
             Ok(pts) if pts.iter().any(|p| p.is_some()) => series.push(pts),
             Ok(_) => return Err(err(format!("\"{}\" gav ingen punkter i intervallet", c.display))),
-            Err(e) => return Err(err(format!("Could not sample \"{}\": {e}", c.display))),
+            Err(e) => return Err(err(format!("Kunne ikke beregne punkter for \"{}\": {e}", c.display))),
         }
     }
     let img = render(spec.from, spec.to, &series);
@@ -599,7 +599,7 @@ fn graf(s: &mut Session, v: &Value) -> CmdResult {
         s.sel = Selection { anchor: a, focus: b };
     }
     s.run("insert.picture", &json!({"data": data, "width": width, "alt": alt}))?;
-    s.status = "Graph inserted".to_string();
+    s.status = "Grafen er indsat".to_string();
     sel_result(s)
 }
 
