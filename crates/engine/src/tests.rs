@@ -5090,3 +5090,16 @@ fn a_price_is_not_a_formula() {
     let e = s.run("edit.pasteAsEquation", &json!({"text": "It costs $5 and $10"})).expect_err("not a formula");
     assert!(e.to_string().contains("not a formula"), "{e}");
 }
+
+/// #142: a shape inserted from the ribbon can be grabbed on the page — the layout reports it
+/// where it was drawn, so the canvas finds it under the pointer.
+#[test]
+fn an_inserted_shape_is_where_it_was_drawn() {
+    let mut s = Session::new(wordcraft_doc::Document::new());
+    run(&mut s, "insert.shape", json!({"kind": "rectangle"}));
+    let layout = s.layout();
+    let hit = layout.object(&wordcraft_doc::Pos::body(0, 0), 0).expect("the shape is laid out");
+    let (x, y) = (hit.rect.x + hit.rect.w / 2.0, hit.rect.y + hit.rect.h / 2.0);
+    let found = layout.object_at_in(hit.page, x, y, 2.0, wordcraft_doc::StoryRef::Body);
+    assert!(found.is_some(), "the shape can be grabbed where it was drawn");
+}

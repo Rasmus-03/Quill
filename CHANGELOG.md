@@ -5,6 +5,9 @@
 The first steps of 1.2 (the plan lives in [`docs/release-plan-1.2.md`](docs/release-plan-1.2.md)):
 the build is trustworthy again, and the app carries its own name everywhere a user sees it.
 
+- **The shape tool is pinned by a test**: a shape inserted from the ribbon can be grabbed,
+  dragged and resized on the page — the old field report (#142) is closed, and a test keeps it
+  that way
 - **Danish school templates of our own**: File › New offers an *Opgaveark* (the subject, the
   name, the class and the date, the task, room for the answer and for notes), a
   *Rapportforside* (the title, the author, the subject, the class, the date and the supervisor)
