@@ -400,19 +400,15 @@ pub fn parse_ns(bytes: &[u8], extra: &[(&'static str, &str)]) -> Result<El, Docx
                 // escaped length so that every part the reader accepts can be
                 // written out again (a CDATA section of `<` used to read fine
                 // and then fail to reopen after saving).
-                if stack.last().is_some() {
+                if let Some(top) = stack.last_mut() {
                     let s = t.decode().map_err(|e| DocxError::Xml(e.to_string()))?;
-                    if let Some(top) = stack.last_mut() {
-                        add_text(top, &s, &mut text_bytes)?;
-                    }
+                    add_text(top, &s, &mut text_bytes)?;
                 }
             }
             Event::CData(t) => {
-                if stack.last().is_some() {
+                if let Some(top) = stack.last_mut() {
                     let s = String::from_utf8_lossy(&t).into_owned();
-                    if let Some(top) = stack.last_mut() {
-                        add_text(top, &s, &mut text_bytes)?;
-                    }
+                    add_text(top, &s, &mut text_bytes)?;
                 }
             }
             Event::GeneralRef(g) => {

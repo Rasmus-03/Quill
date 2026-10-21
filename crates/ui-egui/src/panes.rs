@@ -136,7 +136,7 @@ fn nav(app: &mut WordApp, ui: &mut Ui) {
     }
     ui.add_space(4.0);
     ui.horizontal(|ui| {
-        for (k, l) in [("headings", "Headings"), ("pages", "Pages"), ("results", "Results"), ("vault", "Vault")] {
+        for (k, l) in [("headings", "Headings"), ("pages", "Pages"), ("results", "Results"), ("vault", "Vault"), ("cloud", "Nextcloud")] {
             if ui.selectable_label(app.ui.nav_tab == k, tl!(l)).clicked() {
                 app.ui.nav_tab = k.into();
             }
@@ -154,6 +154,7 @@ fn nav(app: &mut WordApp, ui: &mut Ui) {
             }
         }
         "vault" => vault_nav(app, ui),
+        "cloud" => cloud_nav(app, ui),
         "results" => {
             let results = app.session.find.results.clone();
             ui.label(egui::RichText::new(format!("{} results", results.len())).small().weak());
@@ -215,7 +216,61 @@ fn nav(app: &mut WordApp, ui: &mut Ui) {
 
 /// Obsidian vault: open or refresh a folder, search note titles and text, open a note, and save
 /// this document into the vault. Vaults need the desktop host's folder picker.
+///
+/// The pane has three views: the notes themselves, the notes that link to the open one, and the
+/// tags the notes carry.
 fn vault_nav(app: &mut WordApp, ui: &mut Ui) {
+    ui.horizontal(|ui| {
+        for (k, l) in [("notes", "Notes"), ("backlinks", "Backlinks"), ("tags", "Tags")] {
+            if ui.selectable_label(app.ui.vault_tab == k, tl!(l)).clicked() {
+                app.ui.vault_tab = k.into();
+                refresh_vault_view(app, k);
+            }
+        }
+    });
+    ui.separator();
+    match app.ui.vault_tab.as_str() {
+        "backlinks" => vault_backlinks(app, ui),
+        "tags" => vault_tags(app, ui),
+        _ => vault_notes(app, ui),
+    }
+}
+
+/// Read the vault's links and tags again, for the view that was opened.
+fn refresh_vault_view(app: &mut WordApp, view: &str) {
+    match view {
+        "backlinks" => {
+            if let Ok(value) = app.run("vault.backlinks", json!({})) {
+                app.ui.vault_backlinks = value
+                    .get("backlinks")
+                    .and_then(|b| b.as_array())
+                    .map(|a| a.iter().filter_map(|v| v.as_str().map(str::to_string)).collect())
+                    .unwrap_or_default();
+            }
+        }
+        "tags" => {
+            if let Ok(value) = app.run("vault.tags", json!({})) {
+                app.ui.vault_tags = value
+                    .get("tags")
+                    .and_then(|t| t.as_array())
+                    .map(|a| {
+                        a.iter()
+                            .filter_map(|v| {
+                                let tag = v.get("tag")?.as_str()?.to_string();
+                                let notes = v.get("notes")?.as_array()?.iter().filter_map(|n| n.as_str().map(str::to_string)).collect();
+                                Some((tag, notes))
+                            })
+                            .collect()
+                    })
+                    .unwrap_or_default();
+            }
+        }
+        _ => {}
+    }
+}
+
+/// The vault's notes: search them, open one, and save this document into the vault.
+fn vault_notes(app: &mut WordApp, ui: &mut Ui) {
     let root = app.session.vault.root.as_ref().map(|p| p.to_string_lossy().to_string());
     ui.horizontal(|ui| {
         if ui.button(tl!("Open Vault…")).clicked() {
@@ -223,6 +278,7 @@ fn vault_nav(app: &mut WordApp, ui: &mut Ui) {
         }
         if root.is_some() && ui.button(tl!("Refresh")).clicked() {
             let _ = app.run("vault.scan", json!({}));
+            refresh_vault_view(app, &app.ui.vault_tab.clone());
         }
     });
     let Some(root) = root else {
@@ -286,6 +342,267 @@ fn vault_nav(app: &mut WordApp, ui: &mut Ui) {
             }
             Err(e) => app.status(e),
         }
+    }
+}
+
+/// The notes that link to the open note.
+fn vault_backlinks(app: &mut WordApp, ui: &mut Ui) {
+    let note = app.session.vault.note.as_ref().map(|p| p.to_string_lossy().replace('\\', "/")).unwrap_or_default();
+    if note.is_empty() {
+        ui.label(egui::RichText::new(tl!("Open a note to see the notes that link to it.")).weak());
+        return;
+    }
+    ui.label(egui::RichText::new(note).small().weak());
+    ui.separator();
+    let backlinks = app.ui.vault_backlinks.clone();
+    let count = backlinks.len().to_string();
+    ui.label(egui::RichText::new(crate::i18n::fmt(tl!("{n} notes"), &[("n", &count)])).small().weak());
+    egui::ScrollArea::vertical().max_height(ui.available_height() * 0.7).show(ui, |ui| {
+        for path in backlinks.into_iter().take(500) {
+            let title = path.rsplit('/').next().unwrap_or(&path).trim_end_matches(".md").to_string();
+            if ui.add(egui::Button::selectable(false, egui::RichText::new(title).font(semibold(12.5))).frame(false)).on_hover_text(&path).clicked() {
+                if let Err(e) = app.run("vault.open", json!({"path": path})) {
+                    app.status(e);
+                }
+                app.canvas.want_focus = true;
+            }
+        }
+    });
+}
+
+/// The tags the notes carry, and the notes that carry them.
+fn vault_tags(app: &mut WordApp, ui: &mut Ui) {
+    let tags = app.ui.vault_tags.clone();
+    if tags.is_empty() {
+        ui.label(egui::RichText::new(tl!("Open an Obsidian vault folder to see the tags its notes carry.")).weak());
+        return;
+    }
+    let chosen = app.ui.vault_tag.clone();
+    egui::ScrollArea::vertical().max_height(ui.available_height() * 0.7).show(ui, |ui| {
+        for (tag, notes) in tags.iter().take(500) {
+            let count = notes.len().to_string();
+            let label = format!("{tag} ({count})");
+            let selected = chosen == *tag;
+            if ui.add(egui::Button::selectable(selected, egui::RichText::new(label).font(semibold(12.5))).frame(false)).clicked() {
+                app.ui.vault_tag = if selected { String::new() } else { tag.clone() };
+            }
+            if chosen == *tag {
+                for path in notes.iter().take(200) {
+                    let title = path.rsplit('/').next().unwrap_or(path).trim_end_matches(".md").to_string();
+                    if ui
+                        .add(egui::Button::selectable(false, egui::RichText::new(title).font(regular(12.0))).frame(false))
+                        .on_hover_text(path)
+                        .clicked()
+                    {
+                        if let Err(e) = app.run("vault.open", json!({"path": path})) {
+                            app.status(e);
+                        }
+                        app.canvas.want_focus = true;
+                    }
+                }
+            }
+        }
+    });
+}
+
+/// Nextcloud: connect to a server, walk its folders, open a file from it and save this document
+/// back to it. The server answers on a worker thread, so the pane never waits for it.
+fn cloud_nav(app: &mut WordApp, ui: &mut Ui) {
+    if app.session.cloud.connected {
+        cloud_files(app, ui);
+    } else {
+        cloud_sign_in(app, ui);
+    }
+}
+
+/// The sign-in form: the server's address, the account and an app password.
+fn cloud_sign_in(app: &mut WordApp, ui: &mut Ui) {
+    ui.label(egui::RichText::new(tl!("Connect to Nextcloud")).strong());
+    ui.add_space(4.0);
+    let mut server = app.ui.cloud_server.clone();
+    if ui.add(egui::TextEdit::singleline(&mut server).hint_text("cloud.example.com").desired_width(f32::INFINITY)).changed() {
+        app.ui.cloud_server = server.clone();
+    }
+    let mut user = app.ui.cloud_user.clone();
+    if ui.add(egui::TextEdit::singleline(&mut user).hint_text(tl!("User name")).desired_width(f32::INFINITY)).changed() {
+        app.ui.cloud_user = user.clone();
+    }
+    let mut password = app.ui.cloud_password.clone();
+    if ui.add(egui::TextEdit::singleline(&mut password).password(true).hint_text(tl!("Password")).desired_width(f32::INFINITY)).changed() {
+        app.ui.cloud_password = password.clone();
+    }
+    let mut insecure = app.ui.cloud_insecure;
+    if ui.checkbox(&mut insecure, tl!("Don't check the server's certificate")).changed() {
+        app.ui.cloud_insecure = insecure;
+    }
+    ui.label(egui::RichText::new(tl!("An app password is safer than your account password.")).small().weak());
+    ui.add_space(4.0);
+    if ui.button(tl!("Connect")).clicked() {
+        let params = json!({
+            "server": app.ui.cloud_server.trim(),
+            "user": app.ui.cloud_user.trim(),
+            "password": app.ui.cloud_password,
+            "insecure": app.ui.cloud_insecure,
+        });
+        match app.run("cloud.connect", params) {
+            Ok(_) => {
+                // The host keeps the account, so the next launch can reconnect on its own.
+                let account = crate::CloudAccount {
+                    server: app.ui.cloud_server.trim().to_string(),
+                    user: app.ui.cloud_user.trim().to_string(),
+                    password: app.ui.cloud_password.clone(),
+                    insecure: app.ui.cloud_insecure,
+                };
+                let kept = app.services.save_cloud.as_ref().map(|save| save(&account));
+                if let Some(Err(e)) = kept {
+                    app.status(e);
+                }
+                app.ui.cloud_password.clear();
+                app.ui.nav_tab = "cloud".into();
+            }
+            Err(e) => app.status(e),
+        }
+    }
+}
+
+/// A connected server: its folders and files, the search, and saving this document into it.
+fn cloud_files(app: &mut WordApp, ui: &mut Ui) {
+    let product = app.session.cloud.capabilities.as_ref().map(|c| c.product.clone()).unwrap_or_default();
+    let version = app.session.cloud.capabilities.as_ref().map(|c| c.version.clone()).unwrap_or_default();
+    let account = app.session.cloud.account.as_ref().map(|a| a.display_name.clone()).unwrap_or_default();
+    let folder = app.session.cloud.folder.clone();
+    let files = app.session.cloud.files.clone();
+    let hits = app.session.cloud.hits.clone();
+    let versions = app.session.cloud.versions.clone();
+    let link = app.session.cloud.link.clone();
+    let error = app.session.cloud.error.clone();
+    let open_path = app.session.cloud.document.as_ref().map(|d| d.path.clone());
+
+    let mut title = product.clone();
+    if !account.is_empty() {
+        title = if title.is_empty() { account.clone() } else { format!("{title} · {account}") };
+    }
+    ui.label(egui::RichText::new(title).strong());
+    if !version.is_empty() {
+        ui.label(egui::RichText::new(version).small().weak());
+    }
+    ui.horizontal(|ui| {
+        if ui.button(tl!("Refresh")).clicked() {
+            let _ = app.run("cloud.list", json!({"path": folder.clone()}));
+        }
+        if ui.button(tl!("Disconnect")).clicked() {
+            let _ = app.run("cloud.disconnect", json!({}));
+        }
+    });
+    ui.horizontal(|ui| {
+        if ui.button(tl!("Up")).clicked() {
+            let up = match folder.rsplit_once('/') {
+                Some((head, _)) => head.to_string(),
+                None => String::new(),
+            };
+            let _ = app.run("cloud.list", json!({"path": up}));
+        }
+        ui.label(egui::RichText::new(if folder.is_empty() { "/".to_string() } else { format!("/{folder}") }).small().weak());
+    });
+    let files_label = files.len().to_string();
+    ui.label(egui::RichText::new(crate::i18n::fmt(tl!("{n} files"), &[("n", &files_label)])).small().weak());
+    ui.separator();
+    egui::ScrollArea::vertical().max_height(ui.available_height() * 0.34).show(ui, |ui| {
+        for file in files.iter().take(500) {
+            let selected = open_path.as_deref() == Some(file.path.as_str());
+            let label = if file.is_dir { format!("{}/", file.name) } else { file.name.clone() };
+            if ui
+                .add(egui::Button::selectable(selected, egui::RichText::new(label).font(semibold(12.5))).frame(false))
+                .on_hover_text(&file.path)
+                .clicked()
+            {
+                if file.is_dir {
+                    let _ = app.run("cloud.list", json!({"path": file.path.clone()}));
+                } else {
+                    match app.run("cloud.open", json!({"path": file.path.clone()})) {
+                        Ok(_) => app.canvas.want_focus = true,
+                        Err(e) => app.status(e),
+                    }
+                }
+            }
+        }
+    });
+    ui.separator();
+
+    // Search the server's own files.
+    let mut query = app.ui.cloud_query.clone();
+    if ui.add(egui::TextEdit::singleline(&mut query).hint_text(tl!("Search")).desired_width(f32::INFINITY)).changed() {
+        app.ui.cloud_query = query;
+        // The search runs on the server: wait for a pause in typing instead of asking every keystroke.
+        let due = ui.input(|i| i.time) + 0.35;
+        ui.data_mut(|d| d.insert_temp(egui::Id::new("cloud_search_due"), due));
+        ui.ctx().request_repaint_after(std::time::Duration::from_millis(350));
+    }
+    let due = ui.data(|d| d.get_temp::<f64>(egui::Id::new("cloud_search_due")));
+    if due.is_some_and(|due| ui.input(|i| i.time) >= due) {
+        ui.data_mut(|d| d.remove_temp::<f64>(egui::Id::new("cloud_search_due")));
+        let q = app.ui.cloud_query.clone();
+        if !q.trim().is_empty() {
+            let _ = app.run("cloud.search", json!({"term": q}));
+        }
+    }
+    for hit in hits.iter().take(100) {
+        if ui.add(egui::Button::selectable(false, egui::RichText::new(&hit.name).font(regular(12.5))).frame(false)).on_hover_text(&hit.path).clicked()
+        {
+            match app.run("cloud.open", json!({"path": hit.path.clone()})) {
+                Ok(_) => app.canvas.want_focus = true,
+                Err(e) => app.status(e),
+            }
+        }
+    }
+    ui.separator();
+
+    // Save this document into the folder the list shows.
+    ui.label(egui::RichText::new(tl!("Save this document to the server as")).small().weak());
+    let mut name = app.ui.cloud_name.clone();
+    if ui.add(egui::TextEdit::singleline(&mut name).hint_text("document.docx").desired_width(f32::INFINITY)).changed() {
+        app.ui.cloud_name = name.clone();
+    }
+    ui.horizontal(|ui| {
+        if ui.button(tl!("Save to Nextcloud")).clicked() {
+            let file = if name.trim().is_empty() { format!("{}.docx", app.title_stem()) } else { name.trim().to_string() };
+            let path = if folder.is_empty() { file } else { format!("{folder}/{file}") };
+            match app.run("cloud.save", json!({"path": path.clone()})) {
+                Ok(_) => {
+                    app.ui.cloud_name.clear();
+                    app.status(crate::i18n::fmt(tl!("Saved {path}"), &[("path", &path)]));
+                }
+                Err(e) => app.status(e),
+            }
+        }
+        if ui.button(tl!("New folder")).clicked() {
+            let folder_name = format!("{}.md", app.title_stem());
+            let path = if folder.is_empty() { folder_name } else { format!("{folder}/{folder_name}") };
+            let _ = app.run("cloud.mkdir", json!({"path": path}));
+        }
+    });
+    ui.separator();
+
+    // The open document, its share link and the versions the server keeps.
+    if let Some(path) = &open_path {
+        ui.label(egui::RichText::new(path).small().weak());
+        ui.horizontal(|ui| {
+            if ui.button(tl!("Share")).clicked() {
+                let _ = app.run("cloud.share", json!({}));
+            }
+            if ui.button(tl!("Versions")).clicked() {
+                let _ = app.run("cloud.versions", json!({}));
+            }
+        });
+    }
+    for version in versions.iter().take(50) {
+        ui.label(egui::RichText::new(format!("{} · {}", version.name, version.modified)).small().weak());
+    }
+    if let Some(link) = link {
+        ui.label(egui::RichText::new(link).small());
+    }
+    if let Some(error) = error {
+        ui.label(egui::RichText::new(error).color(ui.visuals().warn_fg_color).small());
     }
 }
 

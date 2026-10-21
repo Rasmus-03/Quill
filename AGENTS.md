@@ -4,7 +4,8 @@ WordCraft is a clean-room, open-source, Rust-native word processor targeting Mic
 
 ## Start every session here
 1. Read `plan/STATUS.md` (current milestone, next task), then the task in `plan/execution-plan.md` and the relevant `plan/architecture.md` section. `plan/` is gitignored (local only); if it's missing, start from `ROADMAP.md`, `docs/gaps.md` and `docs/roadmap.md` (Current focus).
-2. Follow the autonomous operation protocol (`plan/execution-plan.md` §5). Don't stop to ask unless a decision is genuinely the owner's (licensing, publishing, pushing to new remotes, secrets).
+2. Quill's own release plan — shared, committed, and the place to take work from — is [`docs/release-plan-1.2.md`](docs/release-plan-1.2.md). It lists the workstreams (A build trust, B real documents, C Danish first, D presentation and identity, E parity wins), the files each item owns, what "done" means and the cost. Pick a row from §5 (who owns what) before you start, so two agents do not edit the same crate.
+3. Follow the autonomous operation protocol (`plan/execution-plan.md` §5). Don't stop to ask unless a decision is genuinely the owner's (licensing, publishing, pushing to new remotes, secrets).
 
 ## Never crash
 People trust WordCraft with their writing; a crash loses their work. **This outranks feature work**: never ship a feature through a panic path, and fix a crash before building on top of it. Standard: [`craftrules/standards/never-crash.md`](https://github.com/storytold/craftrules/blob/main/standards/never-crash.md).
@@ -45,6 +46,12 @@ People trust WordCraft with their writing; a crash loses their work. **This outr
 - **Layering** is enforced by `cargo xtask layers`. Nothing below L6 depends on egui/eframe/winit/rfd. The UI is thin and reads `Session` state; colours come from `theme::Tokens`.
 - **Rust only** (no handwritten JS/TS). **Never break wasm** (`cargo xtask wasm`).
 
+## Rituals (always, every time)
+- **After a test run, the old artifacts go.** `cargo xtask clean` removes the build directories older than a week, the incremental caches, the scratch folders a crashed test left in the temporary directory and the half-written files a killed save left behind. `cargo xtask ci` ends with it. `cargo xtask clean --all` also removes this checkout's build directory (use it when your own `CARGO_TARGET_DIR` is in the way).
+- **The app on this machine follows the checkout.** `cargo xtask install` builds the release app and puts it in `~/Applications/Quill.app` (the command line tool in `~/bin/quill`). `cargo xtask install --hook` writes the git hooks that do it after every commit and every merge, so a push to GitHub leaves the local copy current; `--unhook` takes them away. The hook builds in the background and logs to `.git/quill-install.log`.
+- **Tests clean up after themselves.** A test that writes files puts them in a scratch folder that a `Drop` removes when the test ends, so a run leaves nothing behind. Keep it that way.
+- Nothing is left in the working tree either: `git status` shows only the files the work changed.
+
 ## Quality gates
 Before every commit: `cargo xtask ci` (fmt, clippy -D warnings, tests, assets, layers, wasm). Commit after every arc of work that builds, with a task id in the message (`M2.1: line spacing dialog`).
 
@@ -59,7 +66,7 @@ Typing, Enter, Backspace, Tab, lists, AutoCorrect and AutoFormat follow Word's o
 - CLI: `wordcraft-cli convert in.docx out.pdf`, `wordcraft-cli run --template sample --cmd 'select.text={"text":"Studio"}' --cmd format.bold --save out.docx`, `wordcraft-cli commands`, `wordcraft-cli parity`.
 - MCP: `wordcraft-cli mcp` (headless) or `wordcraft-cli mcp --connect 127.0.0.1:7981` (drives the running app). See `docs/mcp.md`.
 - Shell gotcha: `mv`/`cp` may be aliased interactive — use `/bin/mv -f` / `/bin/cp -f`.
-- Parallel agents: separate `CARGO_TARGET_DIR` per agent; edit only the crates you own; delete your target dir when done (disk).
+- Parallel agents: separate `CARGO_TARGET_DIR` per agent; edit only the crates you own; delete your target dir when done (disk): `cargo xtask clean --all` removes the build directories that are a week old.
 
 ## Roadmap
 Progress docs follow [`craftrules/standards/progress-docs.md`](https://github.com/storytold/craftrules/blob/main/standards/progress-docs.md): `ROADMAP.md` (stage, headline numbers, progress log), `docs/target-app-parity.md` (the assessment), `docs/gaps.md` (ranked work list), `docs/roadmap.md` (milestones, Current focus), `docs/architecture.md`, and the parity checklists `docs/file-format-parity.md`, `docs/layout-parity.md`, `docs/typing-parity.md`, `docs/ui-parity.md`, `docs/hardware-parity.md`, `docs/localization-parity.md`. When work lands, update the gap, the parity doc and the progress log, and bump each touched doc's status line and revision history.

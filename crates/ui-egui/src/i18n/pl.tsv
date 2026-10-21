@@ -19,7 +19,7 @@
 	1.5 Line Spacing	Interlinia 1,5
 	A free, open-source word processor written from scratch in Rust.\nPart of the Crafting Apps from the ArtCraft team.	Darmowy edytor tekstu o otwartym kodzie, napisany od podstaw w języku Rust.\nCzęść rodziny Crafting Apps zespołu ArtCraft.
 	About	Informacje
-	About WordCraft	O programie WordCraft
+	About Quill	O programie Quill
 	Accept	Zaakceptuj
 	Accept All Changes	Zaakceptuj wszystkie zmiany
 	Accept This Change	Zaakceptuj tę zmianę
@@ -808,7 +808,7 @@
 	Word Right	Słowo w prawo
 	Word document (*.docx)	Dokument Word (*.docx)
 	WordArt	WordArt
-	WordCraft	WordCraft
+	Quill	Quill
 	Words	Słowa
 	Words only	Tylko wyrazy
 	Wrap Text	Zawijaj tekst
@@ -876,7 +876,7 @@
 	Stopped	Zatrzymano
 	Speed	Szybkość
 	Normal speed	Normalna szybkość
-	AutoSave documents you have saved in WordCraft	Zapisuj automatycznie dokumenty zapisane już w programie WordCraft
+	AutoSave documents you have saved in Quill	Zapisuj automatycznie dokumenty zapisane już w programie Quill
 	AutoSave failed: {error}. Save the document to turn AutoSave back on.	Autozapis nie powiódł się: {error}. Zapisz dokument, aby ponownie włączyć autozapis.
 	Couldn't download {name}: {error}	Nie udało się pobrać pliku {name}: {error}
 	Do you want to save changes to {name}?	Czy zapisać zmiany w dokumencie {name}?
@@ -1098,7 +1098,7 @@
 	Glow Colors	Kolory poświaty
 	Hide from style lists	Ukryj na listach stylów
 	Indents and Spacing	Wcięcia i odstępy
-	Keep the password somewhere safe: without it nobody, WordCraft included, can open the document. Leave both boxes empty to remove the password.	Przechowuj hasło w bezpiecznym miejscu: bez niego nikt, również WordCraft, nie otworzy dokumentu. Pozostaw oba pola puste, aby usunąć hasło.
+	Keep the password somewhere safe: without it nobody, Quill included, can open the document. Leave both boxes empty to remove the password.	Przechowuj hasło w bezpiecznym miejscu: bez niego nikt, również Quill, nie otworzy dokumentu. Pozostaw oba pola puste, aby usunąć hasło.
 	Line breaking	Łamanie wierszy
 	Linked style (paragraph and character)	Styl połączony (akapitowy i znakowy)
 	Manage Styles	Zarządzaj stylami
@@ -1721,7 +1721,7 @@
 	Beginning of Word	Początek wyrazu
 	Blue:	Niebieski:
 	Border lines	Linie obramowania
-	Browse in WordCraft…	Przeglądaj w programie WordCraft…
+	Browse in Quill…	Przeglądaj w programie Quill…
 	Building Block Gallery Content Control	Formant zawartości galerii bloków konstrukcyjnych
 	Can't be deleted	Nie można usunąć
 	Capitalize first letter of sentences	Zaczynaj zdania wielką literą
@@ -1895,7 +1895,7 @@
 	Only comments can be added, except in regions marked editable.	Można dodawać tylko komentarze, z wyjątkiem obszarów oznaczonych jako edytowalne.
 	Only form fields can be filled in.	Można wypełniać tylko pola formularza.
 	Only the allowed styles can be applied.	Można stosować tylko dozwolone style.
-	Open a file with WordCraft's own browser when the system file dialog doesn't appear.	Otwórz plik we własnej przeglądarce plików programu WordCraft, gdy systemowe okno wyboru pliku się nie pojawia.
+	Open a file with Quill's own browser when the system file dialog doesn't appear.	Otwórz plik we własnej przeglądarce plików programu Quill, gdy systemowe okno wyboru pliku się nie pojawia.
 	Ordinals (1st) as superscript	Liczebniki porządkowe (1st) jako indeks górny
 	Organizer	Organizator
 	Organizer…	Organizator…
@@ -2024,7 +2024,7 @@
 	The document is read only, except for regions marked editable.	Dokument jest tylko do odczytu, z wyjątkiem obszarów oznaczonych jako edytowalne.
 	The password is optional; without it anyone can stop the protection.	Hasło jest opcjonalne; bez niego każdy może wyłączyć ochronę.
 	The printer, two-sided printing and pages per sheet are chosen in that dialog.	Drukarkę, druk dwustronny i liczbę stron na arkuszu wybiera się w tym oknie.
-	The system file dialog isn't available, so WordCraft shows its own. To get the system dialog, install a file chooser portal (such as xdg-desktop-portal-gtk) or zenity.	Systemowe okno wyboru pliku jest niedostępne, więc WordCraft pokazuje własne. Aby korzystać z okna systemowego, zainstaluj portal wyboru plików (np. xdg-desktop-portal-gtk) lub zenity.
+	The system file dialog isn't available, so Quill shows its own. To get the system dialog, install a file chooser portal (such as xdg-desktop-portal-gtk) or zenity.	Systemowe okno wyboru pliku jest niedostępne, więc Quill pokazuje własne. Aby korzystać z okna systemowego, zainstaluj portal wyboru plików (np. xdg-desktop-portal-gtk) lub zenity.
 	These marks show even when Show/Hide ¶ is off.	Te znaki są widoczne nawet przy wyłączonym poleceniu Pokaż wszystko ¶.
 	This document	Ten dokument
 	This folder can't be read: {error}	Nie można odczytać tego folderu: {error}
@@ -2067,15 +2067,15 @@
 	Undo 1 Action	Cofnij 1 akcję
 	Undo {n} Actions	Cofnij akcje: {n}
 	Start-up	Uruchamianie
-	Show the Start screen when WordCraft starts	Pokazuj ekran startowy po uruchomieniu programu WordCraft
-	On: WordCraft opens on File › Home, with a blank document, the templates and your recent documents. Off: it opens a blank document.	Włączone: WordCraft otwiera się na karcie Plik › Start z pustym dokumentem, szablonami i ostatnimi dokumentami. Wyłączone: otwiera pusty dokument.
-	Couldn't make WordCraft the default: {error}	Nie udało się ustawić WordCraft jako domyślnego: {error}
-	In Default apps, choose WordCraft for the document types you want it to open.	W Aplikacjach domyślnych wybierz WordCraft dla typów dokumentów, które ma otwierać.
-	Make WordCraft the default for Word documents…	Ustaw WordCraft jako domyślny dla dokumentów Word…
-	Opens .docx, .doc, .rtf and .odt files and Word templates with WordCraft from now on.	Od teraz pliki .docx, .doc, .rtf i .odt oraz szablony Word otwierają się w WordCraft.
-	Opens Settings › Default apps, where you choose WordCraft for .docx and the other document types.	Otwiera Ustawienia › Aplikacje domyślne, gdzie wybierasz WordCraft dla .docx i innych typów dokumentów.
-	To open Word documents with WordCraft by default: select one in Finder, choose File › Get Info, pick WordCraft under Open with, then click Change All.	Aby otwierać dokumenty Word domyślnie w WordCraft: zaznacz jeden w Finderze, wybierz Plik › Pokaż info, wybierz WordCraft w „Otwórz za pomocą”, a następnie kliknij „Zmień wszystkie”.
-	WordCraft is now the default app for Word documents.	WordCraft jest teraz domyślną aplikacją dla dokumentów Word.
+	Show the Start screen when Quill starts	Pokazuj ekran startowy po uruchomieniu programu Quill
+	On: Quill opens on File › Home, with a blank document, the templates and your recent documents. Off: it opens a blank document.	Włączone: Quill otwiera się na karcie Plik › Start z pustym dokumentem, szablonami i ostatnimi dokumentami. Wyłączone: otwiera pusty dokument.
+	Couldn't make Quill the default: {error}	Nie udało się ustawić Quill jako domyślnego: {error}
+	In Default apps, choose Quill for the document types you want it to open.	W Aplikacjach domyślnych wybierz Quill dla typów dokumentów, które ma otwierać.
+	Make Quill the default for Word documents…	Ustaw Quill jako domyślny dla dokumentów Word…
+	Opens .docx, .doc, .rtf and .odt files and Word templates with Quill from now on.	Od teraz pliki .docx, .doc, .rtf i .odt oraz szablony Word otwierają się w Quill.
+	Opens Settings › Default apps, where you choose Quill for .docx and the other document types.	Otwiera Ustawienia › Aplikacje domyślne, gdzie wybierasz Quill dla .docx i innych typów dokumentów.
+	To open Word documents with Quill by default: select one in Finder, choose File › Get Info, pick Quill under Open with, then click Change All.	Aby otwierać dokumenty Word domyślnie w Quill: zaznacz jeden w Finderze, wybierz Plik › Pokaż info, wybierz Quill w „Otwórz za pomocą”, a następnie kliknij „Zmień wszystkie”.
+	Quill is now the default app for Word documents.	Quill jest teraz domyślną aplikacją dla dokumentów Word.
 	Numerals:	Cyfry:
 	Numerals	Cyfry
 	Hindi	Hindi
@@ -2484,3 +2484,42 @@ preview	Title	Tytuł
 	Open Vault	Otwórz skarbiec
 	Refresh Vault	Odśwież skarbiec
 	Search Vault	Przeszukaj skarbiec
+
+	Connect to Nextcloud	Połącz z Nextcloud
+	Disconnect from Nextcloud	Odłącz od Nextcloud
+	Nextcloud Status	Stan Nextcloud
+	Nextcloud Files	Pliki Nextcloud
+	Open from Nextcloud	Otwórz z Nextcloud
+	Save to Nextcloud	Zapisz w Nextcloud
+	New Nextcloud Folder	Nowy folder Nextcloud
+	Delete on Nextcloud	Usuń w Nextcloud
+	Share on Nextcloud	Udostępnij w Nextcloud
+	Search Nextcloud Files	Szukaj w plikach Nextcloud
+	Nextcloud File Versions	Wersje plików Nextcloud
+	Wait for Nextcloud	Oczekiwanie na Nextcloud
+	Cloud	Chmura
+	Nextcloud	Nextcloud
+	Server	Serwer
+	User name	Nazwa użytkownika
+	Connect	Połącz
+	Disconnect	Odłącz
+	New folder	Nowy folder
+	Folder	Folder
+	Files	Pliki
+	Status	Stan
+	Versions	Wersje
+	Save this document to the server as	Zapisz ten dokument na serwerze jako
+	An app password is safer than your account password.	Hasło aplikacji jest bezpieczniejsze niż hasło konta.
+	Don't check the server's certificate	Nie sprawdzaj certyfikatu serwera
+	Notes	Notatki
+	Backlinks	Odnośniki wsteczne
+	Tags	Tagi
+	Open a note to see the notes that link to it.	Otwórz notatkę, aby zobaczyć notatki, które do niej linkują.
+	Open an Obsidian vault folder to see the tags its notes carry.	Otwórz folder magazynu Obsidian, aby zobaczyć tagi jego notatek.
+	Index Vault Notes	Indeksuj notatki magazynu
+	Vault Backlinks	Odnośniki wsteczne w magazynie
+	Vault Tags	Tagi w magazynie
+	Insert Note Link	Wstaw odnośnik do notatki
+
+	Paste as Equation	Wklej jako równanie
+	Open Obsidian Vault…	Otwórz magazyn Obsidian…

@@ -19,6 +19,7 @@ wordcraft-docx = { workspace = true }
 wordcraft-docbin = { workspace = true }
 wordcraft-pdf = { workspace = true }
 wordcraft-formats = { workspace = true }
+wordcraft-cloud = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
 thiserror = { workspace = true }
@@ -34,3 +35,5 @@ js-sys = "0.3"
 
 [dev-dependencies]
 zip = { workspace = true }
+# The mock Nextcloud server the cloud tests run against.
+wordcraft-cloud = { workspace = true, features = ["testkit"] }

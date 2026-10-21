@@ -38,7 +38,36 @@ pub fn specs() -> Vec<CommandSpec> {
         CommandSpec::new("edit.pasteSpecial", "Paste Special", "Home › Clipboard › Paste", paste_special)
             .key("Mod+Alt+V")
             .params(r#"{"as"?: "formatted"|"rtf"|"html"|"picture"|"text", "text"?: string, "html"?: string, "rtf"?: string, "picture"?: base64}"#),
+        CommandSpec::new("edit.pasteAsEquation", "Paste as Equation", "Home › Clipboard › Paste", paste_as_equation)
+            .params(r#"{"text"?: string (the text to read; the clipboard's when omitted), "display"?: bool}"#),
     ]
+}
+
+/// Paste a formula as an equation: the text is read as LaTeX and becomes a real equation.
+///
+/// The text has to be a formula the way a Markdown note writes one: `$x^2$` or `$$…$$`.
+fn paste_as_equation(s: &mut Session, v: &Value) -> CmdResult {
+    let text = match p::str(v, "text") {
+        Some(t) => t.to_string(),
+        None => s.clipboard.as_ref().map(|f| f.plain_text()).ok_or_else(|| CmdError::Failed("the clipboard is empty".into()))?,
+    };
+    let Some(math) = super::equation::latex_math(&text) else {
+        return Err(CmdError::Failed("the text is not a formula (it should be $…$ or $$…$$)".into()));
+    };
+    let display = p::bool(v, "display").unwrap_or(math.display);
+    super::equation::insert_latex(s, &math.latex, display, false)
+}
+
+/// The formula in a pasted text, for the front end: the Paste Options button offers to make it
+/// an equation.
+pub fn note_latex(v: &Value, result: &mut Value) {
+    let Some(text) = p::str(v, "text") else { return };
+    let Some(math) = super::equation::latex_math(text) else { return };
+    if !super::equation::looks_like_latex_math(text) {
+        return;
+    }
+    // The text as it was pasted, so the front end can hand it straight back.
+    result["latex"] = json!({"latex": math.latex, "display": math.display, "text": text.trim()});
 }
 
 /// Clipboard text from the params (system clipboard), else WordCraft's own copy.

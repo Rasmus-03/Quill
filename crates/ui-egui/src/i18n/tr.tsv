@@ -17,7 +17,7 @@
 	A free, open-source word processor written from scratch in Rust.\nPart of the Crafting Apps from the ArtCraft team.	Rust ile sıfırdan yazılmış ücretsiz, açık kaynak bir kelime işlemci.\nArtCraft ekibinin Crafting Apps ailesinin bir parçası.
 	AaBbCcDd	AaBbCcÇç
 	About	Hakkında
-	About WordCraft	WordCraft Hakkında
+	About Quill	Quill Hakkında
 	Accept	Kabul Et
 	Accept All Changes	Tüm Değişiklikleri Kabul Et
 	Accept This Change	Bu Değişikliği Kabul Et
@@ -829,7 +829,7 @@ preview	Title	Örnek
 	Word Left	Önceki Sözcük
 	Word Right	Sonraki Sözcük
 	WordArt	WordArt
-	WordCraft	WordCraft
+	Quill	Quill
 	Words	Sözcükler
 	Words only	Yalnızca sözcükler
 	Wrap Text	Metni Kaydır
@@ -847,7 +847,7 @@ preview	Title	Örnek
 	Only web (http, https) and email (mailto) links can be followed	Yalnızca web (http, https) ve e-posta (mailto) bağlantıları açılabilir
 
 	Apply Styles	Stilleri Uygula
-	AutoSave documents you have saved in WordCraft	WordCraft'ta kaydettiğiniz belgeleri otomatik kaydet
+	AutoSave documents you have saved in Quill	Quill'ta kaydettiğiniz belgeleri otomatik kaydet
 	AutoSave failed: {error}. Save the document to turn AutoSave back on.	Otomatik Kaydet başarısız oldu: {error}. Otomatik Kaydet'i yeniden açmak için belgeyi kaydedin.
 	Bottom Margin	Alt Kenar Boşluğu
 	Edit Comment	Yorumu Düzenle
@@ -1536,7 +1536,7 @@ preview	Title	Örnek
 	The document will be saved with a password. Save it to protect it.	Belge parolayla kaydedilecek. Korumak için belgeyi kaydedin.
 	The password is removed. Save the document to keep the change.	Parola kaldırıldı. Değişikliği korumak için belgeyi kaydedin.
 	The passwords don't match.	Parolalar eşleşmiyor.
-	Keep the password somewhere safe: without it nobody, WordCraft included, can open the document. Leave both boxes empty to remove the password.	Parolayı güvenli bir yerde saklayın: parola olmadan WordCraft dahil hiç kimse belgeyi açamaz. Parolayı kaldırmak için iki kutuyu da boş bırakın.
+	Keep the password somewhere safe: without it nobody, Quill included, can open the document. Leave both boxes empty to remove the password.	Parolayı güvenli bir yerde saklayın: parola olmadan Quill dahil hiç kimse belgeyi açamaz. Parolayı kaldırmak için iki kutuyu da boş bırakın.
 	{cols}×{rows} Table	{cols}×{rows} Tablo
 	Name	Ad
 	PRs	PR'lar
@@ -2016,13 +2016,13 @@ preview	Title	Örnek
 	Hindi	Hintçe
 	Context	Bağlam
 	System	Sistem
-	Couldn't make WordCraft the default: {error}	WordCraft varsayılan yapılamadı: {error}
-	In Default apps, choose WordCraft for the document types you want it to open.	Varsayılan uygulamalar bölümünde, WordCraft'ın açmasını istediğiniz belge türlerini seçin.
-	Make WordCraft the default for Word documents…	WordCraft'ı Word belgeleri için varsayılan yap…
-	Opens .docx, .doc, .rtf and .odt files and Word templates with WordCraft from now on.	Bundan sonra .docx, .doc, .rtf ve .odt dosyalarını ve Word şablonlarını WordCraft ile açar.
-	Opens Settings › Default apps, where you choose WordCraft for .docx and the other document types.	Ayarlar › Varsayılan uygulamalar bölümünü açar; burada .docx ve diğer belge türleri için WordCraft'ı seçersiniz.
-	To open Word documents with WordCraft by default: select one in Finder, choose File › Get Info, pick WordCraft under Open with, then click Change All.	Word belgelerini varsayılan olarak WordCraft ile açmak için: Finder'da bir belge seçin, Dosya › Bilgi Al'ı seçin, Birlikte aç altında WordCraft'ı seçin ve Tümünü Değiştir'e tıklayın.
-	WordCraft is now the default app for Word documents.	WordCraft artık Word belgeleri için varsayılan uygulama.
+	Couldn't make Quill the default: {error}	Quill varsayılan yapılamadı: {error}
+	In Default apps, choose Quill for the document types you want it to open.	Varsayılan uygulamalar bölümünde, Quill'ın açmasını istediğiniz belge türlerini seçin.
+	Make Quill the default for Word documents…	Quill'ı Word belgeleri için varsayılan yap…
+	Opens .docx, .doc, .rtf and .odt files and Word templates with Quill from now on.	Bundan sonra .docx, .doc, .rtf ve .odt dosyalarını ve Word şablonlarını Quill ile açar.
+	Opens Settings › Default apps, where you choose Quill for .docx and the other document types.	Ayarlar › Varsayılan uygulamalar bölümünü açar; burada .docx ve diğer belge türleri için Quill'ı seçersiniz.
+	To open Word documents with Quill by default: select one in Finder, choose File › Get Info, pick Quill under Open with, then click Change All.	Word belgelerini varsayılan olarak Quill ile açmak için: Finder'da bir belge seçin, Dosya › Bilgi Al'ı seçin, Birlikte aç altında Quill'ı seçin ve Tümünü Değiştir'e tıklayın.
+	Quill is now the default app for Word documents.	Quill artık Word belgeleri için varsayılan uygulama.
 	Templates	Şablonlar
 	Templates and Add-ins	Şablonlar ve Eklentiler
 	Attach Template	Şablonu Ekle
@@ -2173,7 +2173,7 @@ preview	Title	Örnek
 	Word document	Word belgesi
 	All files	Tüm dosyalar
 	Recipient lists	Alıcı listeleri
-	The system file dialog isn't available, so WordCraft shows its own. To get the system dialog, install a file chooser portal (such as xdg-desktop-portal-gtk) or zenity.	Sistemin dosya iletişim kutusu kullanılamadığı için WordCraft kendi iletişim kutusunu gösteriyor. Sistem iletişim kutusunu kullanmak için bir dosya seçici portalı (örneğin xdg-desktop-portal-gtk) ya da zenity yükleyin.
+	The system file dialog isn't available, so Quill shows its own. To get the system dialog, install a file chooser portal (such as xdg-desktop-portal-gtk) or zenity.	Sistemin dosya iletişim kutusu kullanılamadığı için Quill kendi iletişim kutusunu gösteriyor. Sistem iletişim kutusunu kullanmak için bir dosya seçici portalı (örneğin xdg-desktop-portal-gtk) ya da zenity yükleyin.
 	Up one level	Bir düzey yukarı
 	Home folder	Ana klasör
 	{name} wasn't found.	{name} bulunamadı.
@@ -2181,8 +2181,8 @@ preview	Title	Örnek
 	This folder can't be read: {error}	Bu klasör okunamıyor: {error}
 	Showing the first {count} items.	İlk {count} öğe gösteriliyor.
 	File name:	Dosya adı:
-	Browse in WordCraft…	WordCraft'ta Gözat…
-	Open a file with WordCraft's own browser when the system file dialog doesn't appear.	Sistemin dosya iletişim kutusu açılmadığında dosyayı WordCraft'ın kendi dosya tarayıcısıyla açın.
+	Browse in Quill…	Quill'ta Gözat…
+	Open a file with Quill's own browser when the system file dialog doesn't appear.	Sistemin dosya iletişim kutusu açılmadığında dosyayı Quill'ın kendi dosya tarayıcısıyla açın.
 	Hide White Space	Boşluğu gizle
 	All pages	Tüm sayfalar
 	Current page	Geçerli sayfa
@@ -2464,8 +2464,8 @@ preview	Title	Örnek
 	Region:	Bölge:
 	Automatic ({region})	Otomatik ({region})
 	Start-up	Başlangıç
-	Show the Start screen when WordCraft starts	WordCraft açılırken Başlangıç ekranını göster
-	On: WordCraft opens on File › Home, with a blank document, the templates and your recent documents. Off: it opens a blank document.	Açık: WordCraft, Dosya › Giriş sayfasında boş belge, şablonlar ve son belgelerinizle açılır. Kapalı: boş bir belge açar.
+	Show the Start screen when Quill starts	Quill açılırken Başlangıç ekranını göster
+	On: Quill opens on File › Home, with a blank document, the templates and your recent documents. Off: it opens a blank document.	Açık: Quill, Dosya › Giriş sayfasında boş belge, şablonlar ve son belgelerinizle açılır. Kapalı: boş bir belge açar.
 	Typing	Yazma
 	Level 4	Düzey 4
 	Level 5	Düzey 5
@@ -2489,3 +2489,42 @@ preview	Title	Örnek
 	Open Vault	Kasayı Aç
 	Refresh Vault	Kasayı Yenile
 	Search Vault	Kasada Ara
+
+	Connect to Nextcloud	Nextcloud'a bağlan
+	Disconnect from Nextcloud	Nextcloud bağlantısını kes
+	Nextcloud Status	Nextcloud durumu
+	Nextcloud Files	Nextcloud dosyaları
+	Open from Nextcloud	Nextcloud'dan aç
+	Save to Nextcloud	Nextcloud'a kaydet
+	New Nextcloud Folder	Nextcloud'da yeni klasör
+	Delete on Nextcloud	Nextcloud'da sil
+	Share on Nextcloud	Nextcloud'da paylaş
+	Search Nextcloud Files	Nextcloud dosyalarında ara
+	Nextcloud File Versions	Nextcloud dosya sürümleri
+	Wait for Nextcloud	Nextcloud'u bekle
+	Cloud	Bulut
+	Nextcloud	Nextcloud
+	Server	Sunucu
+	User name	Kullanıcı adı
+	Connect	Bağlan
+	Disconnect	Bağlantıyı kes
+	New folder	Yeni klasör
+	Folder	Klasör
+	Files	Dosyalar
+	Status	Durum
+	Versions	Sürümler
+	Save this document to the server as	Bu belgeyi sunucuya şu adla kaydet:
+	An app password is safer than your account password.	Uygulama parolası, hesap parolasından daha güvenlidir.
+	Don't check the server's certificate	Sunucunun belirtisini doğrulama
+	Notes	Notlar
+	Backlinks	Geri bağlantılar
+	Tags	Etiketler
+	Open a note to see the notes that link to it.	Bağlantı veren notları görmek için bir not açın.
+	Open an Obsidian vault folder to see the tags its notes carry.	Notlarının etiketlerini görmek için bir Obsidian kasası klasörü açın.
+	Index Vault Notes	Kasa notlarını dizinle
+	Vault Backlinks	Kasadaki geri bağlantılar
+	Vault Tags	Kasadaki etiketler
+	Insert Note Link	Not bağlantısı ekle
+
+	Paste as Equation	Denklem olarak yapıştır
+	Open Obsidian Vault…	Obsidian kasasını aç…

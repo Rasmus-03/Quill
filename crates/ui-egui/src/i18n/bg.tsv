@@ -21,7 +21,7 @@
 	1.5 Line Spacing	Междуредие 1,5
 	A free, open-source word processor written from scratch in Rust.\nPart of the Crafting Apps from the ArtCraft team.	Безплатен текстообработващ редактор с отворен код, написан от нулата на Rust.\nЧаст от Crafting Apps на екипа на ArtCraft.
 	About	Относно
-	About WordCraft	За WordCraft
+	About Quill	За Quill
 	Accept	Приемане
 	Accept All Changes	Приемане на всички промени
 	Accept This Change	Приемане на тази промяна
@@ -913,7 +913,7 @@
 	Word Right	Дума надясно
 	Word document (*.docx)	Документ на Word (*.docx)
 	WordArt	WordArt
-	WordCraft	WordCraft
+	Quill	Quill
 	Words	Думи
 	Words only	Само думи
 	Wrap Text	Обтичане на текста
@@ -980,7 +980,7 @@
 	Stopped	Спряно
 	Speed	Скорост
 	Normal speed	Нормална скорост
-	AutoSave documents you have saved in WordCraft	Автоматично запазване на документите, които сте запазили в WordCraft
+	AutoSave documents you have saved in Quill	Автоматично запазване на документите, които сте запазили в Quill
 	AutoSave failed: {error}. Save the document to turn AutoSave back on.	Автоматичното запазване е неуспешно: {error}. Запазете документа, за да включите отново автоматичното запазване.
 	Couldn't download {name}: {error}	Неуспешно изтегляне на {name}: {error}
 	Do you want to save changes to {name}?	Искате ли да запазите промените в {name}?
@@ -1285,7 +1285,7 @@
 	The document will be saved with a password. Save it to protect it.	Документът ще бъде запазен с парола. Запазете го, за да го защитите.
 	The password is removed. Save the document to keep the change.	Паролата е премахната. Запазете документа, за да запазите промяната.
 	The passwords don't match.	Паролите не съвпадат.
-	Keep the password somewhere safe: without it nobody, WordCraft included, can open the document. Leave both boxes empty to remove the password.	Съхранявайте паролата на сигурно място: без нея никой, включително WordCraft, не може да отвори документа. Оставете двете полета празни, за да премахнете паролата.
+	Keep the password somewhere safe: without it nobody, Quill included, can open the document. Leave both boxes empty to remove the password.	Съхранявайте паролата на сигурно място: без нея никой, включително Quill, не може да отвори документа. Оставете двете полета празни, за да премахнете паролата.
 	Align Top Left	Подравняване горе вляво
 	Align Top Center	Подравняване горе в центъра
 	Align Top Right	Подравняване горе вдясно
@@ -2383,7 +2383,7 @@
 	Word document	Документ на Word
 	All files	Всички файлове
 	Recipient lists	Списъци с получатели
-	The system file dialog isn't available, so WordCraft shows its own. To get the system dialog, install a file chooser portal (such as xdg-desktop-portal-gtk) or zenity.	Системният диалогов прозорец за файлове не е наличен, затова WordCraft показва своя. За да получите системния, инсталирайте портал за избор на файлове (например xdg-desktop-portal-gtk) или zenity.
+	The system file dialog isn't available, so Quill shows its own. To get the system dialog, install a file chooser portal (such as xdg-desktop-portal-gtk) or zenity.	Системният диалогов прозорец за файлове не е наличен, затова Quill показва своя. За да получите системния, инсталирайте портал за избор на файлове (например xdg-desktop-portal-gtk) или zenity.
 	Up one level	Едно ниво нагоре
 	Home folder	Домашна папка
 	{name} wasn't found.	{name} не е намерен.
@@ -2391,8 +2391,8 @@
 	This folder can't be read: {error}	Тази папка не може да бъде прочетена: {error}
 	Showing the first {count} items.	Показани са първите {count} елемента.
 	File name:	Име на файла:
-	Browse in WordCraft…	Разглеждане в WordCraft…
-	Open a file with WordCraft's own browser when the system file dialog doesn't appear.	Отваряне на файл чрез собствения браузър на WordCraft, когато системният диалогов прозорец за файлове не се появява.
+	Browse in Quill…	Разглеждане в Quill…
+	Open a file with Quill's own browser when the system file dialog doesn't appear.	Отваряне на файл чрез собствения браузър на Quill, когато системният диалогов прозорец за файлове не се появява.
 	Resize Table by Dragging	Преоразмеряване на таблица чрез плъзгане
 	Visual effects	Визуални ефекти
 	Animation effects:	Ефекти на анимация:
@@ -2418,23 +2418,23 @@
 	TOC {n}	Съдържание {n}
 	Good afternoon	Добър ден
 	Context	Според контекста
-	Couldn't make WordCraft the default: {error}	WordCraft не можа да стане приложение по подразбиране: {error}
+	Couldn't make Quill the default: {error}	Quill не можа да стане приложение по подразбиране: {error}
 	Do Not Check Spelling or Grammar	Без проверка на правописа и граматиката
 	Hindi	Хинди
-	In Default apps, choose WordCraft for the document types you want it to open.	В „Приложения по подразбиране“ изберете WordCraft за типовете документи, които искате да отваря.
-	Make WordCraft the default for Word documents…	WordCraft по подразбиране за документи на Word…
+	In Default apps, choose Quill for the document types you want it to open.	В „Приложения по подразбиране“ изберете Quill за типовете документи, които искате да отваря.
+	Make Quill the default for Word documents…	Quill по подразбиране за документи на Word…
 	Numerals	Цифри
 	Numerals:	Цифри:
-	Opens .docx, .doc, .rtf and .odt files and Word templates with WordCraft from now on.	Отсега нататък файловете .docx, .doc, .rtf и .odt и шаблоните на Word ще се отварят с WordCraft.
-	Opens Settings › Default apps, where you choose WordCraft for .docx and the other document types.	Отваря „Настройки › Приложения по подразбиране“, където избирате WordCraft за .docx и другите типове документи.
+	Opens .docx, .doc, .rtf and .odt files and Word templates with Quill from now on.	Отсега нататък файловете .docx, .doc, .rtf и .odt и шаблоните на Word ще се отварят с Quill.
+	Opens Settings › Default apps, where you choose Quill for .docx and the other document types.	Отваря „Настройки › Приложения по подразбиране“, където избирате Quill за .docx и другите типове документи.
 	Reading	Четене
 	Reading Column Width	Ширина на колоната при четене
 	Reading Line Spacing	Междуредие при четене
 	Reading Text Size	Размер на текста при четене
 	Show KeyTips (Alt or F10)	Показване на клавишните подсказки (Alt или F10)
 	System	Според системата
-	To open Word documents with WordCraft by default: select one in Finder, choose File › Get Info, pick WordCraft under Open with, then click Change All.	За да се отварят документите на Word с WordCraft по подразбиране: изберете документ във Finder, изберете File › Get Info, изберете WordCraft под Open with и щракнете Change All.
-	WordCraft is now the default app for Word documents.	WordCraft вече е приложението по подразбиране за документи на Word.
+	To open Word documents with Quill by default: select one in Finder, choose File › Get Info, pick Quill under Open with, then click Change All.	За да се отварят документите на Word с Quill по подразбиране: изберете документ във Finder, изберете File › Get Info, изберете Quill под Open with и щракнете Change All.
+	Quill is now the default app for Word documents.	Quill вече е приложението по подразбиране за документи на Word.
 	Correct TWo INitial CApitals	Коригиране на ДВе НАчални ГЛавни букви
 	Correct accidental usage of cAPS LOCK key	Коригиране на случайно използване на клавиша cAPS LOCK
 	Picture	Картина
@@ -2446,8 +2446,8 @@
 	Undo History	История на отмяната
 	Undo {n} Actions	Отмяна на {n} действия
 	Start-up	Стартиране
-	Show the Start screen when WordCraft starts	Показване на началния екран при стартиране на WordCraft
-	On: WordCraft opens on File › Home, with a blank document, the templates and your recent documents. Off: it opens a blank document.	Вкл.: WordCraft се отваря на Файл › Начало с празен документ, шаблоните и последните документи. Изкл.: отваря се празен документ.
+	Show the Start screen when Quill starts	Показване на началния екран при стартиране на Quill
+	On: Quill opens on File › Home, with a blank document, the templates and your recent documents. Off: it opens a blank document.	Вкл.: Quill се отваря на Файл › Начало с празен документ, шаблоните и последните документи. Изкл.: отваря се празен документ.
 	Typing	Въвеждане
 	Level 4	Ниво 4
 	Level 5	Ниво 5
@@ -2480,3 +2480,42 @@
 	Open Vault	Отваряне на хранилище
 	Refresh Vault	Опресняване на хранилището
 	Search Vault	Търсене в хранилището
+
+	Connect to Nextcloud	Свързване с Nextcloud
+	Disconnect from Nextcloud	Прекъсване на връзката с Nextcloud
+	Nextcloud Status	Състояние на Nextcloud
+	Nextcloud Files	Файлове в Nextcloud
+	Open from Nextcloud	Отваряне от Nextcloud
+	Save to Nextcloud	Записване в Nextcloud
+	New Nextcloud Folder	Нова папка в Nextcloud
+	Delete on Nextcloud	Изтриване в Nextcloud
+	Share on Nextcloud	Споделяне в Nextcloud
+	Search Nextcloud Files	Търсене във файловете на Nextcloud
+	Nextcloud File Versions	Версии на файловете в Nextcloud
+	Wait for Nextcloud	Изчакване на Nextcloud
+	Cloud	Облак
+	Nextcloud	Nextcloud
+	Server	Сървър
+	User name	Потребителско име
+	Connect	Свързване
+	Disconnect	Прекъсване на връзката
+	New folder	Нова папка
+	Folder	Папка
+	Files	Файлове
+	Status	Състояние
+	Versions	Версии
+	Save this document to the server as	Запиши този документ в сървъра като
+	An app password is safer than your account password.	Парола за приложение е по-безопасна от паролата на акаунта.
+	Don't check the server's certificate	Не проверявай сертификата на сървъра
+	Notes	Бележки
+	Backlinks	Обратни връзки
+	Tags	Етикети
+	Open a note to see the notes that link to it.	Отворете бележка, за да видите бележките, които сочат към нея.
+	Open an Obsidian vault folder to see the tags its notes carry.	Отворете папка на хранилище Obsidian, за да видите етикетите на бележките в нея.
+	Index Vault Notes	Индексиране на бележките в хранилището
+	Vault Backlinks	Обратни връзки в хранилището
+	Vault Tags	Етикети в хранилището
+	Insert Note Link	Вмъкване на връзка към бележка
+
+	Paste as Equation	Поставяне като формула
+	Open Obsidian Vault…	Отваряне на хранилище на Obsidian…

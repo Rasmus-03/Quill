@@ -4,9 +4,12 @@
 //! invoked through `std::process::Command`.
 
 mod assets;
+mod clean;
 mod ico;
+mod install;
 mod layers;
 mod parity;
+mod pkg_names;
 mod stats;
 mod version;
 
@@ -20,7 +23,20 @@ commands:
   assets          check that every icon/image/font/asset is attributed in ATTRIBUTION.md
   layers          enforce the crate dependency layering (plan/architecture.md §3)
   wasm            cargo check --target wasm32-unknown-unknown for the wasm-safe crates
-  ci              fmt --check, clippy -D warnings, test, assets, layers, wasm (stops at first failure)
+  pkg-names       check that every `cargo -p <package>` in a workflow or a packaging script
+                  names a package that exists in the workspace
+  ci              fmt --check, clippy -D warnings, test, assets, layers, wasm, pkg-names
+                  (stops at first failure)
+  test [-- args...]     run the tests, then remove what the run left behind (the ritual)
+  install [--hook|--unhook]
+                  build the app and put it on this machine (macOS: ~/Applications/Quill.app,
+                  the command line tool in ~/bin). --hook writes the git hooks that install it
+                  after every commit and every merge; --unhook takes them away
+  clean [--all] [--older-than DAYS]
+                  remove what the last build and test run left behind: build directories older
+                  than DAYS days, the incremental caches, the scratch folders a crashed test left
+                  and the half-written files a killed save left. --all removes this checkout's
+                  build directory too
   corpus [--download]
                   show where test corpora live; --download fetches PngSuite into corpus/pngsuite
   stats [--exact] count tests and lines per crate (--exact: ask the test harness via `-- --list`)
@@ -34,8 +50,12 @@ fn main() -> ExitCode {
     let rest: Vec<&str> = args.iter().skip(1).map(String::as_str).collect();
     let result = match args.first().map(String::as_str) {
         Some("assets") => assets::run(&root()),
+        Some("clean") => cmd_clean(&rest),
+        Some("install") => cmd_install(&rest),
+        Some("test") => cmd_test(&rest),
         Some("layers") => cmd_layers(),
         Some("wasm") => cmd_wasm(),
+        Some("pkg-names") => pkg_names::run(&root()),
         Some("ci") => cmd_ci(),
         Some("corpus") => cmd_corpus(rest.contains(&"--download")),
         Some("stats") => stats::run(&root(), rest.contains(&"--exact")),
@@ -80,6 +100,55 @@ pub fn metadata() -> Result<serde_json::Value, String> {
         return Err(format!("cargo metadata failed:\n{}", String::from_utf8_lossy(&out.stderr)));
     }
     serde_json::from_slice(&out.stdout).map_err(|e| format!("cargo metadata: bad JSON: {e}"))
+}
+
+/// `cargo xtask test`: the tests, and then the cleanup, whether the tests passed or not.
+fn cmd_test(args: &[&str]) -> Result<(), String> {
+    let mut c = cargo();
+    c.args(["test", "--workspace"]);
+    c.args(args);
+    eprintln!("$ cargo test --workspace");
+    let status = c.status().map_err(|e| format!("cargo test: failed to spawn: {e}"))?;
+    // The ritual: the artifacts go, whatever the tests said.
+    let report = clean::run(&root(), &clean::Options::default())?;
+    println!("clean: {report}");
+    if status.success() { Ok(()) } else { Err(format!("tests exited with {status}")) }
+}
+
+/// `cargo xtask install`: build the app and put it on this machine.
+fn cmd_install(args: &[&str]) -> Result<(), String> {
+    let mut opts = install::Options { hooks: None };
+    for a in args {
+        match *a {
+            "--hook" => opts.hooks = Some(install::Hooks::Install),
+            "--unhook" => opts.hooks = Some(install::Hooks::Remove),
+            other => return Err(format!("unknown option `{other}`")),
+        }
+    }
+    let report = install::run(&root(), opts)?;
+    println!("{report}");
+    Ok(())
+}
+
+/// `cargo xtask clean`: the ritual after a test run.
+fn cmd_clean(args: &[&str]) -> Result<(), String> {
+    let mut opts = clean::Options::default();
+    let mut i = 0;
+    while i < args.len() {
+        match args[i] {
+            "--all" => opts.all = true,
+            "--older-than" => {
+                i += 1;
+                let days = args.get(i).and_then(|d| d.parse::<u64>().ok()).ok_or("--older-than wants a number of days")?;
+                opts.older_than_days = days;
+            }
+            other => return Err(format!("unknown option `{other}`")),
+        }
+        i += 1;
+    }
+    let report = clean::run(&root(), &opts)?;
+    println!("clean: {report}");
+    Ok(())
 }
 
 fn cmd_layers() -> Result<(), String> {
@@ -140,6 +209,20 @@ fn cmd_wasm() -> Result<(), String> {
         let ok = run(c, &format!("cargo check --target wasm32-unknown-unknown -p {pkg}")).is_ok();
         results.push((pkg.clone(), ok));
     }
+    // The browser build of the cloud crate is type-checked on the host as well: the wasm target
+    // is not installed everywhere, and the browser code has to compile either way.
+    {
+        let mut c = cargo();
+        c.args(["check", "-p", "wordcraft-cloud", "--features", "wasm-check"]);
+        let ok = run(c, "cargo check -p wordcraft-cloud --features wasm-check").is_ok();
+        if !ok {
+            println!("\nwasm32-unknown-unknown check:");
+            for p in &set {
+                println!("  {:<6} {p}", "skip");
+            }
+            return Err("the browser build of the cloud crate does not compile".into());
+        }
+    }
     println!("\nwasm32-unknown-unknown check:");
     for (p, ok) in &results {
         println!("  {:<6} {p}", if *ok { "ok" } else { "FAIL" });
@@ -167,17 +250,23 @@ fn cmd_ci() -> Result<(), String> {
                 run(c, "cargo clippy --workspace --all-targets -- -D warnings")
             }),
         ),
-        (
-            "test",
-            Box::new(|| {
-                let mut c = cargo();
-                c.args(["test", "--workspace"]);
-                run(c, "cargo test --workspace")
-            }),
-        ),
+        // The test step cleans up after itself, so a failing run leaves nothing behind either.
+        ("test", Box::new(|| cmd_test(&[]))),
         ("assets", Box::new(|| assets::run(&root()))),
         ("layers", Box::new(cmd_layers)),
+        // A stale package name in a workflow or a packaging script breaks the build in a way
+        // that looks like a broken toolchain, so it is checked here too.
+        ("pkg-names", Box::new(|| pkg_names::run(&root()))),
         ("wasm", Box::new(cmd_wasm)),
+        // The ritual: a test run ends by removing what it left behind.
+        (
+            "clean",
+            Box::new(|| {
+                let report = clean::run(&root(), &clean::Options::default())?;
+                println!("clean: {report}");
+                Ok(())
+            }),
+        ),
     ];
     let mut done = Vec::new();
     for (name, f) in &steps {

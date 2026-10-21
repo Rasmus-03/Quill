@@ -21,6 +21,8 @@ pub(crate) enum Choice {
     Keep,
     Merge,
     Text,
+    /// Make the pasted formula an equation.
+    Equation,
     Special,
 }
 
@@ -30,6 +32,7 @@ impl Choice {
             Choice::Keep => "Keep Source Formatting",
             Choice::Merge => "Merge Formatting",
             Choice::Text => "Keep Text Only",
+            Choice::Equation => "Paste as Equation",
             Choice::Special => "Paste Special…",
         }
     }
@@ -54,6 +57,9 @@ pub(crate) struct State {
     /// The selection right after the paste: moving the caret or selecting other text dismisses
     /// the button, as Word does.
     selection: Selection,
+    /// The formula in the pasted text, when it is one: the button then offers to make it an
+    /// equation.
+    latex: Option<(String, bool)>,
     rev: u64,
     document: u64,
 }
@@ -91,6 +97,13 @@ pub(crate) fn note(app: &mut WordApp, command: &str, started: Started, result: &
         },
         _ => return,
     };
+    let latex = value.get("latex").and_then(|l| {
+        let latex = l.get("latex")?.as_str()?.to_string();
+        let display = l.get("display").and_then(Value::as_bool).unwrap_or(false);
+        // The text as it was pasted, so it can be pasted again as an equation.
+        let text = l.get("text").and_then(Value::as_str).map(str::to_string).unwrap_or_else(|| latex.clone());
+        Some((text, display))
+    });
     app.canvas.paste_options = Some(State {
         command: command.to_string(),
         params: started.params,
@@ -98,6 +111,7 @@ pub(crate) fn note(app: &mut WordApp, command: &str, started: Started, result: &
         selection: app.session.sel.clone(),
         rev: app.session.rev(),
         document: app.session.document_id(),
+        latex,
     });
 }
 
@@ -152,7 +166,15 @@ pub(crate) fn choose(app: &mut WordApp, choice: Choice) {
         // The paste isn't undoable any more (or protection refuses): never paste it a second time.
         return;
     }
-    let State { command, params, .. } = state;
+    let State { command, params, latex, .. } = state;
+    if choice == Choice::Equation {
+        // The formula that was pasted as text becomes an equation in its place.
+        if let Some((text, display)) = latex {
+            let _ = app.run("edit.pasteAsEquation", json!({"text": text, "display": display}));
+            app.canvas.want_focus = true;
+        }
+        return;
+    }
     if choice == Choice::Special {
         let restore_state = State {
             command: command.clone(),
@@ -161,6 +183,7 @@ pub(crate) fn choose(app: &mut WordApp, choice: Choice) {
             selection: app.session.sel.clone(),
             rev: app.session.rev(),
             document: app.session.document_id(),
+            latex: None,
         };
         app.canvas.paste_options_restore = Some(restore_state);
         let mut dialog_params = params;
@@ -178,7 +201,7 @@ pub(crate) fn choose(app: &mut WordApp, choice: Choice) {
         Choice::Keep => "edit.paste",
         Choice::Merge => "edit.pasteMerge",
         Choice::Text => "edit.pasteText",
-        Choice::Special => return,
+        Choice::Equation | Choice::Special => return,
     };
     let fallback = (command, params.clone());
     if app.run(id, params).is_err() {
@@ -255,6 +278,14 @@ fn menu(ui: &mut egui::Ui, app: &mut WordApp, current: Choice) {
             ui.close();
         }
     }
+    // A formula pasted from a note can become an equation.
+    if app.canvas.paste_options.as_ref().is_some_and(|s| s.latex.is_some()) {
+        ui.separator();
+        if ui.button(tl!(Choice::Equation.label())).clicked() {
+            choose(app, Choice::Equation);
+            ui.close();
+        }
+    }
     ui.separator();
     if ui.button(tl!(Choice::Special.label())).clicked() {
         choose(app, Choice::Special);
@@ -312,6 +343,25 @@ mod tests {
         assert!(!p.props_of_char(7).bold.unwrap_or(false), "Keep Text Only drops the source's bold");
         assert_eq!(a.session.doc.plain_text(wordcraft_engine::doc::StoryRef::Body), "plain strong");
         assert_eq!(a.canvas.paste_options.as_ref().map(|s| s.choice), Some(Choice::Text), "the replacement paste shows it again");
+    }
+
+    /// A formula pasted from a note can become an equation: the button offers that form.
+    #[test]
+    fn a_formula_offers_the_equation_form() {
+        let mut a = app();
+        a.run("edit.paste", json!({"text": "$x^2 + 1$"})).unwrap();
+        assert!(a.canvas.paste_options.as_ref().and_then(|s| s.latex.as_ref()).is_some(), "the paste was a formula");
+        choose(&mut a, Choice::Equation);
+        let para = a.session.doc.para_at(&a.session.sel.focus).unwrap();
+        assert!(para.objects.iter().any(|o| matches!(o, wordcraft_doc::InlineObject::Equation { .. })), "the formula is an equation now");
+    }
+
+    /// A price is not a formula, so the button does not offer the equation form.
+    #[test]
+    fn a_price_does_not_offer_the_equation_form() {
+        let mut a = app();
+        a.run("edit.paste", json!({"text": "It costs $5 and $10"})).unwrap();
+        assert!(a.canvas.paste_options.as_ref().is_some_and(|s| s.latex.is_none()), "a price is not a formula");
     }
 
     #[test]

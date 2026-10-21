@@ -221,7 +221,9 @@ fn paste(s: &mut Session, v: &Value) -> CmdResult {
         }
     }
     super::paste::insert(s, frag)?;
-    sel_result(s)
+    let mut r = sel_result(s)?;
+    super::paste::note_latex(v, &mut r);
+    Ok(r)
 }
 
 /// Merge Formatting: the pasted text takes the destination's formatting, keeping its emphasis.
@@ -375,7 +377,9 @@ fn paste_text(s: &mut Session, v: &Value) -> CmdResult {
         return Err(CmdError::Failed("the clipboard is empty".into()));
     }
     super::paste_text(s, &text.replace("\r\n", "\r").replace('\n', "\r"))?;
-    sel_result(s)
+    let mut r = sel_result(s)?;
+    super::paste::note_latex(v, &mut r);
+    Ok(r)
 }
 
 /// One match: its range and, when asked for, the Replace with text filled in for it.
