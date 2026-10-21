@@ -86,6 +86,25 @@ use wordcraft_engine::Session;
 pub use control::ControlRequest;
 pub use file_dialogs::{FileDialogAnswer, FileDialogRequest, open_filters};
 
+/// The cloud account the host keeps between runs.
+///
+/// The app password is a secret: the host writes it to a file of its own that only the user can
+/// read, never to the ordinary settings file.
+#[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CloudAccount {
+    /// The server's address.
+    pub server: String,
+    /// The account's name.
+    pub user: String,
+    /// The app password.
+    #[serde(default)]
+    pub password: String,
+    /// The server's certificate is not checked.
+    #[serde(default)]
+    pub insecure: bool,
+}
+
 /// Platform services injected by the host (file dialogs, file I/O).
 #[derive(Default)]
 pub struct Services {
@@ -105,6 +124,10 @@ pub struct Services {
     /// sender counts as cancelled. An `Err` says no system dialog could be shown, and the app shows
     /// its built-in file browser instead (#576). The app shows one dialog at a time ([`file_dialogs`]).
     pub file_dialog: Option<Box<dyn Fn(FileDialogRequest) -> std::sync::mpsc::Receiver<FileDialogAnswer>>>,
+    /// Desktop: keep the cloud account (with its app password) between runs, so the next
+    /// launch can reconnect without asking again. The host writes it to a file only the user
+    /// can read; the editor never keeps the password itself.
+    pub save_cloud: Option<Box<dyn Fn(&CloudAccount) -> Result<(), String>>>,
     /// Web: open a file picker; the file arrives later through `inbox`.
     pub open_async: Option<Box<dyn Fn(&str)>>,
     /// Web: files (name, bytes) delivered asynchronously (picker, drag and drop).
@@ -195,6 +218,28 @@ pub struct UiState {
     /// Obsidian vault search text and the note path typed for Save to Vault.
     pub vault_query: String,
     pub vault_export_path: String,
+    /// The vault pane's view: the notes, the notes that link to the open one, or the tags.
+    pub vault_tab: String,
+    /// The notes that link to the open note, read when the view was opened.
+    pub vault_backlinks: Vec<String>,
+    /// The tags the notes carry, and the notes that carry them.
+    pub vault_tags: Vec<(String, Vec<String>)>,
+    /// The tag whose notes are shown.
+    pub vault_tag: String,
+    /// Nextcloud: the server's address and the account's name, kept between runs.
+    pub cloud_server: String,
+    pub cloud_user: String,
+    /// Nextcloud: the app password, typed for this session only. It is kept by the host in a
+    /// file of its own that only the user can read, never in `ui.json`.
+    #[serde(skip)]
+    pub cloud_password: String,
+    /// Nextcloud: the server's certificate is not checked (a self-signed server).
+    pub cloud_insecure: bool,
+    /// Nextcloud: the folder the file list shows, and the search text.
+    pub cloud_folder: String,
+    pub cloud_query: String,
+    /// Nextcloud: the file name typed for saving into the current folder.
+    pub cloud_name: String,
     /// User name (File › Options) for comments and tracked changes; empty keeps the default.
     pub author: String,
     /// Desktop: the main window's size and position, restored at the next launch.
@@ -283,6 +328,17 @@ impl Default for UiState {
             nav_tab: "headings".into(),
             vault_query: String::new(),
             vault_export_path: String::new(),
+            vault_tab: "notes".into(),
+            vault_backlinks: Vec::new(),
+            vault_tags: Vec::new(),
+            vault_tag: String::new(),
+            cloud_server: String::new(),
+            cloud_user: String::new(),
+            cloud_password: String::new(),
+            cloud_insecure: false,
+            cloud_folder: String::new(),
+            cloud_query: String::new(),
+            cloud_name: String::new(),
             author: String::new(),
             window: None,
             language: i18n::AUTO.into(),
@@ -1200,6 +1256,21 @@ impl WordApp {
                 }
                 json!({"backstage": self.ui.backstage})
             }
+            // The Navigation pane's view: the headings, the pages, the results, the Obsidian
+            // vault or the Nextcloud files.
+            "ui.navTab" => {
+                let tab = s("tab").unwrap_or("headings").to_string();
+                if !["headings", "pages", "results", "vault", "cloud"].contains(&tab.as_str()) {
+                    return Some(Err(format!("`{tab}` is not a view of the Navigation pane")));
+                }
+                self.ui.nav_tab = tab.clone();
+                self.session.view.nav_pane = true;
+                if tab == "cloud" {
+                    // The pane reads the server's files when it is opened.
+                    let _ = self.session.run("cloud.list", &json!({"path": self.ui.cloud_folder.clone()}));
+                }
+                json!({"tab": tab})
+            }
             "ui.dialog" if s("name") == Some("colors") => {
                 // The font colour's More Colors… (#606); `tab`: standard or custom.
                 let target = colors::Target::cmd("format.color").remember(colors::Remember::FontColor);
@@ -1591,6 +1662,10 @@ impl WordApp {
         self.drain_control(ctx);
         zotero::poll(self, ctx);
         read_aloud::poll(self, ctx);
+        // The cloud worker answers on its own thread; its answers land here.
+        if self.session.poll_cloud() {
+            ctx.request_repaint();
+        }
         self.clear_stale_change_picture();
         let _ = self.poll_file_dialog();
         self.drain_inbox();
@@ -1663,6 +1738,10 @@ impl WordApp {
         if self.services.download.is_some() {
             return Some(AutoSaveBlock::Browser);
         }
+        if self.session.cloud.document.is_some() {
+            // A document from the server is written back to the server.
+            return if self.session.cloud.connected { None } else { Some(AutoSaveBlock::Cloud) };
+        }
         let Some(path) = &self.session.path else { return Some(AutoSaveBlock::Unsaved) };
         if !keeps_everything(&path.to_string_lossy()) {
             let name = path.file_name().map(|n| n.to_string_lossy().to_string()).unwrap_or_default();
@@ -1697,7 +1776,13 @@ impl WordApp {
     fn autosave_tick(&mut self, now: f64) {
         if self.autosaves() && self.session.dirty && now - self.last_autosave > 2500.0 && now - self.canvas.caret_visible_since > 1500.0 {
             self.last_autosave = now;
-            if let Err(e) = self.session.run("file.save", &json!({})) {
+            // A document from the server goes back to the server; a local one to its file.
+            let save = if self.session.cloud.document.is_some() { "cloud.save" } else { "file.save" };
+            if save == "cloud.save" && self.session.cloud.in_flight > 0 {
+                // A write is still on its way: don't send another one.
+                return;
+            }
+            if let Err(e) = self.session.run(save, &json!({})) {
                 log::warn!("AutoSave failed: {e}");
                 self.autosave_path = None;
                 self.status(i18n::fmt(tl!("AutoSave failed: {error}. Save the document to turn AutoSave back on."), &[("error", &e.to_string())]));
@@ -1743,6 +1828,12 @@ impl WordApp {
         crate::keytips::logic(self, &ctx);
         if self.ui.backstage {
             backstage::show(self, ui);
+        } else if self.session.view.focus_mode {
+            // Focus mode (View › Immersive › Focus): the writing and nothing else. The page
+            // fills the window, and Escape brings the interface back.
+            egui::CentralPanel::default().frame(egui::Frame::NONE.fill(t.canvas)).show(ui, |ui| {
+                canvas::show(self, ui);
+            });
         } else {
             chrome::title_bar(self, ui);
             ribbon::show(self, ui);
@@ -1888,6 +1979,8 @@ pub enum AutoSaveBlock {
     Format { name: String },
     /// A file that was opened but not yet saved in this session.
     NotSavedHere,
+    /// A document from the server, while the server is not connected.
+    Cloud,
 }
 
 impl AutoSaveBlock {
@@ -1905,6 +1998,7 @@ impl AutoSaveBlock {
             AutoSaveBlock::NotSavedHere => {
                 tl!("Save the document to turn on AutoSave (a file you have only opened isn't rewritten until you save it)").to_string()
             }
+            AutoSaveBlock::Cloud => tl!("Connect to the server to turn on AutoSave for a document from the cloud").to_string(),
         }
     }
 
@@ -2114,6 +2208,33 @@ mod tests {
 
     fn app() -> WordApp {
         WordApp::new(Session::new(wordcraft_doc::Document::new()), Services::default())
+    }
+
+    /// The Navigation pane's views: the headings, the pages, the results, the Obsidian vault and
+    /// the Nextcloud files.
+    #[test]
+    fn the_navigation_pane_has_a_view_for_the_cloud_and_the_vault() {
+        let mut a = app();
+        for tab in ["headings", "pages", "results", "vault", "cloud"] {
+            assert_eq!(a.run("ui.navTab", json!({"tab": tab})).unwrap(), json!({"tab": tab}));
+            assert_eq!(a.ui.nav_tab, tab);
+            assert!(a.session.view.nav_pane, "the pane opens on the view that was asked for");
+        }
+        // A view that does not exist is refused, and the pane stays where it was.
+        assert!(a.run("ui.navTab", json!({"tab": "nowhere"})).is_err());
+        assert_eq!(a.ui.nav_tab, "cloud");
+    }
+
+    /// Focus mode (View › Immersive › Focus) is a state the interface reads: the ribbon, the
+    /// panes and the status bar step aside.
+    #[test]
+    fn focus_mode_is_a_view_state() {
+        let mut a = app();
+        assert!(!a.session.view.focus_mode);
+        a.run("view.focus", json!({})).unwrap();
+        assert!(a.session.view.focus_mode);
+        a.run("view.focus", json!({"value": false})).unwrap();
+        assert!(!a.session.view.focus_mode);
     }
 
     /// File › Options › Advanced › Animation: the caret's animation is a UI command, kept between

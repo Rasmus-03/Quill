@@ -36,7 +36,7 @@ Native save reliability: synthetic cases on macOS reproduced loss through the pr
 | 19 | **RTF and ODT depth**: notes, comments, revisions, sections, RTL | | ~1,500 lines each in `crates/formats` | Users exchanging with LibreOffice or older tools | 18–27 | [file-format-parity.md](file-format-parity.md) |
 | 20 | **Performance on large real-world documents** unmeasured (500+ pages, many pictures) | | Only the 188-page sample benchmark; scrolling a 1,096-page one-table document went from ~600 ms to ~2–5 ms a frame (#811), but opening it still lays out for seconds | Thesis and book authors | 10–20 | [layout-parity.md](layout-parity.md) |
 | 21 | **Mail merge data sources**: no Outlook/Contacts, Access or database sources, no email merge; CSV, typed lists (#247) and Excel/OpenDocument spreadsheets (#334) only | | Select Recipients reads .csv/.tsv, .xlsx/.xlsm and .ods | Office administrators | 4–8 | [target-app-parity.md](target-app-parity.md) |
-| 22 | **Ecosystem**: no VBA execution (macros preserved only), no Office add-ins, no cloud storage, no real-time co-authoring | | `.docm` keeps macros (#172) | Enterprise users with macro templates; teams | 40–80 + owner decisions | [target-app-parity.md](target-app-parity.md) |
+| 22 | **Ecosystem**: no VBA execution (macros preserved only), no Office add-ins, no real-time co-authoring. Cloud storage landed for Nextcloud (open, save, share, search and file versions on a server, 1.1.0); OneDrive, Google Drive and Dropbox are not there | | `.docm` keeps macros (#172); `crates/cloud` (Nextcloud/WebDAV) | Enterprise users with macro templates; teams | 35–75 + owner decisions | [target-app-parity.md](target-app-parity.md) |
 | 23 | **PDF Reflow depth**: v1 landed (2026-10-20, desktop): glyphs reflow into lines and paragraphs, headings from a size step up, list marks, centred paragraphs, the MediaBox page, picture XObjects decoded in place; still missing: run colour and bold/italic faces, tables drawn from rules, palette (Indexed) and JPX pictures, text without a ToUnicode map | | `crates/formats/src/pdf.rs`; Word's own import keeps far more of the formatting | Users who edit PDFs they receive | 12–18 | [file-format-parity.md](file-format-parity.md) |
 | 24 | **Default shortcuts**: ~135 of Word's ~250 (#330, #339, #343; Customize Keyboard #368, Customize Ribbon and the Quick Access Toolbar #379 landed) | | [ui-parity.md](ui-parity.md) | Power users | 4–7 | [ui-parity.md](ui-parity.md) |
 | 25 | **In-app AI assistant** (Copilot-style draft, rewrite, summarize) | | Chat PR #178 open | Users expecting Copilot | 15–30 + owner (provider) | [target-app-parity.md](target-app-parity.md) |
@@ -62,8 +62,11 @@ The same gaps grouped the way the parity documents are, for agents working in on
   Options button beside a fresh paste offers Keep Source Formatting, Merge Formatting, Keep Text Only
   and Paste Special…; still missing: RTF on macOS and X11. An Obsidian vault opens in the Navigation
   pane with title/text search, note open/save and Export into the vault, preserving frontmatter,
-  wikilinks, embeds and unknown syntax; it is not a Word feature, and has no backlinks, graph, tags
-  pane, Canvas or plugin semantics.
+  wikilinks, embeds and unknown syntax, and since 1.1.0 it also has a backlinks view, a tags view
+  and Insert › Link; it is not a Word feature, and has no graph, Canvas or plugin semantics. A
+  Nextcloud server (1.1.0) holds the same files: the Navigation pane's Nextcloud tab browses it,
+  opens and saves documents on it, shares them and searches the server's own files; it is not a
+  Word feature either, and OneDrive, Google Drive and Dropbox are not there.
 - **UI/UX gaps:** #7, #18, #24; crop handles on the canvas (rotation handle landed, #332); context menus for objects (the table's landed; it still lacks Border Styles); Linux title bar theming (#78); File ›
   Options › Animation effects › Use system setting reads macOS (Reduce motion) and the Linux/BSD
   desktops (`apps/wordcraft/src/animations.rs`) but hasn't been tried on a Mac or in a real
@@ -77,6 +80,7 @@ The same gaps grouped the way the parity documents are, for agents working in on
 
 | Date | Change | Summary |
 |---|---|---|
+| 2026-10-21 | minor | Nextcloud landed (1.1.0): connect to a server, browse its folders, open and save documents on it, share them, search the server's files and read its file versions; the editor never waits for the server, and a file that changed there is not overwritten. The Obsidian vault gained a backlinks view, a tags view and Insert › Link. Focus mode (View › Immersive › Focus) now hides the interface. Cloud storage is out of gap #22's list; OneDrive, Google Drive and Dropbox are not there |
 | 2026-10-20 | minor | PDF Reflow landed (desktop): a PDF opens as an editable document — reflowed text with headings, list marks and centred paragraphs, the MediaBox page and measured margins, picture XObjects decoded in place; gap #23 narrowed to the formatting depth (colour, faces, tables from rules, palette/JPX pictures, no-ToUnicode text). Paste Options button and Obsidian vault workspace landed the same day: a fresh paste can switch form in place with one undo step; a vault opens in the Navigation pane with title/text search, note open/save and Export, preserving frontmatter, wikilinks, embeds and unknown syntax. Remaining Obsidian depth (backlinks, graph, tags, Canvas, plugins) is listed as a non-Word extra |
 | 2026-10-11 | trivial | Table column and row markers on the rulers landed (#700): the ruler's column markers are off the UI/UX gaps |
 | 2026-10-11 | trivial | UI/UX gaps: the table context menu landed, its items following the selection as in Word (Delete Cells, Rows, Columns or Table, Merge and Split Cells, Distribute, AutoFit, Text Direction, Insert Caption…, Table Properties…); objects' menus and Border Styles remain |

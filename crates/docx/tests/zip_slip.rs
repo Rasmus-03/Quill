@@ -97,14 +97,12 @@ fn saved_names(bytes: &[u8]) -> Vec<String> {
     let mut overrides = 0;
     loop {
         match r.read_event_into(&mut buf).unwrap() {
-            Event::Start(e) | Event::Empty(e) => {
-                if e.local_name().as_ref() == b"Override" {
-                    let part = e.attributes().flatten().find(|a| a.key.local_name().as_ref() == b"PartName").expect("Override without PartName");
-                    let part = String::from_utf8_lossy(&part.value).into_owned();
-                    assert!(part.starts_with('/'), "override without a leading slash: {part:?}");
-                    assert!(clean(part.trim_start_matches('/')), "hostile part name in [Content_Types].xml: {part:?}");
-                    overrides += 1;
-                }
+            Event::Start(e) | Event::Empty(e) if e.local_name().as_ref() == b"Override" => {
+                let part = e.attributes().flatten().find(|a| a.key.local_name().as_ref() == b"PartName").expect("Override without PartName");
+                let part = String::from_utf8_lossy(&part.value).into_owned();
+                assert!(part.starts_with('/'), "override without a leading slash: {part:?}");
+                assert!(clean(part.trim_start_matches('/')), "hostile part name in [Content_Types].xml: {part:?}");
+                overrides += 1;
             }
             Event::Eof => break,
             _ => {}

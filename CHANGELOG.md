@@ -1,5 +1,36 @@
 # Changelog
 
+## 1.1.0 — Nextcloud, Obsidian depth and Focus mode
+
+A release about the places your writing lives: a Nextcloud server, an Obsidian vault, and the
+page in front of you.
+
+- **Nextcloud**: connect to a server (address, account and an app password), browse its folders
+  in the Navigation pane, open a file from it, write the document back to it, make a public link
+  and read the versions the server keeps. The server's own search finds files by their contents.
+  Everything runs on a worker thread, so the editor never waits for the server, and a file that
+  changed on the server in the meantime is not overwritten: Quill says so and asks for a new
+  name. The app password is kept in a file only the user can read, never in the ordinary
+  settings file, and the next launch reconnects on its own. A Markdown file on the server is an
+  Obsidian note: frontmatter, wikilinks and embeds survive the round trip, and its images are
+  written beside it. See [docs/cloud.md](docs/cloud.md)
+- **Obsidian, deeper**: the vault pane has three views now — the notes, the notes that link to
+  the open one (backlinks), and the tags the notes carry. Tags come from the frontmatter's
+  `tags:` list and from the `#tags` in the note's own text. Insert › Link writes a link to a
+  note at the caret, the way Obsidian writes it. See [docs/obsidian.md](docs/obsidian.md)
+- **Focus mode** (View › Immersive › Focus) now does what it says: the ribbon, the panes and
+  the status bar step aside and the page fills the window. Escape brings the interface back.
+- **AutoSave to the server**: a document that was opened from the server is written back to it
+  a couple of seconds after the last change, as long as the server is connected
+- **The ritual**: `cargo xtask test` runs the tests and then removes what the run left behind
+  (build directories older than a week, the incremental caches, the scratch folders a crashed
+  test left and the half-written files a killed save left). `cargo xtask ci` ends with it, and
+  `cargo xtask clean --all` sweeps everything, this checkout's build directory included
+- The macOS build works again: the app icon was renamed to `quill-macos-512.png`, and the app
+  still pointed at the old name
+- 1,000+ commands in the registry, each with its own tests; the Word feature catalog is at
+  489 of 504 (97.0 %)
+
 ## 1.0.2 — Hostile-input bounds, Paste Options and Obsidian vaults
 
 A second hardening pass over binary documents, pictures, fonts and proofing tables, Word's Paste Options button after a paste, and an Obsidian vault workspace.

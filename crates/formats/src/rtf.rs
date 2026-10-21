@@ -1378,10 +1378,8 @@ impl Reader {
                 self.st.fmt.sub = false;
             }
             "fs" => self.st.fmt.size = if pv > 0 { Some((pv as f32 / 2.0).clamp(1.0, 1638.0)) } else { None },
-            "ansicpg" => {
-                if pv > 0 && wordcraft_doc::encoding::SINGLE_BYTE_CODE_PAGES.contains(&(pv as u16)) {
-                    self.ansicpg = pv as u16;
-                }
+            "ansicpg" if pv > 0 && wordcraft_doc::encoding::SINGLE_BYTE_CODE_PAGES.contains(&(pv as u16)) => {
+                self.ansicpg = pv as u16;
             }
             "deff" => self.deff = pv,
             "f" => {

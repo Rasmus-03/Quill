@@ -419,6 +419,8 @@ pub struct Session {
     pub prefs: Prefs,
     /// The Obsidian vault open in this session (the root is also in [`Prefs::vault_root`]).
     pub vault: crate::vault::Vault,
+    /// The Nextcloud account open in this session and what is known about the server.
+    pub cloud: crate::cloud::Cloud,
     /// The system region (#838): the paper a new blank document starts on, the default
     /// measurement unit and the decimal separator. The front end sets it from the platform (the
     /// browser's locale on the web); headless sessions keep `en-US`. A region the user chose
@@ -661,6 +663,7 @@ impl Session {
             also_selected: Vec::new(),
             prefs: Prefs::default(),
             vault: Default::default(),
+            cloud: Default::default(),
             system_region: Default::default(),
             keymap: crate::KeyMap::default(),
             ribbon: crate::RibbonLayout::default(),
@@ -1060,6 +1063,8 @@ impl Session {
             pending_move: _,
             clipboard_text: _,
             clip_history: _,
+            // The cloud account: host wiring, not an edit.
+            cloud: _,
             // Like the clipboard: session tools for math commands, not an edit.
             math_defs: _,
             math_last: _,

@@ -2092,3 +2092,39 @@
 	Search Vault	Пошук у сховищі
 	Save to Vault	Зберегти у сховище
 	Vault	Сховище
+
+	Connect to Nextcloud	Підключення до Nextcloud
+	Disconnect from Nextcloud	Відключення від Nextcloud
+	Nextcloud Status	Стан Nextcloud
+	Nextcloud Files	Файли Nextcloud
+	Open from Nextcloud	Відкрити з Nextcloud
+	Save to Nextcloud	Зберегти в Nextcloud
+	New Nextcloud Folder	Нова тека в Nextcloud
+	Delete on Nextcloud	Видалити в Nextcloud
+	Share on Nextcloud	Поділитися в Nextcloud
+	Search Nextcloud Files	Пошук у файлах Nextcloud
+	Nextcloud File Versions	Версії файлів Nextcloud
+	Wait for Nextcloud	Очікування Nextcloud
+	Cloud	Хмара
+	Nextcloud	Nextcloud
+	Server	Сервер
+	User name	Ім'я користувача
+	Connect	Підключити
+	Disconnect	Відключити
+	New folder	Нова тека
+	Folder	Тека
+	Files	Файли
+	Status	Стан
+	Versions	Версії
+	Save this document to the server as	Зберегти цей документ на сервері як
+	An app password is safer than your account password.	Пароль застосунку безпечніший за пароль облікового запису.
+	Don't check the server's certificate	Не перевіряти сертифікат сервера
+	Notes	Нотатки
+	Backlinks	Зворотні посилання
+	Tags	Мітки
+	Open a note to see the notes that link to it.	Відкрийте нотатку, щоб побачити нотатки, які на неї посилаються.
+	Open an Obsidian vault folder to see the tags its notes carry.	Відкрийте теку сховища Obsidian, щоб побачити мітки його нотаток.
+	Index Vault Notes	Індексація нотаток сховища
+	Vault Backlinks	Зворотні посилання у сховищі
+	Vault Tags	Мітки у сховищі
+	Insert Note Link	Вставлення посилання на нотатку

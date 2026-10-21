@@ -2094,3 +2094,39 @@
 	Search Vault	Претражи трезор
 	Save to Vault	Сачувај у трезор
 	Vault	Трезор
+
+	Connect to Nextcloud	Повезивање са Nextcloud-ом
+	Disconnect from Nextcloud	Прекидање везе са Nextcloud-ом
+	Nextcloud Status	Стање Nextcloud-а
+	Nextcloud Files	Фajлови Nextcloud-а
+	Open from Nextcloud	Отварање из Nextcloud-а
+	Save to Nextcloud	Чување у Nextcloud-у
+	New Nextcloud Folder	Нова фасцикла у Nextcloud-у
+	Delete on Nextcloud	Брисање у Nextcloud-у
+	Share on Nextcloud	Дељење у Nextcloud-у
+	Search Nextcloud Files	Претраживање у Nextcloud фајловима
+	Nextcloud File Versions	Верзије фајлова у Nextcloud-у
+	Wait for Nextcloud	Чекање на Nextcloud
+	Cloud	Облак
+	Nextcloud	Nextcloud
+	Server	Сервер
+	User name	Корисничко име
+	Connect	Повезивање
+	Disconnect	Прекидање везе
+	New folder	Нова фасцикла
+	Folder	Фасцикла
+	Files	Фajлови
+	Status	Стање
+	Versions	Верзије
+	Save this document to the server as	Чување овог документа на серверу као
+	An app password is safer than your account password.	Лозинка апликације је безбеднија од лозинке налога.
+	Don't check the server's certificate	Не проверавати сертификат сервера
+	Notes	Белешке
+	Backlinks	Повратне везе
+	Tags	Ознаке
+	Open a note to see the notes that link to it.	Отворите белешку да бисте видели белешке које на њу упуте.
+	Open an Obsidian vault folder to see the tags its notes carry.	Отворите фасциклу Obsidian складишта да бисте видели ознаке његових белешки.
+	Index Vault Notes	Индексирање белешки складишта
+	Vault Backlinks	Повратне везе у складишту
+	Vault Tags	Ознаке у складишту
+	Insert Note Link	Уметање везе ка белешци

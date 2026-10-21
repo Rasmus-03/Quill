@@ -2484,3 +2484,39 @@ preview	Title	Tytuł
 	Open Vault	Otwórz skarbiec
 	Refresh Vault	Odśwież skarbiec
 	Search Vault	Przeszukaj skarbiec
+
+	Connect to Nextcloud	Połącz z Nextcloud
+	Disconnect from Nextcloud	Odłącz od Nextcloud
+	Nextcloud Status	Stan Nextcloud
+	Nextcloud Files	Pliki Nextcloud
+	Open from Nextcloud	Otwórz z Nextcloud
+	Save to Nextcloud	Zapisz w Nextcloud
+	New Nextcloud Folder	Nowy folder Nextcloud
+	Delete on Nextcloud	Usuń w Nextcloud
+	Share on Nextcloud	Udostępnij w Nextcloud
+	Search Nextcloud Files	Szukaj w plikach Nextcloud
+	Nextcloud File Versions	Wersje plików Nextcloud
+	Wait for Nextcloud	Oczekiwanie na Nextcloud
+	Cloud	Chmura
+	Nextcloud	Nextcloud
+	Server	Serwer
+	User name	Nazwa użytkownika
+	Connect	Połącz
+	Disconnect	Odłącz
+	New folder	Nowy folder
+	Folder	Folder
+	Files	Pliki
+	Status	Stan
+	Versions	Wersje
+	Save this document to the server as	Zapisz ten dokument na serwerze jako
+	An app password is safer than your account password.	Hasło aplikacji jest bezpieczniejsze niż hasło konta.
+	Don't check the server's certificate	Nie sprawdzaj certyfikatu serwera
+	Notes	Notatki
+	Backlinks	Odnośniki wsteczne
+	Tags	Tagi
+	Open a note to see the notes that link to it.	Otwórz notatkę, aby zobaczyć notatki, które do niej linkują.
+	Open an Obsidian vault folder to see the tags its notes carry.	Otwórz folder magazynu Obsidian, aby zobaczyć tagi jego notatek.
+	Index Vault Notes	Indeksuj notatki magazynu
+	Vault Backlinks	Odnośniki wsteczne w magazynie
+	Vault Tags	Tagi w magazynie
+	Insert Note Link	Wstaw odnośnik do notatki

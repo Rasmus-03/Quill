@@ -2489,3 +2489,39 @@
 	Open Vault	Tár megnyitása
 	Refresh Vault	Tár frissítése
 	Search Vault	Keresés a tárban
+
+	Connect to Nextcloud	Kapcsolódás a Nextcloudhoz
+	Disconnect from Nextcloud	Kapcsolat megszüntetése a Nextclouddal
+	Nextcloud Status	Nextcloud állapota
+	Nextcloud Files	Nextcloud-fájlok
+	Open from Nextcloud	Megnyitás a Nextcloudból
+	Save to Nextcloud	Mentés a Nextcloudba
+	New Nextcloud Folder	Új Nextcloud-mappa
+	Delete on Nextcloud	Törlés a Nextcloudon
+	Share on Nextcloud	Megosztás a Nextcloudon
+	Search Nextcloud Files	Keresés a Nextcloud-fájlokban
+	Nextcloud File Versions	Nextcloud-fájlok verziói
+	Wait for Nextcloud	Várakozás a Nextcloudra
+	Cloud	Felhő
+	Nextcloud	Nextcloud
+	Server	Kiszolgáló
+	User name	Felhasználónév
+	Connect	Kapcsolódás
+	Disconnect	Kapcsolat megszüntetése
+	New folder	Új mappa
+	Folder	Mappa
+	Files	Fájlok
+	Status	Állapot
+	Versions	Verziók
+	Save this document to the server as	A dokumentum mentése a kiszolgálóra mint
+	An app password is safer than your account password.	Az alkalmazásjelszó biztonságosabb a fiókjelszónál.
+	Don't check the server's certificate	Ne ellenőrizd a kiszolgáló tanúsítványát
+	Notes	Jegyzetek
+	Backlinks	Visszautaló hivatkozások
+	Tags	Címkék
+	Open a note to see the notes that link to it.	Nyisson meg egy jegyzetet, hogy lássa a rá hivatkozó jegyzeteket.
+	Open an Obsidian vault folder to see the tags its notes carry.	Nyisson egy Obsidian-tár gyökeret, hogy lássa a jegyeinek címkéit.
+	Index Vault Notes	A tár jegyzetekének indexelése
+	Vault Backlinks	Visszautaló hivatkozások a tárban
+	Vault Tags	A tár címkéi
+	Insert Note Link	Jegyzet-hivatkozás beszúrása

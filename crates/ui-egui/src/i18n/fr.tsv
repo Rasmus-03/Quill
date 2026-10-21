@@ -2088,3 +2088,39 @@
 	Search Vault	Rechercher dans le coffre
 	Save to Vault	Enregistrer dans le coffre
 	Vault	Coffre
+
+	Connect to Nextcloud	Se connecter à Nextcloud
+	Disconnect from Nextcloud	Se déconnecter de Nextcloud
+	Nextcloud Status	État de Nextcloud
+	Nextcloud Files	Fichiers Nextcloud
+	Open from Nextcloud	Ouvrir depuis Nextcloud
+	Save to Nextcloud	Enregistrer dans Nextcloud
+	New Nextcloud Folder	Nouveau dossier Nextcloud
+	Delete on Nextcloud	Supprimer sur Nextcloud
+	Share on Nextcloud	Partager sur Nextcloud
+	Search Nextcloud Files	Rechercher dans les fichiers Nextcloud
+	Nextcloud File Versions	Versions des fichiers Nextcloud
+	Wait for Nextcloud	Attendre Nextcloud
+	Cloud	Cloud
+	Nextcloud	Nextcloud
+	Server	Serveur
+	User name	Nom d'utilisateur
+	Connect	Se connecter
+	Disconnect	Se déconnecter
+	New folder	Nouveau dossier
+	Folder	Dossier
+	Files	Fichiers
+	Status	État
+	Versions	Versions
+	Save this document to the server as	Enregistrer ce document sur le serveur sous
+	An app password is safer than your account password.	Un mot de passe d'application est plus sûr que celui du compte.
+	Don't check the server's certificate	Ne pas vérifier le certificat du serveur
+	Notes	Notes
+	Backlinks	Rétroliens
+	Tags	Étiquettes
+	Open a note to see the notes that link to it.	Ouvrez une note pour voir les notes qui y renvoient.
+	Open an Obsidian vault folder to see the tags its notes carry.	Ouvrez un dossier de coffre Obsidian pour voir les étiquettes de ses notes.
+	Index Vault Notes	Indexer les notes du coffre
+	Vault Backlinks	Rétroliens du coffre
+	Vault Tags	Étiquettes du coffre
+	Insert Note Link	Insérer un lien vers une note

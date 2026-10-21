@@ -4,6 +4,7 @@
 //! Only the desktop app can reach a vault's files. The commands are still registered in every
 //! build so the registry stays the same; on the web they fail with an ordinary error.
 
+use std::collections::BTreeMap;
 use std::path::{Component, Path, PathBuf};
 use std::time::UNIX_EPOCH;
 
@@ -46,6 +47,26 @@ pub struct VaultHit {
     pub snippet: String,
 }
 
+/// The links between the notes in a vault, and the tags they carry.
+#[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
+pub struct NoteIndex {
+    /// For each note, the notes it links to.
+    pub outgoing: BTreeMap<String, Vec<String>>,
+    /// For each note, the notes that link to it.
+    pub backlinks: BTreeMap<String, Vec<String>>,
+    /// The tags and the notes that carry them.
+    pub tags: BTreeMap<String, Vec<String>>,
+}
+
+/// Most links one note may hold.
+pub const MAX_LINKS_PER_NOTE: usize = 2000;
+/// Most tags one note may carry.
+pub const MAX_TAGS_PER_NOTE: usize = 200;
+/// Most notes one index reads.
+const MAX_INDEX_FILES: usize = 5000;
+/// Largest note one index reads.
+const MAX_INDEX_BYTES: u64 = 2 * 1024 * 1024;
+
 /// The open vault in this session. The root is persisted in [`crate::session::Prefs`]; the file
 /// list is rebuilt when the vault is opened or scanned.
 #[derive(Clone, Debug, Default)]
@@ -60,6 +81,9 @@ pub struct Vault {
     /// on every frame.
     pub query: String,
     pub results: Vec<VaultHit>,
+    /// The links between the notes and their tags, built when they are first asked for and kept
+    /// until the vault is read again.
+    index: Option<NoteIndex>,
 }
 
 impl Vault {
@@ -78,6 +102,9 @@ impl Vault {
     pub fn scan(&mut self) -> Result<(), String> {
         let root = self.root.clone().ok_or_else(|| "no vault is open".to_string())?;
         self.files.clear();
+        // The notes may have changed, so the links between them are read again when they are
+        // asked for.
+        self.index = None;
         self.truncated = false;
         let mut stack = vec![(root.clone(), 0usize)];
         'walk: while let Some((dir, depth)) = stack.pop() {
@@ -215,6 +242,175 @@ impl Vault {
         }
         hits
     }
+
+    /// The links between the notes, and the tags they carry.
+    ///
+    /// The index is built once and kept until the vault is read again, so the pane can ask for
+    /// it on every frame without reading the notes again.
+    pub fn index(&mut self) -> NoteIndex {
+        if self.index.is_none() {
+            let built = self.build_index();
+            self.index = Some(built);
+        }
+        self.index.clone().unwrap_or_default()
+    }
+
+    /// Read every note and work out what links to what.
+    ///
+    /// Every note is read once. A vault that is too large to read is cut short, and the notes
+    /// that were not read simply have no links.
+    fn build_index(&self) -> NoteIndex {
+        let mut index = NoteIndex::default();
+        let Some(root) = self.root.as_ref() else { return index };
+        let mut scanned = 0usize;
+        for file in self.files.iter() {
+            if scanned >= MAX_INDEX_FILES {
+                break;
+            }
+            if file.size > MAX_INDEX_BYTES {
+                continue;
+            }
+            let Ok(data) = crate::io::vault_fs::read(&root.join(&file.path)) else { continue };
+            scanned += 1;
+            let text = wordcraft_formats::txt::decode(&data);
+            let targets = wikilinks(&text);
+            for target in targets {
+                let note = self.note_for(&target);
+                if let Some(note) = note
+                    && note != file.path
+                {
+                    index.outgoing.entry(file.path.clone()).or_default().push(note.clone());
+                    let back = index.backlinks.entry(note).or_default();
+                    if !back.contains(&file.path) {
+                        back.push(file.path.clone());
+                    }
+                }
+            }
+            for tag in note_tags(&text) {
+                let notes = index.tags.entry(tag).or_default();
+                if !notes.contains(&file.path) {
+                    notes.push(file.path.clone());
+                }
+            }
+        }
+        for notes in index.backlinks.values_mut() {
+            notes.sort();
+        }
+        for notes in index.tags.values_mut() {
+            notes.sort();
+        }
+        index
+    }
+
+    /// The note a `[[wikilink]]` points at: the note with that title, or with that path.
+    pub fn note_for(&self, target: &str) -> Option<String> {
+        let wanted = target.trim().trim_end_matches(".md").to_lowercase();
+        if wanted.is_empty() {
+            return None;
+        }
+        // A link names the note without its folder ("[[Note]]") or with it ("[[Folder/Note]]").
+        for file in &self.files {
+            if file.path.to_lowercase() == wanted {
+                return Some(file.path.clone());
+            }
+        }
+        for file in &self.files {
+            if file.title.to_lowercase() == wanted {
+                return Some(file.path.clone());
+            }
+        }
+        None
+    }
+}
+
+/// The notes a text links to: the targets of its `[[wikilinks]]`.
+pub fn wikilinks(text: &str) -> Vec<String> {
+    let mut out = Vec::new();
+    let mut rest = text;
+    while let Some(start) = rest.find("[[") {
+        rest = &rest[start + 2..];
+        let Some(end) = rest.find("]]") else { break };
+        let inner = &rest[..end];
+        rest = &rest[end + 2..];
+        // `[[Note#Heading|Alias]]` points at the note; the heading and the alias are not part of it.
+        let target = inner.split('|').next().unwrap_or("").split('#').next().unwrap_or("").trim();
+        if target.is_empty() || target.len() > 255 {
+            continue;
+        }
+        if !out.iter().any(|t: &String| t == target) {
+            out.push(target.to_string());
+        }
+        if out.len() >= MAX_LINKS_PER_NOTE {
+            break;
+        }
+    }
+    out
+}
+
+/// The tags a note carries: the ones in its frontmatter and the ones written in its text.
+pub fn note_tags(text: &str) -> Vec<String> {
+    let mut tags = Vec::new();
+    let mut body = text;
+    // The frontmatter's own `tags:` list.
+    if let Some(rest) = text.strip_prefix("---\n").or_else(|| text.strip_prefix("---\r\n")) {
+        let end = rest.find("\n---").unwrap_or(rest.len());
+        let front = &rest[..end];
+        body = &rest[end.min(rest.len())..];
+        let mut in_tags = false;
+        for line in front.lines() {
+            let line = line.trim_end();
+            if line.trim_start().starts_with("tags:") {
+                in_tags = true;
+                let value = line.trim_start().trim_start_matches("tags:").trim();
+                if value.starts_with('[') {
+                    for tag in value.trim_matches(|c| c == '[' || c == ']').split(',') {
+                        push_tag(&mut tags, tag.trim().trim_matches(|c| c == '"' || c == '\''));
+                    }
+                    in_tags = false;
+                }
+                continue;
+            }
+            if in_tags {
+                if let Some(tag) = line.trim_start().strip_prefix("- ") {
+                    push_tag(&mut tags, tag.trim().trim_matches(|c| c == '"' || c == '\''));
+                } else if !line.trim().is_empty() {
+                    in_tags = false;
+                }
+            }
+        }
+    }
+    // The `#tags` written in the note itself.
+    for (at, c) in body.char_indices() {
+        if c != '#' {
+            continue;
+        }
+        // A tag starts a word: the `#` may not follow a letter or a digit.
+        if at > 0 {
+            let before = body[..at].chars().next_back().unwrap_or(' ');
+            if before.is_alphanumeric() {
+                continue;
+            }
+        }
+        let rest = &body[at + 1..];
+        let end = rest.find(|c: char| !c.is_alphanumeric() && c != '_' && c != '-').unwrap_or(rest.len());
+        let tag = &rest[..end];
+        if !tag.is_empty() {
+            push_tag(&mut tags, tag);
+        }
+    }
+    tags
+}
+
+/// Add a tag, keeping the list short and free of duplicates.
+fn push_tag(tags: &mut Vec<String>, tag: &str) {
+    let tag = tag.trim();
+    if tag.is_empty() || tag.len() > 64 || tags.iter().any(|t| t.eq_ignore_ascii_case(tag)) {
+        return;
+    }
+    if tags.len() >= MAX_TAGS_PER_NOTE {
+        return;
+    }
+    tags.push(tag.to_string());
 }
 
 fn snippet_around(text: &str, pos: usize) -> String {
@@ -270,7 +466,70 @@ pub fn specs() -> Vec<CommandSpec> {
         CommandSpec::new("vault.export", "Save to Vault", "File › Save As", export)
             .params(r#"{"path"?: string (relative to the vault, or absolute inside it; omit to ask), "attachments"?: string (folder for images, default the saved preference)}"#)
             .pure(),
+        CommandSpec::new("vault.index", "Index Vault Notes", "View › Vault", index)
+            .params("{}")
+            .pure(),
+        CommandSpec::new("vault.backlinks", "Vault Backlinks", "View › Vault", backlinks)
+            .params(r#"{"note"?: string (the note; the open one when omitted)}"#)
+            .pure(),
+        CommandSpec::new("vault.tags", "Vault Tags", "View › Vault", tags).params("{}").pure(),
+        CommandSpec::new("vault.insertLink", "Insert Note Link", "Insert › Link", insert_link)
+            .params(r#"{"target": string (the note to link to), "label"?: string (the text shown instead of the note's name)}"#),
     ]
+}
+
+/// The links between the notes and the tags they carry.
+fn index(s: &mut Session, _: &Value) -> CmdResult {
+    let index = s.vault.index();
+    Ok(json!({
+        "notes": index.outgoing.len(),
+        "outgoing": index.outgoing,
+        "backlinks": index.backlinks,
+        "tags": index.tags,
+    }))
+}
+
+/// The notes that link to a note.
+fn backlinks(s: &mut Session, v: &Value) -> CmdResult {
+    let note = match p::str(v, "note") {
+        Some(note) => note.to_string(),
+        None => s.vault.note.as_ref().map(|n| n.to_string_lossy().replace('\\', "/")).unwrap_or_default(),
+    };
+    if note.is_empty() {
+        return Ok(json!({"note": "", "backlinks": []}));
+    }
+    let index = s.vault.index();
+    let links = index.backlinks.get(&note).cloned().unwrap_or_default();
+    Ok(json!({"note": note, "backlinks": links}))
+}
+
+/// The tags the notes carry, and the notes that carry them.
+fn tags(s: &mut Session, _: &Value) -> CmdResult {
+    let index = s.vault.index();
+    let mut out: Vec<(String, Vec<String>)> = index.tags.into_iter().collect();
+    out.sort_by(|a, b| b.1.len().cmp(&a.1.len()).then_with(|| a.0.cmp(&b.0)));
+    Ok(json!({"tags": out.into_iter().map(|(tag, notes)| json!({"tag": tag, "notes": notes})).collect::<Vec<_>>()}))
+}
+
+/// Write a link to a note at the caret, as Obsidian writes it.
+fn insert_link(s: &mut Session, v: &Value) -> CmdResult {
+    let target = p::req_str(v, "target")?.trim().to_string();
+    if target.is_empty() {
+        return Err(CmdError::Params("`target` (the note to link to) is required".into()));
+    }
+    if target.contains(['[', ']', '|', '\n', '\r']) {
+        return Err(CmdError::Params("a note's name may not hold brackets or a bar".into()));
+    }
+    if target.chars().count() > 255 {
+        return Err(CmdError::Params("the note's name is too long".into()));
+    }
+    let label = p::str(v, "label").map(str::trim).filter(|l| !l.is_empty());
+    let text = match label {
+        Some(label) if label.chars().count() <= 255 && !label.contains(['[', ']', '|', '\n', '\r']) => format!("[[{target}|{label}]]"),
+        Some(_) => return Err(CmdError::Params("the label may not hold brackets or a bar".into())),
+        None => format!("[[{target}]]"),
+    };
+    s.run("text.insert", &json!({"text": text, "raw": true}))
 }
 
 fn open(s: &mut Session, v: &Value) -> CmdResult {
@@ -561,5 +820,44 @@ mod tests {
         assert!(out.contains("Text"), "{out:?}");
         assert_eq!(s.vault.note.as_deref(), Some(Path::new("One.md")));
         assert!(!s.dirty);
+    }
+
+    /// The notes link to each other, and the index knows who links to whom.
+    #[test]
+    fn notes_link_to_each_other_and_carry_tags() {
+        let d = Scratch::new();
+        d.write("One.md", "---\ntags: [idea, work]\n---\n\n# One\n\nA [[Two]] and a #home.\n");
+        d.write("Two.md", "# Two\n\nBack to [[One]].\n");
+        d.write("folder/Three.md", "# Three\n\nNothing here.\n");
+        let mut v = Vault::scan_at(&d.0).unwrap();
+        let index = v.index();
+        assert_eq!(index.outgoing.get("One.md"), Some(&vec!["Two.md".to_string()]), "{index:?}");
+        assert_eq!(index.backlinks.get("Two.md"), Some(&vec!["One.md".to_string()]), "{index:?}");
+        assert_eq!(index.backlinks.get("One.md"), Some(&vec!["Two.md".to_string()]), "{index:?}");
+        assert_eq!(index.tags.get("idea"), Some(&vec!["One.md".to_string()]), "{index:?}");
+        assert_eq!(index.tags.get("work"), Some(&vec!["One.md".to_string()]), "{index:?}");
+        assert_eq!(index.tags.get("home"), Some(&vec!["One.md".to_string()]), "{index:?}");
+        // A heading is not a tag.
+        assert!(!index.tags.contains_key("One"), "{index:?}");
+    }
+
+    /// A link is written at the caret the way Obsidian writes it.
+    #[test]
+    fn a_link_is_written_at_the_caret() {
+        let mut s = Session::new(wordcraft_doc::Document::new());
+        s.run("vault.insertLink", &serde_json::json!({"target": "Note"})).unwrap();
+        assert_eq!(s.doc.plain_text(wordcraft_doc::StoryRef::Body), "[[Note]]");
+        s.run("vault.insertLink", &serde_json::json!({"target": "Note", "label": "the note"})).unwrap();
+        assert_eq!(s.doc.plain_text(wordcraft_doc::StoryRef::Body), "[[Note]][[Note|the note]]");
+    }
+
+    /// A link's name may not smuggle markup into the note.
+    #[test]
+    fn a_link_name_is_checked() {
+        let mut s = Session::new(wordcraft_doc::Document::new());
+        assert!(s.run("vault.insertLink", &serde_json::json!({"target": "a|b"})).is_err());
+        assert!(s.run("vault.insertLink", &serde_json::json!({"target": ""})).is_err());
+        assert!(s.run("vault.insertLink", &serde_json::json!({})).is_err());
+        assert_eq!(s.doc.plain_text(wordcraft_doc::StoryRef::Body), "");
     }
 }

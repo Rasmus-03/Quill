@@ -2085,3 +2085,39 @@
 	Search Vault	Hledat v trezoru
 	Save to Vault	Uložit do trezoru
 	Vault	Trezor
+
+	Connect to Nextcloud	Připojit k Nextcloudu
+	Disconnect from Nextcloud	Odpojit od Nextcloudu
+	Nextcloud Status	Stav Nextcloudu
+	Nextcloud Files	Soubory v Nextcloudu
+	Open from Nextcloud	Otevřít z Nextcloudu
+	Save to Nextcloud	Uložit do Nextcloudu
+	New Nextcloud Folder	Nová složka v Nextcloudu
+	Delete on Nextcloud	Smazat v Nextcloudu
+	Share on Nextcloud	Sdílet v Nextcloudu
+	Search Nextcloud Files	Hledat v souborech Nextcloudu
+	Nextcloud File Versions	Verze souborů v Nextcloudu
+	Wait for Nextcloud	Čekat na Nextcloud
+	Cloud	Cloud
+	Nextcloud	Nextcloud
+	Server	Server
+	User name	Uživatelské jméno
+	Connect	Připojit
+	Disconnect	Odpojit
+	New folder	Nová složka
+	Folder	Složka
+	Files	Soubory
+	Status	Stav
+	Versions	Verze
+	Save this document to the server as	Uložit tento dokument na server jako
+	An app password is safer than your account password.	Heslo pro aplikaci je bezpečnější než heslo účtu.
+	Don't check the server's certificate	Neověřovat certifikát serveru
+	Notes	Poznámky
+	Backlinks	Opačné odkazy
+	Tags	Štítky
+	Open a note to see the notes that link to it.	Otevřete poznámku a uvidíte poznámky, které na ni odkazují.
+	Open an Obsidian vault folder to see the tags its notes carry.	Otevřete složku úložiště Obsidian, abyste viděli štítky jeho poznámek.
+	Index Vault Notes	Indexovat poznámky úložiště
+	Vault Backlinks	Opačné odkazy v úložišti
+	Vault Tags	Štítky v úložišti
+	Insert Note Link	Vložit odkaz na poznámku

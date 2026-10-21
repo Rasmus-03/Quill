@@ -2475,3 +2475,39 @@ preview	Title	Esempio
 	Open Vault	Apri caveau
 	Refresh Vault	Aggiorna caveau
 	Search Vault	Cerca nel caveau
+
+	Connect to Nextcloud	Connessione a Nextcloud
+	Disconnect from Nextcloud	Disconnessione da Nextcloud
+	Nextcloud Status	Stato di Nextcloud
+	Nextcloud Files	File di Nextcloud
+	Open from Nextcloud	Apri da Nextcloud
+	Save to Nextcloud	Salva in Nextcloud
+	New Nextcloud Folder	Nuova cartella di Nextcloud
+	Delete on Nextcloud	Elimina da Nextcloud
+	Share on Nextcloud	Condividi su Nextcloud
+	Search Nextcloud Files	Cerca nei file di Nextcloud
+	Nextcloud File Versions	Versioni dei file di Nextcloud
+	Wait for Nextcloud	Attesa di Nextcloud
+	Cloud	Cloud
+	Nextcloud	Nextcloud
+	Server	Server
+	User name	Nome utente
+	Connect	Connetti
+	Disconnect	Disconnetti
+	New folder	Nuova cartella
+	Folder	Cartella
+	Files	File
+	Status	Stato
+	Versions	Versioni
+	Save this document to the server as	Salva questo documento sul server come
+	An app password is safer than your account password.	Una password per l'app è più sicura di quella dell'account.
+	Don't check the server's certificate	Non verificare il certificato del server
+	Notes	Note
+	Backlinks	Riferimenti inversi
+	Tags	Etichette
+	Open a note to see the notes that link to it.	Apri una nota per vedere le note che vi rimandano.
+	Open an Obsidian vault folder to see the tags its notes carry.	Apri una cartella di archivio Obsidian per vedere le etichette delle sue note.
+	Index Vault Notes	Indizza le note dell'archivio
+	Vault Backlinks	Riferimenti inversi dell'archivio
+	Vault Tags	Etichette dell'archivio
+	Insert Note Link	Inserisci collegamento a nota

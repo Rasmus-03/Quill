@@ -2480,3 +2480,39 @@
 	Open Vault	Отваряне на хранилище
 	Refresh Vault	Опресняване на хранилището
 	Search Vault	Търсене в хранилището
+
+	Connect to Nextcloud	Свързване с Nextcloud
+	Disconnect from Nextcloud	Прекъсване на връзката с Nextcloud
+	Nextcloud Status	Състояние на Nextcloud
+	Nextcloud Files	Файлове в Nextcloud
+	Open from Nextcloud	Отваряне от Nextcloud
+	Save to Nextcloud	Записване в Nextcloud
+	New Nextcloud Folder	Нова папка в Nextcloud
+	Delete on Nextcloud	Изтриване в Nextcloud
+	Share on Nextcloud	Споделяне в Nextcloud
+	Search Nextcloud Files	Търсене във файловете на Nextcloud
+	Nextcloud File Versions	Версии на файловете в Nextcloud
+	Wait for Nextcloud	Изчакване на Nextcloud
+	Cloud	Облак
+	Nextcloud	Nextcloud
+	Server	Сървър
+	User name	Потребителско име
+	Connect	Свързване
+	Disconnect	Прекъсване на връзката
+	New folder	Нова папка
+	Folder	Папка
+	Files	Файлове
+	Status	Състояние
+	Versions	Версии
+	Save this document to the server as	Запиши този документ в сървъра като
+	An app password is safer than your account password.	Парола за приложение е по-безопасна от паролата на акаунта.
+	Don't check the server's certificate	Не проверявай сертификата на сървъра
+	Notes	Бележки
+	Backlinks	Обратни връзки
+	Tags	Етикети
+	Open a note to see the notes that link to it.	Отворете бележка, за да видите бележките, които сочат към нея.
+	Open an Obsidian vault folder to see the tags its notes carry.	Отворете папка на хранилище Obsidian, за да видите етикетите на бележките в нея.
+	Index Vault Notes	Индексиране на бележките в хранилището
+	Vault Backlinks	Обратни връзки в хранилището
+	Vault Tags	Етикети в хранилището
+	Insert Note Link	Вмъкване на връзка към бележка

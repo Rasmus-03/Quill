@@ -2490,3 +2490,39 @@ preview	Title	Пример
 	Open Vault	Открыть хранилище
 	Refresh Vault	Обновить хранилище
 	Search Vault	Поиск в хранилище
+
+	Connect to Nextcloud	Подключение к Nextcloud
+	Disconnect from Nextcloud	Отключение от Nextcloud
+	Nextcloud Status	Состояние Nextcloud
+	Nextcloud Files	Файлы Nextcloud
+	Open from Nextcloud	Открыть из Nextcloud
+	Save to Nextcloud	Сохранение в Nextcloud
+	New Nextcloud Folder	Новая папка в Nextcloud
+	Delete on Nextcloud	Удаление в Nextcloud
+	Share on Nextcloud	Общий доступ в Nextcloud
+	Search Nextcloud Files	Поиск по файлам Nextcloud
+	Nextcloud File Versions	Версии файлов Nextcloud
+	Wait for Nextcloud	Ожидание Nextcloud
+	Cloud	Облако
+	Nextcloud	Nextcloud
+	Server	Сервер
+	User name	Имя пользователя
+	Connect	Подключить
+	Disconnect	Отключить
+	New folder	Новая папка
+	Folder	Папка
+	Files	Файлы
+	Status	Состояние
+	Versions	Версии
+	Save this document to the server as	Сохранить этот документ на сервере как
+	An app password is safer than your account password.	Пароль приложения безопаснее пароля учётной записи.
+	Don't check the server's certificate	Не проверять сертификат сервера
+	Notes	Заметки
+	Backlinks	Обратные ссылки
+	Tags	Метки
+	Open a note to see the notes that link to it.	Откройте заметку, чтобы увидеть заметки, которые на неё ссылаются.
+	Open an Obsidian vault folder to see the tags its notes carry.	Откройте папку хранилища Obsidian, чтобы увидеть метки её заметок.
+	Index Vault Notes	Индексация заметок хранилища
+	Vault Backlinks	Обратные ссылки в хранилище
+	Vault Tags	Метки в хранилище
+	Insert Note Link	Вставка ссылки на заметку

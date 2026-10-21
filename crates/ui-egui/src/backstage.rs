@@ -283,8 +283,18 @@ fn open_page(app: &mut WordApp, ui: &mut Ui) {
     {
         let _ = app.run("ui.fileBrowser", json!({}));
     }
+    if ui.button(egui::RichText::new(tl!("Nextcloud")).font(medium(14.0))).clicked() {
+        open_cloud_tab(app);
+    }
     ui.add_space(18.0);
     open_list(app, ui);
+}
+
+/// The Nextcloud pane: where the files on the server are.
+fn open_cloud_tab(app: &mut WordApp) {
+    app.ui.backstage = false;
+    app.ui.nav_tab = "cloud".into();
+    app.session.view.nav_pane = true;
 }
 
 /// Save As: Browse… asks where to save. It has no recent-documents list: clicking one of those
@@ -293,6 +303,9 @@ fn save_as_page(app: &mut WordApp, ui: &mut Ui) {
     heading(ui, "Save As");
     if ui.button(egui::RichText::new(tl!("Browse…")).font(medium(14.0))).clicked() {
         app.save_as_dialog();
+    }
+    if ui.button(egui::RichText::new(tl!("Save to Nextcloud")).font(medium(14.0))).clicked() {
+        open_cloud_tab(app);
     }
 }
 

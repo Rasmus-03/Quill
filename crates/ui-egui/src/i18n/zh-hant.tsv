@@ -2081,3 +2081,39 @@
 	Search Vault	搜尋儲存庫
 	Save to Vault	儲存到儲存庫
 	Vault	儲存庫
+
+	Connect to Nextcloud	連線到 Nextcloud
+	Disconnect from Nextcloud	中斷 Nextcloud 連線
+	Nextcloud Status	Nextcloud 狀態
+	Nextcloud Files	Nextcloud 檔案
+	Open from Nextcloud	從 Nextcloud 開啟
+	Save to Nextcloud	儲存到 Nextcloud
+	New Nextcloud Folder	Nextcloud 新增資料夾
+	Delete on Nextcloud	在 Nextcloud 中刪除
+	Share on Nextcloud	在 Nextcloud 中分享
+	Search Nextcloud Files	搜尋 Nextcloud 檔案
+	Nextcloud File Versions	Nextcloud 檔案版本
+	Wait for Nextcloud	等待 Nextcloud
+	Cloud	雲端
+	Nextcloud	Nextcloud
+	Server	伺服器
+	User name	使用者名稱
+	Connect	連線
+	Disconnect	中斷連線
+	New folder	新增資料夾
+	Folder	資料夾
+	Files	檔案
+	Status	狀態
+	Versions	版本
+	Save this document to the server as	將此文件儲存到伺服器，名稱為
+	An app password is safer than your account password.	應用程式密碼比帳戶密碼更安全。
+	Don't check the server's certificate	不檢查伺服器的憑證
+	Notes	筆記
+	Backlinks	反向連結
+	Tags	標籤
+	Open a note to see the notes that link to it.	開啟一個筆記即可看到連結到它的筆記。
+	Open an Obsidian vault folder to see the tags its notes carry.	開啟 Obsidian 保存庫資料夾即可看到筆記的標籤。
+	Index Vault Notes	為保存庫筆記建立索引
+	Vault Backlinks	保存庫中的反向連結
+	Vault Tags	保存庫中的標籤
+	Insert Note Link	插入筆記連結

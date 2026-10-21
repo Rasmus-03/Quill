@@ -7,6 +7,7 @@
 #![deny(clippy::unwrap_used, clippy::expect_used, clippy::panic, clippy::unimplemented, clippy::todo, clippy::unreachable)]
 
 pub mod catalog;
+pub mod cloud;
 pub mod cmd;
 pub mod file_access;
 pub mod io;
@@ -169,6 +170,8 @@ pub mod p {
 mod tests;
 #[cfg(test)]
 mod tests_bidi;
+#[cfg(test)]
+mod tests_cloud;
 #[cfg(test)]
 mod tests_fonts;
 #[cfg(test)]

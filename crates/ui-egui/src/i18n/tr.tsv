@@ -2489,3 +2489,39 @@ preview	Title	Örnek
 	Open Vault	Kasayı Aç
 	Refresh Vault	Kasayı Yenile
 	Search Vault	Kasada Ara
+
+	Connect to Nextcloud	Nextcloud'a bağlan
+	Disconnect from Nextcloud	Nextcloud bağlantısını kes
+	Nextcloud Status	Nextcloud durumu
+	Nextcloud Files	Nextcloud dosyaları
+	Open from Nextcloud	Nextcloud'dan aç
+	Save to Nextcloud	Nextcloud'a kaydet
+	New Nextcloud Folder	Nextcloud'da yeni klasör
+	Delete on Nextcloud	Nextcloud'da sil
+	Share on Nextcloud	Nextcloud'da paylaş
+	Search Nextcloud Files	Nextcloud dosyalarında ara
+	Nextcloud File Versions	Nextcloud dosya sürümleri
+	Wait for Nextcloud	Nextcloud'u bekle
+	Cloud	Bulut
+	Nextcloud	Nextcloud
+	Server	Sunucu
+	User name	Kullanıcı adı
+	Connect	Bağlan
+	Disconnect	Bağlantıyı kes
+	New folder	Yeni klasör
+	Folder	Klasör
+	Files	Dosyalar
+	Status	Durum
+	Versions	Sürümler
+	Save this document to the server as	Bu belgeyi sunucuya şu adla kaydet:
+	An app password is safer than your account password.	Uygulama parolası, hesap parolasından daha güvenlidir.
+	Don't check the server's certificate	Sunucunun belirtisini doğrulama
+	Notes	Notlar
+	Backlinks	Geri bağlantılar
+	Tags	Etiketler
+	Open a note to see the notes that link to it.	Bağlantı veren notları görmek için bir not açın.
+	Open an Obsidian vault folder to see the tags its notes carry.	Notlarının etiketlerini görmek için bir Obsidian kasası klasörü açın.
+	Index Vault Notes	Kasa notlarını dizinle
+	Vault Backlinks	Kasadaki geri bağlantılar
+	Vault Tags	Kasadaki etiketler
+	Insert Note Link	Not bağlantısı ekle

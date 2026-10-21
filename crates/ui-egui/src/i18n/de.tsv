@@ -2079,3 +2079,39 @@
 	Search Vault	Vault durchsuchen
 	Save to Vault	In Vault speichern
 	Vault	Vault
+
+	Connect to Nextcloud	Mit Nextcloud verbinden
+	Disconnect from Nextcloud	Verbindung zu Nextcloud trennen
+	Nextcloud Status	Nextcloud-Status
+	Nextcloud Files	Nextcloud-Dateien
+	Open from Nextcloud	Aus Nextcloud öffnen
+	Save to Nextcloud	In Nextcloud speichern
+	New Nextcloud Folder	Neuer Nextcloud-Ordner
+	Delete on Nextcloud	In Nextcloud löschen
+	Share on Nextcloud	In Nextcloud teilen
+	Search Nextcloud Files	Nextcloud-Dateien durchsuchen
+	Nextcloud File Versions	Nextcloud-Dateiversionen
+	Wait for Nextcloud	Auf Nextcloud warten
+	Cloud	Cloud
+	Nextcloud	Nextcloud
+	Server	Server
+	User name	Benutzername
+	Connect	Verbinden
+	Disconnect	Trennen
+	New folder	Neuer Ordner
+	Folder	Ordner
+	Files	Dateien
+	Status	Status
+	Versions	Versionen
+	Save this document to the server as	Dieses Dokument auf dem Server speichern als
+	An app password is safer than your account password.	Ein App-Passwort ist sicherer als das Passwort Ihres Kontos.
+	Don't check the server's certificate	Zertifikat des Servers nicht prüfen
+	Notes	Notizen
+	Backlinks	Rückverweise
+	Tags	Schlagwörter
+	Open a note to see the notes that link to it.	Öffnen Sie eine Notiz, um die Notizen zu sehen, die auf sie verweisen.
+	Open an Obsidian vault folder to see the tags its notes carry.	Öffnen Sie einen Obsidian-Speicherordner, um die Schlagwörter seiner Notizen zu sehen.
+	Index Vault Notes	Notizen des Speichers indizieren
+	Vault Backlinks	Rückverweise im Speicher
+	Vault Tags	Schlagwörter im Speicher
+	Insert Note Link	Notizlink einfügen

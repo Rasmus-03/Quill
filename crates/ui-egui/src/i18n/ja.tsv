@@ -2080,3 +2080,39 @@
 	Search Vault	保管庫を検索
 	Save to Vault	保管庫に保存
 	Vault	保管庫
+
+	Connect to Nextcloud	Nextcloud に接続
+	Disconnect from Nextcloud	Nextcloud との接続を解除
+	Nextcloud Status	Nextcloud の状態
+	Nextcloud Files	Nextcloud のファイル
+	Open from Nextcloud	Nextcloud から開く
+	Save to Nextcloud	Nextcloud に保存
+	New Nextcloud Folder	Nextcloud の新しいフォルダー
+	Delete on Nextcloud	Nextcloud 上で削除
+	Share on Nextcloud	Nextcloud で共有
+	Search Nextcloud Files	Nextcloud のファイルを検索
+	Nextcloud File Versions	Nextcloud のファイルバージョン
+	Wait for Nextcloud	Nextcloud の応答を待つ
+	Cloud	クラウド
+	Nextcloud	Nextcloud
+	Server	サーバー
+	User name	ユーザー名
+	Connect	接続
+	Disconnect	接続解除
+	New folder	新しいフォルダー
+	Folder	フォルダー
+	Files	ファイル
+	Status	状態
+	Versions	バージョン
+	Save this document to the server as	このドキュメントをサーバーに保存する名前:
+	An app password is safer than your account password.	アプリパスワードはアカウントのパスワードより安全です。
+	Don't check the server's certificate	サーバーの証明書を検証しない
+	Notes	ノート
+	Backlinks	バックリンク
+	Tags	タグ
+	Open a note to see the notes that link to it.	ノートを開くと、リンクしているノートが表示されます。
+	Open an Obsidian vault folder to see the tags its notes carry.	Obsidian の保管フォルダーを開くと、メモのタグが表示されます。
+	Index Vault Notes	保管フォルダーのノートを索引
+	Vault Backlinks	保管フォルダーのバックリンク
+	Vault Tags	保管フォルダーのタグ
+	Insert Note Link	ノートリンクを挿入

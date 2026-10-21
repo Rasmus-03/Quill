@@ -101,6 +101,7 @@ pub fn registry() -> Registry {
     v.extend(connectors::specs());
     v.extend(tools::specs());
     v.extend(crate::vault::specs());
+    v.extend(crate::cloud::specs());
     v.extend(templates::specs());
     v.extend(protect::specs());
     v.extend(speech::specs());

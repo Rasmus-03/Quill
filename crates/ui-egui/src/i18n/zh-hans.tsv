@@ -2092,3 +2092,39 @@
 	Search Vault	搜索仓库
 	Save to Vault	保存到仓库
 	Vault	仓库
+
+	Connect to Nextcloud	连接到 Nextcloud
+	Disconnect from Nextcloud	断开 Nextcloud 连接
+	Nextcloud Status	Nextcloud 状态
+	Nextcloud Files	Nextcloud 文件
+	Open from Nextcloud	从 Nextcloud 打开
+	Save to Nextcloud	保存到 Nextcloud
+	New Nextcloud Folder	Nextcloud 新建文件夹
+	Delete on Nextcloud	在 Nextcloud 中删除
+	Share on Nextcloud	在 Nextcloud 中共享
+	Search Nextcloud Files	搜索 Nextcloud 文件
+	Nextcloud File Versions	Nextcloud 文件版本
+	Wait for Nextcloud	等待 Nextcloud
+	Cloud	云
+	Nextcloud	Nextcloud
+	Server	服务器
+	User name	用户名
+	Connect	连接
+	Disconnect	断开连接
+	New folder	新建文件夹
+	Folder	文件夹
+	Files	文件
+	Status	状态
+	Versions	版本
+	Save this document to the server as	将此文档保存到服务器，名称为
+	An app password is safer than your account password.	应用专用密码比账户密码更安全。
+	Don't check the server's certificate	不检查服务器的证书
+	Notes	笔记
+	Backlinks	反向链接
+	Tags	标签
+	Open a note to see the notes that link to it.	打开一个笔记即可看到链接到它的笔记。
+	Open an Obsidian vault folder to see the tags its notes carry.	打开 Obsidian 保管库文件夹即可看到笔记的标签。
+	Index Vault Notes	为保管库笔记建立索引
+	Vault Backlinks	保管库中的反向链接
+	Vault Tags	保管库中的标签
+	Insert Note Link	插入笔记链接

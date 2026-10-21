@@ -2114,3 +2114,39 @@
 	Search Vault	Otsi hoidlast
 	Save to Vault	Salvesta hoidlasse
 	Vault	Hoidla
+
+	Connect to Nextcloud	Ühendus Nextcloudiga
+	Disconnect from Nextcloud	Ühenduse katkestamine Nextcloudiga
+	Nextcloud Status	Nextcloudi olek
+	Nextcloud Files	Nextcloudi failid
+	Open from Nextcloud	Avamine Nextcloudist
+	Save to Nextcloud	Salvestamine Nextcloudi
+	New Nextcloud Folder	Uus Nextcloudi kaust
+	Delete on Nextcloud	Kustutamine Nextcloudis
+	Share on Nextcloud	Jagamine Nextcloudis
+	Search Nextcloud Files	Nextcloudi failide otsimine
+	Nextcloud File Versions	Nextcloudi failide versioonid
+	Wait for Nextcloud	Ootamine Nextcloudi
+	Cloud	Pilv
+	Nextcloud	Nextcloud
+	Server	Server
+	User name	Kasutajanimi
+	Connect	Ühenda
+	Disconnect	Ühenduse katkestamine
+	New folder	Uus kaust
+	Folder	Kaust
+	Files	Failid
+	Status	Olek
+	Versions	Versioonid
+	Save this document to the server as	Salvesta see dokument serverisse kui
+	An app password is safer than your account password.	Rakenduse parool on turvalisem kui konto parool.
+	Don't check the server's certificate	Ära kontrolli serveri sertifikaati
+	Notes	Märkmed
+	Backlinks	Tagasiühendused
+	Tags	Sildid
+	Open a note to see the notes that link to it.	Avage märkme, et näha märkmed, mis sellele viitavad.
+	Open an Obsidian vault folder to see the tags its notes carry.	Ava Obsidiani hoidla kaust, et näha selle märkmede sildid.
+	Index Vault Notes	Indekseri hoidla märkmed
+	Vault Backlinks	Hoidla tagasiühendused
+	Vault Tags	Hoidla sildid
+	Insert Note Link	Märkme lingi sisestamine

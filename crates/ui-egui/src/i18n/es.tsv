@@ -2446,3 +2446,39 @@ preview	Title	Título
 	Search Vault	Buscar en la bóveda
 	Save to Vault	Guardar en la bóveda
 	Vault	Bóveda
+
+	Connect to Nextcloud	Conectar con Nextcloud
+	Disconnect from Nextcloud	Desconectar de Nextcloud
+	Nextcloud Status	Estado de Nextcloud
+	Nextcloud Files	Archivos de Nextcloud
+	Open from Nextcloud	Abrir desde Nextcloud
+	Save to Nextcloud	Guardar en Nextcloud
+	New Nextcloud Folder	Nueva carpeta de Nextcloud
+	Delete on Nextcloud	Eliminar en Nextcloud
+	Share on Nextcloud	Compartir en Nextcloud
+	Search Nextcloud Files	Buscar en los archivos de Nextcloud
+	Nextcloud File Versions	Versiones de los archivos de Nextcloud
+	Wait for Nextcloud	Esperar a Nextcloud
+	Cloud	Nube
+	Nextcloud	Nextcloud
+	Server	Servidor
+	User name	Nombre de usuario
+	Connect	Conectar
+	Disconnect	Desconectar
+	New folder	Nueva carpeta
+	Folder	Carpeta
+	Files	Archivos
+	Status	Estado
+	Versions	Versiones
+	Save this document to the server as	Guardar este documento en el servidor como
+	An app password is safer than your account password.	Una contraseña de aplicación es más segura que la de la cuenta.
+	Don't check the server's certificate	No comprobar el certificado del servidor
+	Notes	Notas
+	Backlinks	Retroenlaces
+	Tags	Etiquetas
+	Open a note to see the notes that link to it.	Abra una nota para ver las notas que la enlazan.
+	Open an Obsidian vault folder to see the tags its notes carry.	Abra una carpeta de almacén de Obsidian para ver las etiquetas de sus notas.
+	Index Vault Notes	Indexar las notas del almacén
+	Vault Backlinks	Retroenlaces del almacén
+	Vault Tags	Etiquetas del almacén
+	Insert Note Link	Insertar enlace a nota
