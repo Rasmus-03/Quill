@@ -22,6 +22,7 @@ page in front of you.
   the status bar step aside and the page fills the window. Escape brings the interface back.
 - **AutoSave to the server**: a document that was opened from the server is written back to it
   a couple of seconds after the last change, as long as the server is connected
+- **The app on this machine follows the checkout**: `cargo xtask install` builds the release app and puts it in `~/Applications/Quill.app` (the command line tool in `~/bin/quill`), and `cargo xtask install --hook` writes the git hooks that install it after every commit and every merge — push to GitHub and the local copy is already the new one. The build runs in the background and logs to `.git/quill-install.log`
 - **The ritual**: `cargo xtask test` runs the tests and then removes what the run left behind
   (build directories older than a week, the incremental caches, the scratch folders a crashed
   test left and the half-written files a killed save left). `cargo xtask ci` ends with it, and

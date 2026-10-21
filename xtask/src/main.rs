@@ -6,8 +6,10 @@
 mod assets;
 mod clean;
 mod ico;
+mod install;
 mod layers;
 mod parity;
+mod pkg_names;
 mod stats;
 mod version;
 
@@ -21,8 +23,15 @@ commands:
   assets          check that every icon/image/font/asset is attributed in ATTRIBUTION.md
   layers          enforce the crate dependency layering (plan/architecture.md §3)
   wasm            cargo check --target wasm32-unknown-unknown for the wasm-safe crates
-  ci              fmt --check, clippy -D warnings, test, assets, layers, wasm (stops at first failure)
+  pkg-names       check that every `cargo -p <package>` in a workflow or a packaging script
+                  names a package that exists in the workspace
+  ci              fmt --check, clippy -D warnings, test, assets, layers, wasm, pkg-names
+                  (stops at first failure)
   test [-- args...]     run the tests, then remove what the run left behind (the ritual)
+  install [--hook|--unhook]
+                  build the app and put it on this machine (macOS: ~/Applications/Quill.app,
+                  the command line tool in ~/bin). --hook writes the git hooks that install it
+                  after every commit and every merge; --unhook takes them away
   clean [--all] [--older-than DAYS]
                   remove what the last build and test run left behind: build directories older
                   than DAYS days, the incremental caches, the scratch folders a crashed test left
@@ -42,9 +51,11 @@ fn main() -> ExitCode {
     let result = match args.first().map(String::as_str) {
         Some("assets") => assets::run(&root()),
         Some("clean") => cmd_clean(&rest),
+        Some("install") => cmd_install(&rest),
         Some("test") => cmd_test(&rest),
         Some("layers") => cmd_layers(),
         Some("wasm") => cmd_wasm(),
+        Some("pkg-names") => pkg_names::run(&root()),
         Some("ci") => cmd_ci(),
         Some("corpus") => cmd_corpus(rest.contains(&"--download")),
         Some("stats") => stats::run(&root(), rest.contains(&"--exact")),
@@ -102,6 +113,21 @@ fn cmd_test(args: &[&str]) -> Result<(), String> {
     let report = clean::run(&root(), &clean::Options::default())?;
     println!("clean: {report}");
     if status.success() { Ok(()) } else { Err(format!("tests exited with {status}")) }
+}
+
+/// `cargo xtask install`: build the app and put it on this machine.
+fn cmd_install(args: &[&str]) -> Result<(), String> {
+    let mut opts = install::Options { hooks: None };
+    for a in args {
+        match *a {
+            "--hook" => opts.hooks = Some(install::Hooks::Install),
+            "--unhook" => opts.hooks = Some(install::Hooks::Remove),
+            other => return Err(format!("unknown option `{other}`")),
+        }
+    }
+    let report = install::run(&root(), opts)?;
+    println!("{report}");
+    Ok(())
 }
 
 /// `cargo xtask clean`: the ritual after a test run.
@@ -228,6 +254,9 @@ fn cmd_ci() -> Result<(), String> {
         ("test", Box::new(|| cmd_test(&[]))),
         ("assets", Box::new(|| assets::run(&root()))),
         ("layers", Box::new(cmd_layers)),
+        // A stale package name in a workflow or a packaging script breaks the build in a way
+        // that looks like a broken toolchain, so it is checked here too.
+        ("pkg-names", Box::new(|| pkg_names::run(&root()))),
         ("wasm", Box::new(cmd_wasm)),
         // The ritual: a test run ends by removing what it left behind.
         (

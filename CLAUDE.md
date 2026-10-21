@@ -48,6 +48,7 @@ People trust WordCraft with their writing; a crash loses their work. **This outr
 
 ## Rituals (always, every time)
 - **After a test run, the old artifacts go.** `cargo xtask clean` removes the build directories older than a week, the incremental caches, the scratch folders a crashed test left in the temporary directory and the half-written files a killed save left behind. `cargo xtask ci` ends with it. `cargo xtask clean --all` also removes this checkout's build directory (use it when your own `CARGO_TARGET_DIR` is in the way).
+- **The app on this machine follows the checkout.** `cargo xtask install` builds the release app and puts it in `~/Applications/Quill.app` (the command line tool in `~/bin/quill`). `cargo xtask install --hook` writes the git hooks that do it after every commit and every merge, so a push to GitHub leaves the local copy current; `--unhook` takes them away. The hook builds in the background and logs to `.git/quill-install.log`.
 - **Tests clean up after themselves.** A test that writes files puts them in a scratch folder that a `Drop` removes when the test ends, so a run leaves nothing behind. Keep it that way.
 - Nothing is left in the working tree either: `git status` shows only the files the work changed.
 
