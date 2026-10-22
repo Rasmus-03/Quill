@@ -1,8 +1,8 @@
 # Quill 1.2 — release plan
 
-> **Last reviewed:** 2026-10-21 · **Last updated:** 2026-10-22 · **Change:** minor (D4 and D5 landed:
-> the fork boundary is in `FORK.md` with the port policy, and `docs/releasing.md` carries the
-> changelog convention, the pre-publish checklist and who publishes) ·
+> **Last reviewed:** 2026-10-22 · **Last updated:** 2026-10-22 · **Change:** minor (the 1.2 work
+> branches are integrated: Danish proofing, the Danish catalog, fuzzing and the parity wins; D4
+> and D5 landed the fork boundary and the release checklist) ·
 > **Status:** draft — the owner decisions in §8 are open · **Baseline:** 1.1.0 (Nextcloud, deeper
 > Obsidian vaults, Focus mode), version `1.1.0` in `Cargo.toml:7`
 
@@ -139,6 +139,16 @@ RTF/ODT readers and the font/TTC parser; promote the existing proptest cases in
 *Where:* `crates/docx/fuzz/`, `crates/docbin/fuzz/`, `crates/formats/fuzz/`, `crates/fonts/fuzz/`.
 *Done when:* a nightly job runs 60 s per target and reports crashes as artifacts.
 *Rule:* a fuzz finding is a crash fix with a regression test (see AGENTS.md, "Never crash").
+*What landed:* four detached `cargo-fuzz` workspaces, one reader each: `read` (docx), `read`
+(docbin), `rtf` and `odt` (formats), and `font` (fonts). Every target feeds bytes straight into
+the crate's public entry point; the seeds are two synthetic DOCX packages, two synthetic `.doc`
+compound files, two RTF files, two ODT packages and a hand-built TrueType font plus a collection,
+all written for this repo. `fuzz.yml` runs nightly at 03:43 UTC and on manual dispatch with a
+nightly toolchain and `cargo-fuzz`, 60 seconds per target, the corpus cached per crate and the
+crash artifacts uploaded when a target fails. The YAML parses, the seeds open through the real
+readers, and all five targets type-check; **running them needs rustup, a nightly toolchain and
+`cargo-fuzz`, which this machine does not have** — the first real fuzz run is still owed on a
+machine that does.
 
 ### B. Real documents — P0/P1
 
@@ -363,6 +373,9 @@ own; `cargo xtask ci` before you commit; one commit per arc, with a task id in t
       macOS DMG and the macOS bundle were built locally; the Windows MSI needs Windows)*
 - [ ] The corpus harness runs over the real-world corpus; every known difference is in the
       compatibility table (B3), not a surprise.
+- [ ] Fuzzing runs nightly over the DOCX, `.doc`, RTF/ODT and font readers. *(A7: the four
+      `cargo-fuzz` workspaces, their seeds and `fuzz.yml` landed and type-check; the nightly run
+      itself still needs a machine with rustup, a nightly toolchain and `cargo-fuzz`)*
 - [ ] The app is Danish: interface, proofing and maths messages.
 - [ ] `README.md` describes every platform, the feature matrix and the limits; `docs/status.md`
       carries the measured maturity table.
@@ -416,6 +429,7 @@ spent on the file that breaks a student's assignment.
 | Date | Change | Summary |
 |---|---|---|
 | 2026-10-22 | minor | D4 and D5 landed: `FORK.md` now says what is Quill's own code and the rules a port follows; `docs/releasing.md` carries the changelog convention, the pre-publish checklist and who publishes |
+| 2026-10-22 | minor | A7 landed: `cargo-fuzz` workspaces for the DOCX, `.doc`, RTF/ODT and font readers with synthetic seeds, and a nightly workflow that runs each target for 60 seconds, caches the corpus and uploads crashes. The targets type-check; the first real fuzz run waits for a machine with rustup, nightly and `cargo-fuzz` |
 | 2026-10-21 | major | Created: the 1.2 plan — build trust (A), real documents (B), Danish first (C), presentation and identity (D), cheap parity wins (E); ten measured findings with file references; seven owner decisions |
 | 2026-10-21 | minor | Arc 3 landed: B4 audited — the shape tool works (a new test drags and resizes an inserted shape, so #142 is closed and pinned), the Windows startup crash is prevented by never enumerating the Vulkan driver, and the other field failures in the list are closed upstream. The gap list is true again |
 | 2026-10-21 | minor | Arc 2 landed: C5 — three Danish school templates of our own (an assignment sheet, a report cover, a two-column handout), offered in File › New; the text and the layout are ours |

@@ -1,0 +1,36 @@
+[package]
+name = "wordcraft-formats-fuzz"
+version = "0.0.0"
+publish = false
+edition = "2024"
+
+[package.metadata]
+cargo-fuzz = true
+
+[dependencies]
+libfuzzer-sys = "0.4"
+
+[dependencies.wordcraft-formats]
+path = ".."
+
+# A fuzz crate is its own workspace: `cargo fuzz` builds it with nightly and a sanitizer, which
+# must not change how the parent workspace resolves dependencies.
+[workspace]
+members = ["."]
+
+[profile.release]
+debug = 1
+
+[[bin]]
+name = "rtf"
+path = "fuzz_targets/rtf.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "odt"
+path = "fuzz_targets/odt.rs"
+test = false
+doc = false
+bench = false
