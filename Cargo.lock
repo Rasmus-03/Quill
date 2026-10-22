@@ -3488,6 +3488,25 @@ dependencies = [
 ]
 
 [[package]]
+name = "quill-web"
+version = "1.1.0"
+dependencies = [
+ "eframe",
+ "egui",
+ "js-sys",
+ "log",
+ "rfd",
+ "serde_json",
+ "wasm-bindgen",
+ "wasm-bindgen-futures",
+ "web-sys",
+ "wordcraft-doc",
+ "wordcraft-engine",
+ "wordcraft-fonts",
+ "wordcraft-ui-egui",
+]
+
+[[package]]
 name = "quote"
 version = "1.0.47"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -5827,25 +5846,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "wordcraft-web"
-version = "1.1.0"
-dependencies = [
- "eframe",
- "egui",
- "js-sys",
- "log",
- "rfd",
- "serde_json",
- "wasm-bindgen",
- "wasm-bindgen-futures",
- "web-sys",
- "wordcraft-doc",
- "wordcraft-engine",
- "wordcraft-fonts",
- "wordcraft-ui-egui",
-]
-
-[[package]]
 name = "wordcraft-zotero"
 version = "1.1.0"
 dependencies = [
@@ -5964,6 +5964,7 @@ version = "1.1.0"
 dependencies = [
  "log",
  "serde_json",
+ "sha2 0.11.0",
 ]
 
 [[package]]
