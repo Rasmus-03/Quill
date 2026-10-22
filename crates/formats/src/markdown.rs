@@ -1217,9 +1217,9 @@ fn escape_line_start(s: String) -> String {
     let s = s.trim_start().to_string();
     let t = s.as_str();
     let lead = s.len() - t.len();
-    // `#tag` is an Obsidian tag, not an ATX heading; only `# ` (or a bare `#`) starts one.
-    let needs = t == "#"
-        || t.starts_with("# ")
+    // `#tag` is an Obsidian tag, not an ATX heading; only a line the reader would take as a
+    // heading is escaped (`#`, `##`, `# text`, `## ##`…; `#tag` stays as it is).
+    let needs = atx_heading(t).is_some()
         || t.starts_with('>')
         || t.starts_with("- ")
         || t.starts_with("+ ")

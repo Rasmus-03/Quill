@@ -1,6 +1,6 @@
 # File-format parity with Microsoft Word
 
-> **Last reviewed:** 2026-10-11 · **Last updated:** 2026-10-20 · **Change:** minor (Obsidian vault import/export with frontmatter, wikilinks, embeds and byte-safe raw fallback; previously trivial: symbol-font text exported as Unicode, #776; previously trivial: text-box margins, Resize shape to fit text and freeforms in groups, #743; previously trivial: formatted paste from the system clipboard's HTML and RTF, #687; previously trivial: independent complex-script formatting inheritance and round-trip regression tests; previously trivial: import/export fixes for TXT, RTF, ODT, HTML and LaTeX, #433–#440; previously major: first version; every format Word reads or writes, measured from the readers and writers on origin/main) · **Target:** Microsoft Word (Microsoft 365) for Mac 16.113.4, plus Word for Windows' extra formats
+> **Last reviewed:** 2026-10-11 · **Last updated:** 2026-10-21 · **Change:** minor (a real-world .docx corpus: 71 files from Apache POI, pinned by hash, every one of them round-tripped; the user-facing table of what survives a round trip; previously minor: Obsidian vault import/export with frontmatter, wikilinks, embeds and byte-safe raw fallback; previously trivial: symbol-font text exported as Unicode, #776; previously trivial: text-box margins, Resize shape to fit text and freeforms in groups, #743; previously trivial: formatted paste from the system clipboard's HTML and RTF, #687; previously trivial: independent complex-script formatting inheritance and round-trip regression tests; previously trivial: import/export fixes for TXT, RTF, ODT, HTML and LaTeX, #433–#440; previously major: first version; every format Word reads or writes, measured from the readers and writers on origin/main) · **Target:** Microsoft Word (Microsoft 365) for Mac 16.113.4, plus Word for Windows' extra formats
 
 Every format Word opens or saves, what WordCraft does with it, and how it's tested. Fidelity is the
 share of a typical real-world file's content and formatting that survives (read: shows correctly;
@@ -130,10 +130,50 @@ from these synthetic package checks, and native Word rendering/binding behavior 
 Native `io::save_path_with` serializes (and, for password-protected DOCX, encrypts) before creating an exclusively owned sibling temporary file. It writes and synchronizes that file, closes it, then replaces the destination. Failed preparation or replacement keeps the original bytes; cleanup removes only the save's temporary file, on a best-effort basis. Existing `<name>.tmp` files, directories and links are untouched. A new document gets the default mode (`0666` less the umask). When replacing an existing regular file, the Unix temporary file starts with mode `0600` and then takes the existing file's basic permissions. Serialization and format support are unchanged.
 Synthetic CLI cases and `engine/tests/safe_save.rs` cover occupied names, links, blocked replacement, missing directories, Save As session state, password-protected saves and original-file protection on macOS. Unit tests inject preparation errors and interleave two prepared saves. Independent saves use separate files; the last successful replacement wins. This is not document locking or conflict detection.
 Windows/Linux runtime behavior, ACLs and extended metadata, real disk-full conditions, power loss and network filesystems are not verified by these tests. The containing directory is not explicitly synchronized. Cleanup can fail when storage or permissions change, and process termination can leave a temporary file. No Word observation was needed for this filesystem change; it makes no new format-fidelity claim.
+## What a user actually gets
+
+The table above is written for the format. This one is written for the person who opens a file
+someone else sent. Every row was checked against **real documents** — 71 files that Word, Google
+Docs, LibreOffice and Pages wrote (see [`docx-corpus.md`](docx-corpus.md)), read → written →
+read again, with the text, the tables, the headers and footers and the pictures compared.
+
+| In the file you were sent | What Quill does with it |
+|---|---|
+| The text, with its fonts, sizes, colours, bold and italic | **Kept.** Same characters, same order, same look |
+| Paragraphs: alignment, spacing before and after, indentation, line spacing | **Kept** |
+| Lists (bulleted and numbered), with their levels and their numbering | **Kept** |
+| Tables, with their rows, columns, cell text, borders and shading | **Kept** |
+| Pictures (inline and floating, with their wrap) | **Kept**, the picture bytes are unchanged |
+| Headers and footers (first page, even and odd pages) | **Kept**, the text and the pictures in them |
+| Footnotes and endnotes | **Kept** |
+| Comments | **Kept** |
+| Tracked changes (insertions and deletions) and formatting revisions | **Kept** — Word shows them as changes |
+| Fields (page numbers, cross-references, a table of contents) | **Kept** with the result they showed; Quill updates the ones it can |
+| Content controls (check boxes, drop-downs, date pickers) | **Kept**, and they can be filled in |
+| Bookmarks, hyperlinks, internal links | **Kept** |
+| Right-to-left text and right-to-left tables | **Kept** |
+| Equations (Word's own equation objects) | **Kept** |
+| Charts and SmartArt | **Shown**, and saved back unchanged — but not editable in Quill |
+| Embedded objects (an Excel sheet, an OLE object) | **Shown** as its picture, saved back whole — not openable in Quill |
+| Word's ink (a pen drawing) | **Kept** as the original InkML — Quill shows the picture, not the strokes |
+| Legacy form fields (the old check boxes and drop-downs) | **Lost** — the only thing a .docx from before 2007 loses |
+| 3D models | **Lost** |
+| East Asian text layout, building blocks, `altChunk` | **Lost** |
+
+The last three rows are the whole list of what is lost. A document that uses none of them comes
+through untouched — which is what the 71 real files show.
+
+**Two files are refused on purpose**, both with a reason: a document with 5,000 nested tables
+(15,005 levels of XML, deeper than the reader's nesting limit) and a package that was cut in
+half. The reader refuses them instead of trying, so a hostile file cannot make it work hard.
+
 ## What decides beta for formats
 
 1. A **real-world DOCX corpus** opened, rendered and round-tripped, compared page by page with
    Word (local only: Word output can't be committed; keep a manifest and our own renders).
+   *The corpus and the round trip exist* (71 real files, pinned by hash, all of them keeping
+   their content — [`docx-corpus.md`](docx-corpus.md)); *the page-by-page comparison with Word*
+   is what is left.
 2. **Preserve what we can't render**: remaining ink forms and unsupported graphics survive a round trip
    (keep the parts and the run). Charts, SmartArt and OLE objects do (#292, #319); drawing-level native ink now keeps its InkML and optional picture fallback.
 3. Move tracking (`w:moveFrom`/`w:moveTo`) read and written (formatting revisions: #41; content controls: #381).
@@ -164,6 +204,7 @@ raise readiness estimates. No Word-derived files are fixtures.
 
 | Date | Change | Summary |
 |---|---|---|
+| 2026-10-21 | minor | A real-world .docx corpus: 71 files from Apache POI's test documents (Apache-2.0), fetched with `cargo xtask corpus --docx`, pinned by SHA-256 in `crates/docx/tests/corpus-manifest.tsv` and kept out of the repository (the clean-room rule). `crates/docx/tests/corpus.rs` reads → writes → reads every file and compares the text, the tables, the parts and the pictures: all 71 keep everything, two are refused on purpose (5,000 nested tables, a truncated package). Adds the user-facing table of what survives a round trip |
 | 2026-10-20 | minor | PDF Reflow, desktop v1: a PDF opens as an editable document — glyphs reflowed into lines and paragraphs (pitch, hyphen joins), headings from a size step up, bullets/numbers as list items, centred paragraphs, the MediaBox page with measured margins, picture XObjects decoded in place (JPEG kept byte-for-byte, the rest re-encoded PNG); hazard-tested against truncated and hostile PDFs |
 | 2026-10-12 | trivial | ODT page size, orientation and margins read back from `styles.xml` on open, so they survive a save and reopen (#810) |
 | 2026-10-12 | minor | RTF reads 8-bit text in the document's or the font's code page (`\ansicpg`, `\fcharset`, `\cpg`) instead of always Windows-1252; a `.doc`/`.docx`/`.rtf` whose content is another of these formats opens by signature. Found on a private corpus of real Russian documents: 38 of 44 `.doc` files were RTF, all now open with their Cyrillic text |

@@ -1,6 +1,6 @@
 [package]
-name = "wordcraft-web"
-description = "WordCraft in the browser (eframe web runner, WebGPU with WebGL2 fallback)"
+name = "quill-web"
+description = "Quill in the browser (eframe web runner, WebGPU with WebGL2 fallback)"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
@@ -10,7 +10,7 @@ publish = false
 workspace = true
 
 [[bin]]
-name = "wordcraft-web"
+name = "quill-web"
 path = "src/main.rs"
 
 [dependencies]
