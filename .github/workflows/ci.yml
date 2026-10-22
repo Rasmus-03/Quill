@@ -5,11 +5,19 @@ on:
     branches: [main]
   pull_request:
 
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   test:
     runs-on: ubuntu-latest
+    timeout-minutes: 60
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Install Maxima and desktop tooling
         run: |
@@ -17,12 +25,14 @@ jobs:
           sudo apt-get install -y --no-install-recommends maxima xdg-utils
 
       - name: Install Rust toolchain
-        uses: dtolnay/rust-toolchain@stable
+        uses: dtolnay/rust-toolchain@683b588c487a69d01f6c6ddf40f036ff682cc2c8 # v1
         with:
           components: rustfmt, clippy
+          # The wasm gate below (cargo xtask wasm) checks the browser build of every layer.
+          targets: wasm32-unknown-unknown
 
       - name: Cache cargo
-        uses: Swatinem/rust-cache@v2
+        uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
 
       - name: Format
         run: cargo fmt --all -- --check
@@ -30,12 +40,11 @@ jobs:
       - name: Clippy
         run: cargo clippy --workspace --all-targets -- -D warnings
 
-      - name: Tests (lib)
-        run: cargo test --workspace --lib
-
-      # `--lib` skips the engine's tests/ directory (save and macro regressions).
-      - name: Tests (engine integration)
-        run: cargo test -p wordcraft-engine --tests
+      # The whole workspace, every test target: the DOCX round-trip and hostile-input suites
+      # (crates/docx/tests), the engine's integration tests, the binaries' own unit tests and
+      # the MCP, fonts, UI and CLI integration tests. `--lib` would skip all of them.
+      - name: Tests
+        run: cargo test --workspace
 
       # Maxima-dependent math tests live in wordcraft-engine and are
       # #[ignore]d by default (they spawn the CAS, so they are slow).
@@ -43,3 +52,17 @@ jobs:
       # tests are benchmarks and a load-flaky i18n audit, not CI content.
       - name: Maxima-dependent tests
         run: cargo test -p wordcraft-engine --lib -- --ignored
+
+      # The repo's own gates, so they run on every push and not only when a developer
+      # remembers `cargo xtask ci`:
+      # - assets: every file that ships needs a row in ATTRIBUTION.md
+      # - layers: nothing below the UI may depend on the UI framework
+      # - wasm: the browser build of every layer still compiles
+      - name: Assets (ATTRIBUTION)
+        run: cargo xtask assets
+
+      - name: Layering
+        run: cargo xtask layers
+
+      - name: WebAssembly
+        run: cargo xtask wasm

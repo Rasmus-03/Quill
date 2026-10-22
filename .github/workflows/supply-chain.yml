@@ -1,0 +1,122 @@
+# The dependency and toolchain gates: what the CI on a pull request does not cover.
+#
+# - `cargo audit`: a new advisory in a dependency (zip, quick-xml, krilla, image…) must fail the
+#   build, not sit there until someone reads a CVE list.
+# - the MSRV job: the workspace declares `rust-version = "1.95"`; nothing else checks that the
+#   code still builds with it.
+# - the weekly job: dependency drift and a runner's own updates are only seen when a push
+#   happens; a scheduled run sees them every week.
+name: Supply chain
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'Cargo.toml'
+      - 'Cargo.lock'
+      - 'crates/*/Cargo.toml'
+      - 'apps/*/Cargo.toml'
+      - 'xtask/Cargo.toml'
+  pull_request:
+    paths:
+      - 'Cargo.toml'
+      - 'Cargo.lock'
+      - 'crates/*/Cargo.toml'
+      - 'apps/*/Cargo.toml'
+      - 'xtask/Cargo.toml'
+  schedule:
+    # Every Monday at 04:17 UTC: the whole workspace, as the CI does, plus the audit.
+    - cron: '17 4 * * 1'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: supply-chain-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  audit:
+    name: cargo audit
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Install cargo-audit
+        uses: taiki-e/install-action@cargo-audit
+
+      - name: Audit the dependencies
+        run: cargo audit
+
+  msrv:
+    name: MSRV (Rust 1.95)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Install the minimum supported toolchain
+        uses: dtolnay/rust-toolchain@683b588c487a69d01f6c6ddf40f036ff682cc2c8 # v1
+        with:
+          toolchain: '1.95'
+
+      - name: Check the workspace
+        run: cargo check --workspace --all-targets --locked
+
+  weekly:
+    name: Weekly full run
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Install Maxima
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends maxima xdg-utils
+
+      - name: Install the toolchain
+        uses: dtolnay/rust-toolchain@683b588c487a69d01f6c6ddf40f036ff682cc2c8 # v1
+        with:
+          components: rustfmt, clippy
+          targets: wasm32-unknown-unknown
+
+      - name: Cache cargo
+        uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
+
+      - name: The whole gate
+        run: cargo xtask ci
+
+  coverage:
+    name: Test coverage
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Install the toolchain
+        uses: dtolnay/rust-toolchain@683b588c487a69d01f6c6ddf40f036ff682cc2c8 # v1
+
+      - name: Cache cargo
+        uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
+
+      - name: Install cargo-llvm-cov
+        uses: taiki-e/install-action@cargo-llvm-cov
+
+      # The number is for the trend, not for a gate: the tests that matter are the ones the
+      # corpus and the property tests cover.
+      - name: Measure the coverage
+        run: cargo llvm-cov --workspace --lcov --output-path lcov.info
+
+      - name: The number
+        run: cargo llvm-cov report --summary-only
+
+      - name: Keep the report
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: coverage
+          path: lcov.info
+          if-no-files-found: error
