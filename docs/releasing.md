@@ -30,18 +30,66 @@ Dry run: `gh workflow run release.yml --ref <branch>` builds the unsigned jobs (
 Linux riscv64, Flatpak, FreeBSD, web) on any branch; the signing jobs are refused there by the `release`
 environment's branch rule, so no draft release is made.
 
+## The changelog
+
+`CHANGELOG.md` is the user's view of a release. It is written **while the work lands**, in the
+same commit as the change, and not scraped from the commit log at release time. It follows the
+shape of the entries already there:
+
+```markdown
+## Unreleased
+
+One paragraph: what this release is about.
+
+- **A bold phrase in the user's words** — what happened before, what happens now, and the issue
+  number when there is one.
+```
+
+The rules:
+
+- One bullet per user-visible change, in the app's terms — the ribbon label, the dialog, the file,
+  the window — never the crate, the command id or the test. Say what the user saw before when it
+  was wrong: "a solve that found nothing used to say only `Maxima produced an empty result`".
+- A fixed crash or a data-path bug gets a bullet even though it is not a feature: it is the thing
+  people are deciding whether to trust.
+- Refactors, dependency bumps, CI and test-only work get no bullet, unless they change what the
+  user can do or how much they can trust it.
+- `## Unreleased` stays at the top. A release turns it into `## <version> — <short title>` (the
+  version `cargo xtask version set` wrote) and opens a fresh `## Unreleased` above it. Newest
+  first.
+- Entries are in English: the changelog is a repository document. Release notes translated for
+  users are a separate file.
+
 ## Before you publish
 
+- The version is bumped: `cargo xtask version set <version>`, which is also what the artifacts,
+  `--version` and About carry.
 - `cargo xtask ci` is green (formatting, clippy, the whole test suite, the asset attribution, the
   crate layering, the package names, the browser build).
-- The CI matrix is green on Linux, macOS and Windows (`printing.yml`), and the workflow lint
-  (`.github/workflows/workflow-lint.yml`) is green.
-- `CHANGELOG.md` has an entry for the version, in the format of the earlier ones.
-- `ROADMAP.md`, `docs/gaps.md`, `docs/roadmap.md` and the parity documents are updated, each with
-  its status line and revision history bumped.
+- The CI matrix is green on Linux, macOS and Windows (`printing.yml`), the workflow lint
+  (`.github/workflows/workflow-lint.yml`) is green, and the supply-chain run on the same commit is
+  green (`cargo audit`, the MSRV job, coverage).
+- `CHANGELOG.md` has an entry for the version in the shape above, with the `Unreleased` heading
+  turned into the version.
+- `ROADMAP.md`, `docs/gaps.md`, `docs/roadmap.md`, `docs/status.md`, the parity documents and
+  `docs/release-plan-1.2.md` are updated, each with its status line and revision history bumped.
+- The release plan's definition of done (`docs/release-plan-1.2.md` §6) is walked item by item,
+  and the ones that cannot be proven on this machine say so.
 - Every artifact carries the Quill name: `quill-…` files, `Quill.app`, `quill.exe`. The
   `pkg-names` gate (`cargo xtask pkg-names`) catches a stale package name in a workflow or a
   packaging script; the packaging scripts themselves are the source of the artifact names.
+- The packaged build was opened once on each platform that can be checked here: it starts, opens
+  a document, saves it and shows the version in About.
+- The dry run (`gh workflow run release.yml --ref <branch>`) built the unsigned jobs, so a broken
+  job is found before the `release` branch carries it.
+
+## Who publishes
+
+The release manager — today the repository owner, `@Rasmus-03` — runs the checklist above,
+reviews the drafted GitHub Release (`Quill v<version>`, with `SHA256SUMS.txt`) and presses
+**Publish**. Nothing else publishes: a green CI run is not a release, and an agent stops at the
+draft. Publishing is an owner decision in the same sense as the signing secrets and the next
+cloud provider: it needs the owner's account, and it cannot be undone politely.
 
 ## The macOS DMG window
 

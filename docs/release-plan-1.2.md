@@ -1,6 +1,8 @@
 # Quill 1.2 — release plan
 
-> **Last reviewed:** 2026-10-21 · **Last updated:** 2026-10-21 · **Change:** major (first version) ·
+> **Last reviewed:** 2026-10-21 · **Last updated:** 2026-10-22 · **Change:** minor (D4 and D5 landed:
+> the fork boundary is in `FORK.md` with the port policy, and `docs/releasing.md` carries the
+> changelog convention, the pre-publish checklist and who publishes) ·
 > **Status:** draft — the owner decisions in §8 are open · **Baseline:** 1.1.0 (Nextcloud, deeper
 > Obsidian vaults, Focus mode), version `1.1.0` in `Cargo.toml:7`
 
@@ -262,20 +264,35 @@ Still open: the **wordmark in the macOS DMG background** is upstream's outlined
 "WordCraft" — redrawing it needs the Inter and JetBrains Mono outlines, so it is a small
 artwork task of its own.
 
-**D4. Spell out the fork boundary** — 1 h
+**D4. Spell out the fork boundary** — 1 h — **done**
 *What:* `FORK.md` is already a good port ledger; add a short "what is Quill's own code" table
 (the maths tab, the cloud crate, the Obsidian vault, the Quill branding) and the policy for
 upstream ports (which upstream files may be overwritten, which are off-limits).
 *Where:* `FORK.md`, `README.md` (one paragraph).
 *Done when:* a reader can tell which parts of the app are Quill's.
+*What landed:* `FORK.md` opens with a **What is Quill's own code** table — the WordMat tab,
+Nextcloud, the Obsidian vaults, the Danish work, the corpus harness, the branding and the
+documentation, each with its files — followed by **The port policy**: Quill's own files are
+never replaced by an upstream file of the same name, a row of the modified-file table may be
+overwritten only together with the change it describes, everything else is merged as upstream
+wrote it (no drive-by reformatting, so ports stay cheap), new code goes in new files where it
+can, the upstream credit stays, and a port is one pull request naming the rows it re-applied.
+The README's developer section says the same in one paragraph and points at `FORK.md`.
 
-**D5. Changelog convention and a release checklist** — 1 h
+**D5. Changelog convention and a release checklist** — 1 h — **done**
 *What:* `docs/releasing.md` still describes releasing WordCraft and states no changelog rule.
 Add: the changelog format (already used in `CHANGELOG.md`), the version bump step, the checklist
 before publishing (green CI, `cargo xtask ci` green, docs updated, artifacts per platform
 verified), and who publishes.
 *Where:* `docs/releasing.md`, `CHANGELOG.md`.
 *Done when:* a dry run of the checklist is possible from the document alone.
+*What landed:* `docs/releasing.md` has **The changelog** — the shape of an entry, written while
+the work lands rather than scraped from commits, in the user's words, with a bullet even for a
+fixed crash and none for a refactor, `Unreleased` turning into the version at release time — and
+a **Before you publish** checklist that starts from the version bump and ends at the packaged
+build, including the supply-chain run, `docs/status.md` and the release plan's definition of
+done. **Who publishes** names the release manager: the owner reviews the drafted GitHub Release
+and presses Publish, and an agent stops at the draft.
 
 ### E. Cheap parity wins — P2, only if the arcs above are green
 
@@ -398,6 +415,7 @@ spent on the file that breaks a student's assignment.
 
 | Date | Change | Summary |
 |---|---|---|
+| 2026-10-22 | minor | D4 and D5 landed: `FORK.md` now says what is Quill's own code and the rules a port follows; `docs/releasing.md` carries the changelog convention, the pre-publish checklist and who publishes |
 | 2026-10-21 | major | Created: the 1.2 plan — build trust (A), real documents (B), Danish first (C), presentation and identity (D), cheap parity wins (E); ten measured findings with file references; seven owner decisions |
 | 2026-10-21 | minor | Arc 3 landed: B4 audited — the shape tool works (a new test drags and resizes an inserted shape, so #142 is closed and pinned), the Windows startup crash is prevented by never enumerating the Vulkan driver, and the other field failures in the list are closed upstream. The gap list is true again |
 | 2026-10-21 | minor | Arc 2 landed: C5 — three Danish school templates of our own (an assignment sheet, a report cover, a two-column handout), offered in File › New; the text and the layout are ours |

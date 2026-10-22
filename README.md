@@ -94,6 +94,12 @@ Everything is a command: the ribbon, the keyboard shortcuts, the command search,
 control channel and the MCP server all dispatch by the same id. See [`AGENTS.md`](AGENTS.md) for
 the working rules and [`docs/architecture.md`](docs/architecture.md) for the layers.
 
+Quill is a snapshot fork of WordCraft (MIT OR Apache-2.0): upstream history is deliberately not
+tracked here, so an upstream change arrives as a hand port. [`FORK.md`](FORK.md) says which parts
+of the app are Quill's own (the WordMat tab, Nextcloud, the Obsidian vaults, the Danish work and
+the branding), every upstream file Quill modifies and what changed in it, and the rules a port
+follows. Plain Markdown, so a port can be reviewed file by file.
+
 ## License
 
 Free and open source (MIT OR Apache-2.0 — see `LICENSE-MIT`, `LICENSE-APACHE`).
