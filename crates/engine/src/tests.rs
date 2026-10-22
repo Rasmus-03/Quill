@@ -5103,3 +5103,41 @@ fn an_inserted_shape_is_where_it_was_drawn() {
     let found = layout.object_at_in(hit.page, x, y, 2.0, wordcraft_doc::StoryRef::Body);
     assert!(found.is_some(), "the shape can be grabbed where it was drawn");
 }
+
+/// The never-crash standard, focused: the cloud and vault commands survive junk parameters, and
+/// the session is still usable afterwards.
+#[test]
+fn the_cloud_and_vault_commands_survive_junk_parameters() {
+    let ids = [
+        "cloud.connect",
+        "cloud.list",
+        "cloud.open",
+        "cloud.save",
+        "cloud.mkdir",
+        "cloud.delete",
+        "cloud.share",
+        "cloud.search",
+        "cloud.versions",
+        "cloud.wait",
+        "vault.index",
+        "vault.backlinks",
+        "vault.tags",
+        "vault.insertLink",
+        "edit.pasteAsEquation",
+    ];
+    let junk = [
+        json!(null),
+        json!({}),
+        json!({"path": [], "text": 5, "note": {"a": 1}}),
+        json!({"path": "../../etc/passwd", "term": {"x": 1}, "latex": 7}),
+        json!({"path": "\u{0}", "target": "a".repeat(9000), "bytes": [1, 2, 3]}),
+    ];
+    for id in ids {
+        for params in &junk {
+            let mut s = Session::new(wordcraft_doc::Document::new());
+            let _ = s.run(id, params);
+            s.clamp_selection();
+            let _ = s.layout();
+        }
+    }
+}
