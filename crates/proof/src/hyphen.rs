@@ -15,6 +15,10 @@
 //!
 //! **Bulgarian**: the Bulgarian syllable rules ([`crate::bg`]); no pattern file or word list.
 //!
+//! **Danish**: the TeX Danish patterns ([`Patterns::da`], by Frank Jensen, LPPL licence
+//! option), then the generic syllable heuristic for words with letters outside the Danish
+//! alphabet.
+//!
 //! Then the paragraph's limits ([`Limits`]) are applied.
 
 pub use crate::dict;
@@ -33,6 +37,8 @@ static EN_US_PAT: &str = include_str!("../../../assets/hyphenation/en-us.pat");
 static PL_PAT: &str = include_str!("../../../assets/hyphenation/pl.pat");
 /// hyph-utf8's `hyph-pt.tex`, unmodified (its BSD 3-clause header is in the file).
 static PT_PAT: &str = include_str!("../../../assets/hyphenation/pt.pat");
+/// hyph-utf8's `hyph-da.tex`, unmodified (its LPPL header is in the file).
+static DA_PAT: &str = include_str!("../../../assets/hyphenation/da.pat");
 
 impl Dictionary {
     /// The bundled US English dictionary (decoded on first use).
@@ -67,6 +73,12 @@ impl Patterns {
     pub fn pt() -> &'static Patterns {
         static P: OnceLock<Patterns> = OnceLock::new();
         P.get_or_init(|| Patterns::parse(PT_PAT))
+    }
+
+    /// The bundled Danish patterns (parsed on first use).
+    pub fn da() -> &'static Patterns {
+        static P: OnceLock<Patterns> = OnceLock::new();
+        P.get_or_init(|| Patterns::parse(DA_PAT))
     }
 }
 
@@ -121,6 +133,9 @@ fn core_breaks(core: &[char], lang: ProofLang) -> (Vec<usize>, Source) {
     if lang == ProofLang::Pt {
         return core_breaks_pt(core);
     }
+    if lang == ProofLang::Da {
+        return core_breaks_da(core);
+    }
     let dict = Dictionary::en_us();
     let s: String = core.iter().collect();
     let from_mask = |m: u64, len: usize| (1..len.min(64)).filter(|&i| m & (1 << i) != 0).collect::<Vec<_>>();
@@ -163,6 +178,21 @@ fn core_breaks_pl(core: &[char]) -> (Vec<usize>, Source) {
 /// [`core_breaks_pl`] for Portuguese: the bundled patterns, then the generic heuristic.
 fn core_breaks_pt(core: &[char]) -> (Vec<usize>, Source) {
     let pats = Patterns::pt();
+    let s: String = core.iter().collect();
+    if let Some(p) = pats.exception(&s) {
+        return (p.to_vec(), Source::Dictionary);
+    }
+    if !pats.is_empty()
+        && let Some(p) = pats.points(core)
+    {
+        return (p, Source::Patterns);
+    }
+    (heuristic_points(core), Source::Heuristic)
+}
+
+/// [`core_breaks_pl`] for Danish: the bundled TeX patterns, then the generic heuristic.
+fn core_breaks_da(core: &[char]) -> (Vec<usize>, Source) {
+    let pats = Patterns::da();
     let s: String = core.iter().collect();
     if let Some(p) = pats.exception(&s) {
         return (p.to_vec(), Source::Dictionary);
@@ -715,6 +745,35 @@ mod tests {
         assert_eq!(p.exception_count(), 3);
         assert_eq!(p.exception("hardware"), Some(&[4][..]));
         assert_eq!(p.exception("software"), Some(&[4][..]));
+    }
+
+    fn da(w: &str) -> String {
+        hyphenate_word_in(w, &Limits::default(), ProofLang::Da)
+    }
+
+    #[test]
+    fn danish_patterns_load() {
+        let p = Patterns::da();
+        assert!(p.len() > 1000, "{}", p.len());
+    }
+
+    #[test]
+    fn danish_words_hyphenate_by_danish_rules() {
+        for (w, want) in [
+            ("sommerferie", "som-mer-fe-rie"),
+            ("arbejdsplads", "ar-bejds-plads"),
+            ("fællesskab", "fæl-les-skab"),
+            ("retskrivning", "retskriv-ning"),
+            ("stavekontrol", "sta-ve-kon-trol"),
+            ("kærlighed", "kær-lig-hed"),
+            ("København", "Kø-ben-havn"),
+            ("Danmark", "Dan-mark"),
+            // One syllable: no break.
+            ("sprog", "sprog"),
+        ] {
+            assert_eq!(da(w), want, "{w}");
+        }
+        assert_eq!(word_breaks_in("sommerferie", ProofLang::Da).1, Source::Patterns);
     }
 
     #[test]
