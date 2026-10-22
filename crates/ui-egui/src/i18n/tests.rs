@@ -1055,6 +1055,25 @@ fn german_covers_the_interface_catalog_and_keeps_count_labels_neutral() {
 }
 
 #[test]
+fn danish_covers_the_interface_catalog_and_keeps_count_labels_neutral() {
+    use std::collections::HashSet;
+    let keys = |source| parse_entries(source).0.into_iter().map(|e| e.source).collect::<HashSet<_>>();
+    let da = lang("da");
+    // Danish covers every string the complete catalogs carry, including the equation gallery.
+    assert_eq!(keys(da.0.source), keys(lang("ru").0.source));
+    assert_eq!(tr(da, "Save"), "Gem");
+    assert_eq!(tr(da, "Spelling & Grammar"), "Stavning og grammatik");
+    assert_eq!(tr(da, "unknown future label"), "unknown future label");
+    assert_eq!(fmt(tr(da, "Exported {path}"), &[("path", "udkast-{words}.docx")]), "Eksporterede udkast-{words}.docx");
+    // `ord` is both singular and plural, so one wording is grammatical for every count.
+    for count in [0, 1, 2, 11, 21, 101] {
+        let words = count.to_string();
+        assert_eq!(fmt(tr(da, "{words} words"), &[("words", &words)]), format!("{count} ord"));
+        assert_eq!(fmt(tr(da, "{selected} of {words} words"), &[("selected", "1"), ("words", &words)]), format!("1 af {count} ord"));
+    }
+}
+
+#[test]
 fn bundled_interface_fonts_cover_german_letters() {
     let db = wordcraft_fonts::FontDb::with_font_dirs(Vec::new());
     for (family, style) in [("Inter", "Regular"), ("Inter", "Medium"), ("Inter", "SemiBold"), ("JetBrains Mono", "Regular")] {
