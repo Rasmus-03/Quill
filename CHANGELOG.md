@@ -3,8 +3,18 @@
 ## Unreleased
 
 The first steps of 1.2 (the plan lives in [`docs/release-plan-1.2.md`](docs/release-plan-1.2.md)):
-the build is trustworthy again, and the app carries its own name everywhere a user sees it.
+the build is trustworthy again, the app carries its own name everywhere a user sees it, and it
+speaks Danish.
 
+- **The interface speaks Danish**. `Dansk` is in the language list, and its catalog covers all
+  2,495 entries the interface uses — every ribbon tab, command label, dialog, setting and status
+  line. It follows your system's language on a Danish machine and can be chosen in Settings ›
+  Language. Nothing is machine-translated and shipped unseen: the catalog is open for a native
+  review, and the i18n coverage test fails if a new string is added without every language
+- **Danish proofing**: spelling from an installed Hunspell Danish dictionary (Stavekontrolden and
+  friends; nothing is bundled), our own conservative grammar rules (doubled words, a missing
+  capital after a full stop, `og og`), and Danish hyphenation from the hyph-utf8 patterns. A
+  Danish document is proofed in Danish without being told, and an English one is not
 - **The shape tool is pinned by a test**: a shape inserted from the ribbon can be grabbed,
   dragged and resized on the page — the old field report (#142) is closed, and a test keeps it
   that way
@@ -39,6 +49,15 @@ the build is trustworthy again, and the app carries its own name everywhere a us
   hostile-input suites, the binaries' own tests and the integration tests. Running it here found
   a bug the old job hid — a paragraph whose text is only hashes was read back as an empty
   heading and lost its text
+- **The readers are fuzzed nightly**: four detached `cargo-fuzz` workspaces (the .docx reader,
+  the `.doc` piece table, the RTF/ODT readers and the font/TTC parser) run for a minute each on
+  every night's build, with seeds written for the repository, a cached corpus per crate and the
+  crashing input uploaded as an artifact. A finding is a crash fix with a regression test
+- **Arrange All, View Side by Side, Synchronous Scrolling, Switch Windows, Ink Equation, Ink to
+  Math and Block Authors** are real commands now, not catalog entries: the Word feature catalog
+  covers **497 of 504** items (98.6%), and each new command has its ribbon button, its parameters
+  and its tests. Block Authors shows one neutral revision colour and "Author" in place of every
+  name without changing the names in the file
 - **The repository's own gates run in CI**: every asset needs a row in ATTRIBUTION.md, the crate
   layering is enforced, and the browser build of every layer still compiles
 - **Quill says Quill**: the release workflow, the web page's title, the app's and the command

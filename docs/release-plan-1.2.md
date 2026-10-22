@@ -352,6 +352,31 @@ Still open in arc 0's wake: the macOS DMG background still carries upstream's ou
 wordmark (it needs the font outlines redrawn), and the CI matrix itself can only be proven on
 GitHub — locally, `cargo test --workspace` is green.
 
+### The 1.2 line, integrated — 2026-10-22
+
+The work branches were merged into `Rasmus-03/1.2` in one line (danish-ui, danish-proof, fuzz,
+parity, then the D4/D5 docs). Merging found two things a green branch alone would have hidden:
+
+| Found on the merged line | Fixed |
+|---|---|
+| **Seven new commands had no translations.** `Arrange All`, `Block Authors`, `Ink Equation`, `Ink to Math`, `Switch Windows`, `Synchronous Scrolling` and `View Side by Side` were added to the registry and to English only, so `every_tab_and_command_is_translated` failed in all 19 catalogs — and the app would have shown English labels in every language | The seven labels and the four new ribbon captions are in all 19 catalogs (190 rows); the test is green |
+| **Seven fuzz seeds had no `ATTRIBUTION.md` row**, so `cargo xtask assets` failed | Each seed has its row: our own bytes, written for the repo |
+
+`cargo xtask ci` on the integrated line: **fmt, clippy, the whole test suite, assets, layers and
+pkg-names are green**; the **wasm** step cannot run on this machine at all (the `rustc` here is
+Homebrew's, there is no `rustup`, so the `wasm32-unknown-unknown` target cannot be installed) —
+that gate is proven in CI, not here.
+
+The parallel agents for the remaining corpus and progress-docs work could not start in this
+session: Codex refuses every model on this account (`The 'gpt-5.5' model is not supported when
+using Codex with a ChatGPT account`), OpenCode has run out of OpenRouter credit and the Claude
+CLI reports `Credit balance is too low`. Their tasks and briefs are recorded in Orca
+(`run_67e13ccb0c63`) and can be retried when an account has credit; the docs they were meant to
+update (the Danish rows in `docs/status.md`, `ROADMAP.md`, `docs/gaps.md` and
+`docs/localization-parity.md`, the `CHANGELOG` entries) were instead updated by the coordinator.
+B1–B3 were already on the line before this session (`crates/docx/tests/corpus.rs`, the pinned
+manifest, `docs/docx-corpus.md`), so the corpus task is a re-run of a test, not a build.
+
 ## 5. Parallel agents — who owns what
 
 | Workstream | Crates | Files an agent may touch | Conflict risk |
@@ -377,19 +402,25 @@ own; `cargo xtask ci` before you commit; one commit per arc, with a task id in t
 - [x] macOS, Windows and Linux packages build from a clean checkout and are named `quill-*`.
       *(arc 0: the scripts build the `quill` packages and name every artifact `quill-*`; the
       macOS DMG and the macOS bundle were built locally; the Windows MSI needs Windows)*
-- [ ] The corpus harness runs over the real-world corpus; every known difference is in the
-      compatibility table (B3), not a surprise.
+- [x] The corpus harness runs over the real-world corpus; every known difference is in the
+      compatibility table (B3), not a surprise. *(landed 2026-10-21: 71 Apache-POI files pinned by
+      SHA-256, read → write → read, every one round-trips; the page-by-page comparison with Word
+      remains open in gap #1)*
 - [ ] Fuzzing runs nightly over the DOCX, `.doc`, RTF/ODT and font readers. *(A7: the four
       `cargo-fuzz` workspaces, their seeds and `fuzz.yml` landed and type-check; the nightly run
       itself still needs a machine with rustup, a nightly toolchain and `cargo-fuzz`)*
-- [ ] The app is Danish: interface, proofing and maths messages.
+- [x] The app is Danish: interface, proofing and maths messages. *(the catalog covers all 2,495
+      entries the interface uses and Danish proofing landed; the native-speaker review in §8.7 is
+      still open and is the owner's call)*
 - [ ] `README.md` describes every platform, the feature matrix and the limits; `docs/status.md`
       carries the measured maturity table.
 - [ ] `rg -i wordcraft` finds nothing user-visible outside the credits. *(arc 0 except the
       macOS DMG background's wordmark, which is artwork)*
 - [ ] `ROADMAP.md`, `docs/gaps.md`, `docs/roadmap.md`, `docs/target-app-parity.md`, the parity
       checklists and `CHANGELOG.md` are updated, each with its status line and revision history
-      bumped (the craftrules progress-docs standard).
+      bumped (the craftrules progress-docs standard). *(partly: the Danish and parity rows and the
+      `CHANGELOG` entries landed with the integration; `docs/roadmap.md` and
+      `docs/target-app-parity.md` still carry their 1.1 numbers)*
 - [ ] The release checklist in `docs/releasing.md` was walked end to end once.
 
 ## 7. What this release deliberately does not do
@@ -434,6 +465,7 @@ spent on the file that breaks a student's assignment.
 
 | Date | Change | Summary |
 |---|---|---|
+| 2026-10-22 | minor | The 1.2 line is integrated: Danish UI (C1), Danish proofing (C2), nightly fuzzing (A7), the parity wins (E1–E3) and D4/D5 merged into one branch, plus the two bugs the merge exposed (seven untranslated commands, seven unattributed fuzz seeds). The Danish and proofing rows of the progress docs say what landed. The gates are green except the wasm step, which this machine cannot run |
 | 2026-10-22 | minor | D4 and D5 landed: `FORK.md` now says what is Quill's own code and the rules a port follows; `docs/releasing.md` carries the changelog convention, the pre-publish checklist and who publishes |
 | 2026-10-22 | minor | A7 landed: `cargo-fuzz` workspaces for the DOCX, `.doc`, RTF/ODT and font readers with synthetic seeds, and a nightly workflow that runs each target for 60 seconds, caches the corpus and uploads crashes. The targets type-check; the first real fuzz run waits for a machine with rustup, nightly and `cargo-fuzz` |
 | 2026-10-21 | major | Created: the 1.2 plan — build trust (A), real documents (B), Danish first (C), presentation and identity (D), cheap parity wins (E); ten measured findings with file references; seven owner decisions |

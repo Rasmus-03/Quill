@@ -111,11 +111,12 @@ Weights and evidence per area: [docs/target-app-parity.md](docs/target-app-parit
 | German | de | partial (#574) | ~95% |
 | Korean | ko | none | 0% |
 | Vietnamese | vi | none | 0% |
+| Danish | da | full (interface, proofing, hyphenation, school templates) | 100% |
 
 Also shipped: Traditional Chinese (`zh-hant`), Ukrainian (`uk`), Serbian (`sr`, `sr-latn`, #250), Russian (`ru`) and Polish (`pl`), all partial (~95%). Bulgarian (`bg`) covers everything the interface audit finds (2,419 entries). Estonian (`et`), Italian (`it`, #594) and Czech (`cs`) now have complete interface catalogs, and Turkish (`tr`) a complete 2,325-entry one (every key of the Russian catalog), all with
 system-locale selection and a saved language choice (Italian also has 51 strings none of the others had yet); Estonian, Turkish, Italian and Czech proofing are not included. Hungarian (`hu`) has a
 complete 2,419-entry catalog, also without proofing.
-Proofing: English, Polish and Portuguese (spelling, grammar, hyphenation), chosen per run from its language. Word ships
+Proofing: English, Polish, Portuguese and Danish (spelling, grammar, hyphenation), chosen per document from its language; Danish spelling needs an installed Hunspell Danish dictionary (nothing is bundled). Word ships
 30 interface languages and proofing for ~50. Detail: [docs/localization-parity.md](docs/localization-parity.md).
 
 ## Upcoming
@@ -135,6 +136,7 @@ Ranked, to beta (detail and remaining milestones in [docs/roadmap.md](docs/roadm
 
 | Date | What landed |
 |---|---|
+| 2026-10-22 | Danish, all the way through: the interface has a Danish catalog (2,495 entries, "Dansk" in the language list, following the system's language), Danish proofing covers spelling (an installed Hunspell Danish dictionary), conservative grammar rules and hyph-utf8 hyphenation, and the maths tab's labels and messages are Danish. The readers are fuzzed nightly (four `cargo-fuzz` workspaces: .docx, `.doc`, RTF/ODT and fonts), and the four new View window commands, Ink Equation, Ink to Math and Block Authors close the last cheap parity rows |
 | 2026-10-22 | Parity wins (E1–E3): View › Window has Arrange All, View Side by Side, Synchronous Scrolling and Switch Windows with engine state and shell requests; Insert › Ink Equation and Draw › Ink to Math insert the equation the ink canvas read (and ask the shell for the canvas when it has no reading); Review › Block Authors shows one neutral revision colour and "Author" instead of names. Catalog 489/504 → 497/504 (98.6%); Translate stays out (needs an online service) |
 | 2026-10-21 | Nextcloud (1.1.0): a new `wordcraft-cloud` crate speaks WebDAV and the OCS API to a Nextcloud server — list, download, upload, new folder, delete, public share link, the server's own search and file versions, with the server's tag for the version that was read, so a file that changed there is not overwritten. The Navigation pane's Nextcloud tab connects (address, account, app password), browses the folders, opens and saves documents on the server and searches it; everything runs on a worker thread, so the editor never waits. The app password is kept in a file only the user can read, and the next launch reconnects on its own. A `.md` file on the server is an Obsidian note: frontmatter, wikilinks and embeds survive, and its images are written beside it |
 | 2026-10-21 | Obsidian, deeper (1.1.0): the vault pane has three views — the notes, the notes that link to the open one, and the tags the notes carry (frontmatter `tags:` lists and `#tags` in the text). Insert › Link writes a link to a note at the caret. The index is built once and kept until the vault is read again |
@@ -280,6 +282,7 @@ Ranked, to beta (detail and remaining milestones in [docs/roadmap.md](docs/roadm
 
 | Date | Change | Summary |
 |---|---|---|
+| 2026-10-22 | minor | Progress log and Languages: Danish (interface catalog, proofing, hyphenation, templates), nightly fuzzing, the parity wins; proofing now four languages |
 | 2026-10-20 | minor | Progress log: Obsidian vault workspace (Navigation pane, search, note open/save/export, lossless Markdown round-trip) |
 | 2026-10-20 | trivial | Progress log: the Paste Options button after a paste |
 | 2026-10-12 | trivial | Progress log: Accept All and Reject All keep the right paragraph marks (#864) |
