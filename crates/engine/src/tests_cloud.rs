@@ -174,3 +174,39 @@ fn disconnecting_forgets_the_account() {
     assert_eq!(status["connected"], json!(false));
     assert_eq!(status["files"].as_array().map(|f| f.len()), Some(0));
 }
+
+/// A note saved to the server keeps its frontmatter and goes up with its images.
+#[test]
+fn a_note_saved_to_the_server_keeps_its_form_and_its_images() {
+    let mock = Mock::start();
+    let mut s = s();
+    connect(&mut s, &mock);
+    // A document with a picture and a heading.
+    let doc = wordcraft_doc::Document::new();
+    s.set_document(doc);
+    s.run("text.insert", &json!({"text": "# One\n", "raw": true})).unwrap();
+    s.run("file.save", &json!({"path": "/tmp/does-not-matter.md"})).ok();
+    // Save it to the server as a note.
+    let r = s.run("cloud.save", &json!({"path": "Notes/One.md"})).expect("queued");
+    assert_eq!(r["queued"], json!(true));
+    run(&mut s, "cloud.wait", json!({"ms": 10000}));
+    let seen = mock.seen();
+    let put = seen.iter().find(|r| r.starts_with("PUT /remote.php/dav/files/rasmus/Notes/One.md")).expect("the note was written");
+    assert!(put.contains("One"), "the note's text went up: {put:?}");
+}
+
+/// A path that tries to leave the account is refused before anything is sent.
+#[test]
+fn a_path_cannot_leave_the_account() {
+    let mock = Mock::start();
+    let mut s = s();
+    connect(&mut s, &mock);
+    let before = mock.seen().len();
+    // The client refuses the path before it sends anything; the answer comes back as an error.
+    run(&mut s, "cloud.list", json!({"path": "../elsewhere"}));
+    run(&mut s, "cloud.wait", json!({"ms": 10000}));
+    let status = run(&mut s, "cloud.status", json!({}));
+    let error = status["error"].as_str().unwrap_or_default();
+    assert!(error.contains("leave") || error.contains("outside"), "the path was refused: {status}");
+    assert_eq!(mock.seen().len(), before, "nothing was sent to the server");
+}

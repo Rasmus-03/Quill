@@ -12,6 +12,9 @@ use serde_json::{Value, json};
 
 use wordcraft_cloud::{Account, Answer, Capabilities, Config, Entry, Job, JobKind, Outcome, SearchHit, Version, Worker};
 
+/// The cloud crate's own types, so a front end can name them without depending on it.
+pub use wordcraft_cloud::Entry as FileEntry;
+
 use crate::{CmdError, CmdResult, CommandSpec, Session, p};
 
 /// The cloud account and what is known about the server.

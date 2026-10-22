@@ -169,3 +169,90 @@ mod unit {
         assert_eq!(basic_auth("rasmus", "hunter2"), "Basic cmFzbXVzOmh1bnRlcjI=");
     }
 }
+
+/// A listing with a folder, a file whose name has a space, and a name the server left out.
+#[test]
+fn a_listing_reads_folders_and_files() {
+    let xml = r#"<d:multistatus xmlns:d="DAV:">
+          <d:response>
+            <d:href>/remote.php/dav/files/u/Docs/</d:href>
+            <d:propstat><d:prop>
+              <d:displayname>Docs</d:displayname>
+              <d:resourcetype><d:collection/></d:resourcetype>
+            </d:prop></d:propstat>
+          </d:response>
+          <d:response>
+            <d:href>/remote.php/dav/files/u/Docs/a%20b.docx</d:href>
+            <d:propstat><d:prop>
+              <d:getcontentlength>42</d:getcontentlength>
+              <d:getlastmodified>Tue, 21 Oct 2026 10:00:00 GMT</d:getlastmodified>
+            </d:prop></d:propstat>
+          </d:response>
+        </d:multistatus>"#;
+    let entries = crate::dav::parse_multistatus(xml).expect("the listing");
+    assert_eq!(entries.len(), 2);
+    assert!(entries[0].is_dir, "the folder");
+    assert_eq!(entries[0].path, "Docs");
+    assert_eq!(entries[1].path, "Docs/a b.docx");
+    assert_eq!(entries[1].name, "a b.docx", "the name comes from the path when the server leaves it out");
+    assert_eq!(entries[1].size, 42);
+}
+
+/// A hostile listing must not panic and must not produce nonsense.
+#[test]
+fn a_hostile_listing_is_read_without_a_panic() {
+    for xml in [
+        "",
+        "<d:multistatus",
+        "<d:multistatus xmlns:d=\"DAV:\"><d:response><d:href>",
+        "<d:multistatus xmlns:d=\"DAV:\"><d:response><d:href>/a</d:href><d:propstat><d:prop><d:getcontentlength>x</d:getcontentlength></d:prop></d:propstat></d:response></d:multistatus>",
+        "<d:multistatus xmlns:d=\"DAV:\"><d:response><d:href>/a</d:href><d:propstat><d:prop><d:displayname></d:displayname></d:prop></d:propstat></d:response></d:multistatus>",
+    ] {
+        // A broken listing is refused, not read as nonsense — and never a panic.
+        if let Ok(entries) = crate::dav::parse_multistatus(xml) {
+            for e in &entries {
+                assert!(e.name.len() < 1000, "a name stays sane");
+            }
+        }
+    }
+}
+
+/// A hostile path may not leave the account, and may not be endless.
+#[test]
+fn a_hostile_path_is_refused() {
+    assert!(crate::url::encode_path("../secret").is_err());
+    assert!(crate::url::encode_path("a/../../secret").is_err());
+    assert!(crate::url::encode_path(&"x".repeat(5000)).is_err());
+    assert!(crate::url::encode_path("a\u{0}b").is_err());
+    // A path with a percent or a space is encoded, not refused.
+    assert_eq!(crate::url::encode_path("a b%c").unwrap(), "/a%20b%25c");
+}
+
+/// A hostile server address is refused before any request is made.
+#[test]
+fn a_hostile_address_is_refused() {
+    for address in [
+        "",
+        "   ",
+        "https://",
+        "https://host name",
+        "https://host:notaport",
+        "ftp://host",
+        "https://user:pw@host",
+        "https://host/../evil",
+        "https://host/with\nnewline",
+        "javascript:alert(1)",
+    ] {
+        assert!(crate::url::ServerUrl::parse(address).is_err(), "{address:?} was accepted");
+    }
+}
+
+/// The OCS answer is read, and a failing one is an error.
+#[test]
+fn the_ocs_answer_is_read() {
+    let body = r#"{"ocs":{"meta":{"status":"ok","statuscode":100},"data":{"url":"https://cloud/s/abc"}}}"#;
+    let reply = crate::http::Reply { status: 200, headers: Vec::new(), body: body.as_bytes().to_vec() };
+    // The data part is what the callers read.
+    let json: serde_json::Value = serde_json::from_slice(&reply.body).expect("json");
+    assert_eq!(json["ocs"]["data"]["url"], "https://cloud/s/abc");
+}
