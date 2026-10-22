@@ -54,7 +54,7 @@ pub const TABLE: &[(&str, Class)] = &[
     // apps and tooling
     ("quill", Class::Exempt),
     ("quill-cli", Class::Exempt),
-    ("web", Class::Exempt),
+    ("quill-web", Class::Exempt),
     ("xtask", Class::Exempt),
 ];
 
@@ -312,7 +312,7 @@ mod tests {
 
     #[test]
     fn apps_and_xtask_exempt() {
-        for app in ["quill", "quill-cli", "wordcraft-web", "xtask"] {
+        for app in ["quill", "quill-cli", "quill-web", "xtask"] {
             assert!(check(&[c(app, &[("egui", Normal, false), ("wordcraft-ui-egui", Normal, true)])]).is_empty());
         }
     }
