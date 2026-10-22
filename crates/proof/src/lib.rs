@@ -18,16 +18,21 @@
 //!   dictionary installed on the system (VERO and friends; not bundled), suggestions tuned for
 //!   Portuguese (missing accents, `seje`/`seja` confusions, missing spaces), conservative
 //!   grammar rules with Portuguese messages, and `hyph-utf8`'s Portuguese patterns.
+//! - **Danish** ([`ProofLang::Da`], module [`da`]): spelling against the Hunspell `da_DK`
+//!   dictionary installed on the system (Stavekontrolden and friends; not bundled), suggestions
+//!   tuned for Danish (`a`/`å`, `o`/`ø`, missing spaces), conservative grammar rules with
+//!   Danish messages, and `hyph-utf8`'s Danish patterns.
 //! - **Other languages** ([`ProofLang::Other`]): no spelling or grammar marks, like Word without
 //!   the language's proofing tools.
-//! - **Hyphenation** ([`hyphen`]): dictionary, Liang patterns (English, Polish, Portuguese),
-//!   Bulgarian syllable rules, heuristic.
+//! - **Hyphenation** ([`hyphen`]): dictionary, Liang patterns (English, Polish, Portuguese,
+//!   Danish), Bulgarian syllable rules, heuristic.
 //!
 //! [`check_text`] checks a paragraph whose runs are in different languages.
 #![deny(clippy::unwrap_used, clippy::expect_used, clippy::panic, clippy::unimplemented, clippy::todo, clippy::unreachable)]
 
 pub mod affix;
 pub mod bg;
+pub mod da;
 pub mod dict;
 pub mod hunspell;
 pub mod hyphen;
@@ -499,6 +504,7 @@ fn spelling_issue(text: &str, a: usize, b: usize, lang: ProofLang, opts: &Option
     let message = match lang {
         ProofLang::Pl => "Możliwy błąd pisowni",
         ProofLang::Pt => "Possível erro de ortografia",
+        ProofLang::Da => "Muligt stavefejl",
         _ => "Possible spelling mistake",
     };
     Some(Issue { start: a, end: b, kind: IssueKind::Spelling, message: message.into(), suggestions: Vec::new(), lang })
@@ -515,6 +521,7 @@ pub fn is_correct_in_with(word: &str, lang: ProofLang, opts: &Options) -> bool {
         ProofLang::En => is_correct_with(word, opts),
         ProofLang::Pl => accepted_by_options(word, opts) || pl::is_correct(word),
         ProofLang::Pt => accepted_by_options(word, opts) || pt::is_correct(word),
+        ProofLang::Da => accepted_by_options(word, opts) || da::is_correct(word),
         ProofLang::Bg | ProofLang::Other => true,
     }
 }
@@ -525,6 +532,7 @@ pub fn suggest_in(word: &str, max: usize, lang: ProofLang) -> Vec<String> {
         ProofLang::En => suggest(word, max),
         ProofLang::Pl => pl::suggest(word, max),
         ProofLang::Pt => pt::suggest(word, max),
+        ProofLang::Da => da::suggest(word, max),
         ProofLang::Bg | ProofLang::Other => Vec::new(),
     }
 }
@@ -537,6 +545,7 @@ pub fn check_grammar_in(text: &str, lang: ProofLang) -> Vec<Issue> {
         ProofLang::En => check_grammar(text),
         ProofLang::Pl => pl::grammar::check(text),
         ProofLang::Pt => pt::grammar::check(text),
+        ProofLang::Da => da::grammar::check(text),
         ProofLang::Bg | ProofLang::Other => Vec::new(),
     }
 }
@@ -1016,6 +1025,26 @@ mod tests {
         assert!(v.iter().all(|i| i.lang == ProofLang::Pt && i.message == "Possível erro de ortografia"), "{v:?}");
     }
 
+    #[test]
+    fn danish_uses_its_own_tools() {
+        da::test_dict::install();
+        let t = "Jeg skriver på dansk, og det er sjovt.";
+        assert!(check_spelling_in(t, ProofLang::Da).is_empty(), "{:?}", check_spelling_in(t, ProofLang::Da));
+        let v = check_spelling_in("Jeg skirve på dansk.", ProofLang::Da);
+        assert_eq!(flagged("Jeg skirve på dansk.", &v), ["skirve"]);
+        assert_eq!((v[0].lang, v[0].message.as_str()), (ProofLang::Da, "Muligt stavefejl"));
+        assert!(suggest_in("skirve", 5, ProofLang::Da).contains(&"skrive".to_string()));
+        // Danish grammar speaks Danish and has no English a/an rule.
+        let g = check_grammar_in("Jeg jeg skriver.", ProofLang::Da);
+        assert_eq!(g[0].message, "Gentaget ord: \"jeg\"");
+        assert!(g.iter().all(|i| i.lang == ProofLang::Da));
+        assert!(!check_grammar_in("this is a apple", ProofLang::Da).iter().any(|i| i.message.contains("\"an\"")));
+        // English proofing is unaffected by the new language.
+        assert!(check_spelling_in("The quick brown fox jumps over the lazy dog.", ProofLang::En).is_empty());
+        assert_eq!(flagged("helo world", &check_spelling_in("helo world", ProofLang::En)), ["helo"]);
+        assert!(check_grammar_in("this is is wrong", ProofLang::En).iter().any(|i| i.message.contains("Repeated")));
+    }
+
     proptest::proptest! {
         #[test]
         fn never_panics(s in "\\PC{0,80}") {
@@ -1025,7 +1054,7 @@ mod tests {
             let _ = has_dictionary(Some(&s));
             let _ = is_correct_for(&s, Some(&s));
             let _ = hyphen::hyphen_points(&s, &hyphen::Limits::default());
-            for lang in [ProofLang::En, ProofLang::Pl, ProofLang::Pt, ProofLang::Other] {
+            for lang in [ProofLang::En, ProofLang::Pl, ProofLang::Pt, ProofLang::Da, ProofLang::Other] {
                 let _ = check_spelling_in(&s, lang);
                 let _ = check_grammar_in(&s, lang);
                 let _ = is_correct_in(&s, lang);
@@ -1046,9 +1075,14 @@ mod tests {
         }
 
         #[test]
-        fn mixed_spans_never_panic(s in "\\PC{0,60}", cuts in proptest::collection::vec((0usize..80, 0usize..80, 0u8..4), 0..6)) {
-            let langs = [ProofLang::En, ProofLang::Pl, ProofLang::Pt, ProofLang::Other];
-            let spans: Vec<(Range<usize>, ProofLang)> = cuts.iter().map(|&(a, b, l)| (a.min(b)..a.max(b), langs[l as usize % 4])).collect();
+        fn danish_suggestions_never_panic(s in "[a-zæøåéA-ZÆØÅÉ'’ -]{0,14}") {
+            let _ = suggest_in(&s, 4, ProofLang::Da);
+        }
+
+        #[test]
+        fn mixed_spans_never_panic(s in "\\PC{0,60}", cuts in proptest::collection::vec((0usize..80, 0usize..80, 0u8..5), 0..6)) {
+            let langs = [ProofLang::En, ProofLang::Pl, ProofLang::Pt, ProofLang::Da, ProofLang::Other];
+            let spans: Vec<(Range<usize>, ProofLang)> = cuts.iter().map(|&(a, b, l)| (a.min(b)..a.max(b), langs[l as usize % 5])).collect();
             for i in check_text(&s, &spans) {
                 proptest::prop_assert!(i.start <= i.end && i.end <= s.len());
             }
