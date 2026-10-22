@@ -84,6 +84,42 @@ pub fn specs() -> Vec<CommandSpec> {
             sel_result(s)
         })
         .pure(),
+        // The window commands: the engine keeps which layout the window asks for and whether its
+        // scrolling is synchronised; the shell arranges its windows from the request.
+        CommandSpec::new("view.arrangeAll", "Arrange All", "View › Window", |s, _| {
+            s.ui_requests.push(json!({"windows": "arrangeAll"}));
+            Ok(json!({"arranged": true}))
+        })
+        .pure(),
+        CommandSpec::new("view.sideBySide", "View Side by Side", "View › Window", |s, v| {
+            let on = p::bool(v, "value").unwrap_or(!s.view.side_by_side);
+            s.view.side_by_side = on;
+            // Synchronous Scrolling only exists for a side-by-side pair.
+            if !on {
+                s.view.sync_scroll = false;
+            }
+            Ok(json!({"value": on, "syncScroll": s.view.sync_scroll}))
+        })
+        .params(r#"{"value"?: bool (omit to toggle)}"#)
+        .pure(),
+        CommandSpec::new("view.syncScroll", "Synchronous Scrolling", "View › Window", |s, v| {
+            s.view.sync_scroll = p::bool(v, "value").unwrap_or(!s.view.sync_scroll);
+            Ok(json!({"value": s.view.sync_scroll}))
+        })
+        .params(r#"{"value"?: bool (omit to toggle)}"#)
+        .when(side_by_side)
+        .pure(),
+        CommandSpec::new("view.switchWindows", "Switch Windows", "View › Window", |s, v| {
+            let direction = match p::str(v, "value").or_else(|| p::str(v, "direction")) {
+                None | Some("next") => "next",
+                Some("previous") => "previous",
+                Some(_) => return Err(CmdError::Params("`value` is \"next\" or \"previous\"".into())),
+            };
+            s.ui_requests.push(json!({"windows": "switch", "direction": direction}));
+            Ok(json!({"direction": direction}))
+        })
+        .params(r#"{"value"?: "next" | "previous"}"#)
+        .pure(),
         CommandSpec::new("view.split", "Split", "View › Window", |s, _| {
             s.ui_requests.push(json!({"toggle": "split"}));
             sel_result(s)
@@ -109,6 +145,11 @@ pub fn specs() -> Vec<CommandSpec> {
         .params(r#"{"value"?: "arabic|hindi|context|system"}"#)
         .pure(),
     ]
+}
+
+/// Synchronous Scrolling is only available while two documents are side by side.
+fn side_by_side(s: &Session) -> Option<&'static str> {
+    if s.view.side_by_side { None } else { Some("View Side by Side is off") }
 }
 
 fn mode(s: &mut Session, m: ViewMode, read: bool) -> CmdResult {
@@ -180,4 +221,54 @@ fn zoom(s: &mut Session, v: &Value) -> CmdResult {
         }
     }
     Ok(json!({"zoom": s.view.zoom, "fit": s.view.fit}))
+}
+
+#[cfg(test)]
+mod tests {
+    use serde_json::json;
+
+    use crate::Session;
+
+    /// E1: the window commands keep the side-by-side and scroll state, and ask the shell for the
+    /// window actions only it can do (arrange, switch).
+    #[test]
+    fn window_commands_keep_the_state_and_ask_the_shell() {
+        let mut s = Session::new(wordcraft_doc::Document::new());
+        assert!(!s.view.side_by_side && !s.view.sync_scroll);
+        // Synchronous Scrolling is only available with two documents side by side.
+        assert!(s.run("view.syncScroll", &json!({})).is_err());
+
+        assert_eq!(s.run("view.sideBySide", &json!({})).unwrap()["value"], true);
+        assert!(s.view.side_by_side);
+        assert_eq!(s.run("view.syncScroll", &json!({})).unwrap()["value"], true);
+        assert!(s.view.sync_scroll);
+        assert_eq!(s.run("view.syncScroll", &json!({"value": false})).unwrap()["value"], false);
+        assert!(!s.view.sync_scroll);
+
+        // Leaving side by side also leaves synchronised scrolling.
+        s.run("view.syncScroll", &json!({"value": true})).unwrap();
+        let r = s.run("view.sideBySide", &json!({"value": false})).unwrap();
+        assert_eq!((r["value"].as_bool(), r["syncScroll"].as_bool()), (Some(false), Some(false)));
+        assert!(!s.view.side_by_side && !s.view.sync_scroll);
+
+        // Arrange and switch are requests for the shell; the engine has no windows of its own.
+        s.ui_requests.clear();
+        s.run("view.arrangeAll", &json!({})).unwrap();
+        s.run("view.switchWindows", &json!({})).unwrap();
+        s.run("view.switchWindows", &json!({"value": "previous"})).unwrap();
+        assert_eq!(
+            s.ui_requests,
+            vec![
+                json!({"windows": "arrangeAll"}),
+                json!({"windows": "switch", "direction": "next"}),
+                json!({"windows": "switch", "direction": "previous"}),
+            ]
+        );
+        assert!(s.run("view.switchWindows", &json!({"value": "somewhere"})).is_err());
+
+        // The choice is in the view state the shell reads.
+        let v = s.run("view.state", &json!({})).unwrap();
+        assert_eq!(v["sideBySide"], false);
+        assert_eq!(v["syncScroll"], false);
+    }
 }

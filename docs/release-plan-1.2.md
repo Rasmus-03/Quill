@@ -292,6 +292,12 @@ need a service, a rendering pipeline or a plugin host — an owner decision (§8
 Every id needs a `CommandSpec`, a test and a ribbon entry, and the parity floor in
 `crates/engine/src/catalog.rs:574` rises with it.
 
+*Landed 2026-10-22:* E1 (the four View window commands), E2 (`insert.inkEquation`,
+`draw.inkToMath`: the shell's ink canvas supplies the reading) and E3's Block Authors
+(`review.blockAuthors`). The catalog is at 497/504 (98.6%). `review.translate` is not
+implemented: Quill has no translation service, and a command that pretended to translate would be
+worse than the missing id.
+
 ## 4. Sequencing
 
 | Arc | Content | Cost | Depends on |

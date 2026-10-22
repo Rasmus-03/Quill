@@ -144,6 +144,11 @@ pub fn builtin_menu(ui: &mut Ui, app: &mut WordApp) {
         app.canvas.want_focus = true;
         ui.close();
     }
+    if ui.button(tl!("Ink Equation")).clicked() {
+        let _ = app.run("insert.inkEquation", json!({}));
+        app.canvas.want_focus = true;
+        ui.close();
+    }
 }
 
 /// Insert › Symbols › Equation: a split button (insert a new equation, or pick a ready-made one).
@@ -306,6 +311,7 @@ pub fn show(app: &mut WordApp, ui: &mut Ui) {
             ui.spacing_mut().item_spacing = vec2(1.0, 0.0);
             let normal = app.session.math_normal_text;
             small(ui, app, "case", Some("Normal Text"), "Type normal (non-math) text in the equation", "equation.normalText", json!({}), normal);
+            small(ui, app, "inkToMath", Some("Ink Equation"), "Write an equation by hand", "insert.inkEquation", json!({}), false);
         });
     });
     group(ui, "Symbols", None, app, symbols);
