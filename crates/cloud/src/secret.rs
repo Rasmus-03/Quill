@@ -86,7 +86,7 @@ impl SecretStore {
 #[cfg(unix)]
 fn write_private(path: &Path, bytes: &[u8]) -> Result<(), Error> {
     use std::io::Write;
-    use std::os::unix::fs::OpenOptionsExt;
+    use std::os::unix::fs::{OpenOptionsExt, PermissionsExt};
     let mut file = std::fs::OpenOptions::new()
         .write(true)
         .create(true)
@@ -96,6 +96,9 @@ fn write_private(path: &Path, bytes: &[u8]) -> Result<(), Error> {
         .map_err(|e| Error::Io(format!("{}: {e}", path.display())))?;
     file.write_all(bytes).map_err(|e| Error::Io(format!("{}: {e}", path.display())))?;
     file.sync_all().map_err(|e| Error::Io(format!("{}: {e}", path.display())))?;
+    // The mode above only applies to a file that is created; an old one keeps its own rights,
+    // so they are set again here.
+    file.set_permissions(std::fs::Permissions::from_mode(0o600)).map_err(|e| Error::Io(format!("{}: {e}", path.display())))?;
     Ok(())
 }
 

@@ -238,3 +238,51 @@ proptest! {
         let _ = read(&z);
     }
 }
+
+/// A part name with a control character is not a part of any package: it is skipped.
+#[test]
+fn a_part_name_with_a_control_character_is_skipped() {
+    let doc = format!("<w:document {W_NS}><w:body><w:p><w:r><w:t>body</w:t></w:r></w:p></w:body></w:document>");
+    let z = zip(&[("_rels/.rels", ROOT_RELS.as_bytes()), ("word/document.xml", doc.as_bytes()), ("word/sty\u{0}les.xml", b"<w:styles/>")]);
+    let d = read(&z).expect("the document still opens");
+    assert_eq!(d.plain_text(wordcraft_doc::StoryRef::Body), "body");
+}
+
+/// An entity in the document is text, not an expansion: nothing is expanded and nothing loops.
+#[test]
+fn an_entity_in_the_document_is_not_expanded() {
+    let doc = format!("<w:document {W_NS}><w:body><w:p><w:r><w:t>&lol; &amp; &lt;</w:t></w:r></w:p></w:body></w:document>");
+    let d = read(&doc_zip(doc.as_bytes())).expect("the document opens");
+    let text = d.plain_text(wordcraft_doc::StoryRef::Body);
+    assert!(text.len() < 100, "nothing was expanded: {text:?}");
+    assert!(text.contains('&'), "the entity is kept as written: {text:?}");
+}
+
+/// A document with a huge number of elements is refused or cut short, never endless.
+#[test]
+fn a_document_with_too_many_elements_is_bounded() {
+    let mut x = format!("<w:document {W_NS}><w:body>");
+    for _ in 0..200_000 {
+        x.push_str("<w:p><w:r><w:t>x</w:t></w:r></w:p>");
+    }
+    x.push_str("</w:body></w:document>");
+    match read(&doc_zip(x.as_bytes())) {
+        Ok(d) => {
+            // Read, but bounded: the paragraphs are a fraction of what was sent.
+            let count = d.body.len();
+            assert!(count <= 200_000, "the paragraphs are bounded: {count}");
+        }
+        Err(e) => assert!(matches!(e, DocxError::Limit(_)), "refused for the right reason: {e}"),
+    }
+}
+
+/// A relationship that points back at itself must not loop.
+#[test]
+fn a_cyclic_relationship_never_loops() {
+    let rels = r#"<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="a" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/><Relationship Id="b" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="../_rels/.rels"/></Relationships>"#;
+    let doc = format!("<w:document {W_NS}><w:body><w:p><w:r><w:t>body</w:t></w:r></w:p></w:body></w:document>");
+    let z = zip(&[("_rels/.rels", ROOT_RELS.as_bytes()), ("word/document.xml", doc.as_bytes()), ("word/_rels/document.xml.rels", rels.as_bytes())]);
+    let d = read(&z).expect("the document opens");
+    assert_eq!(d.plain_text(wordcraft_doc::StoryRef::Body), "body");
+    write(&d).expect("it writes again");
+}

@@ -448,6 +448,60 @@ mod tests {
         (app, hit)
     }
 
+    /// #142: a shape inserted from the ribbon can be grabbed on the page and dragged: it is
+    /// where it was drawn, and the drag makes it float and move.
+    #[test]
+    fn an_inserted_shape_can_be_dragged() {
+        use egui::{Event, PointerButton, Pos2};
+        let mut a = WordApp::new(wordcraft_engine::Session::new(wordcraft_doc::Document::new()), Default::default());
+        a.run("insert.shape", serde_json::json!({"kind": "rectangle"})).unwrap();
+        let mut h = egui_kittest::Harness::builder().with_size(egui::vec2(1440.0, 900.0)).with_step_dt(1.0 / 60.0).build_ui_state(
+            |ui, app: &mut WordApp| {
+                let ctx = ui.ctx().clone();
+                app.logic(&ctx);
+                app.ui(ui);
+            },
+            a,
+        );
+        for _ in 0..6 {
+            h.step();
+        }
+        let hit = h.state_mut().session.layout().object(&wordcraft_doc::Pos::body(0, 0), 0).expect("the shape is laid out");
+        let from =
+            crate::canvas::page_to_screen(h.state_mut(), hit.page, hit.rect.x + hit.rect.w / 2.0, hit.rect.y + hit.rect.h / 2.0).expect("on screen");
+        let to: Pos2 = from + egui::vec2(120.0, 0.0);
+        h.event(Event::PointerMoved(from));
+        h.event(Event::PointerButton { pos: from, button: PointerButton::Primary, pressed: true, modifiers: Default::default() });
+        h.step();
+        for k in 1..=4 {
+            h.event(Event::PointerMoved(from + (to - from) * (k as f32 / 4.0)));
+            h.step();
+        }
+        h.event(Event::PointerButton { pos: to, button: PointerButton::Primary, pressed: false, modifiers: Default::default() });
+        for _ in 0..3 {
+            h.step();
+        }
+        let after = h.state_mut().session.layout().object(&wordcraft_doc::Pos::body(0, 0), 0).expect("still there");
+        assert!(after.rect.x > hit.rect.x + 10.0, "the shape moved: {:?} -> {:?}", hit.rect, after.rect);
+        // And it can be resized by its corner handle.
+        let corner =
+            crate::canvas::page_to_screen(h.state_mut(), after.page, after.rect.x + after.rect.w, after.rect.y + after.rect.h).expect("on screen");
+        h.event(Event::PointerMoved(corner));
+        h.event(Event::PointerButton { pos: corner, button: PointerButton::Primary, pressed: true, modifiers: Default::default() });
+        h.step();
+        let bigger = corner + egui::vec2(60.0, 40.0);
+        for k in 1..=4 {
+            h.event(Event::PointerMoved(corner + (bigger - corner) * (k as f32 / 4.0)));
+            h.step();
+        }
+        h.event(Event::PointerButton { pos: bigger, button: PointerButton::Primary, pressed: false, modifiers: Default::default() });
+        for _ in 0..3 {
+            h.step();
+        }
+        let resized = h.state_mut().session.layout().object(&wordcraft_doc::Pos::body(0, 0), 0).expect("still there");
+        assert!(resized.rect.w > after.rect.w + 10.0, "the shape grew: {:?} -> {:?}", after.rect, resized.rect);
+    }
+
     #[test]
     fn charts_get_no_handles_or_drag_but_shapes_do() {
         let chart =
