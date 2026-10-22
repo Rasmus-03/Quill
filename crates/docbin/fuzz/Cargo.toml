@@ -1,0 +1,29 @@
+[package]
+name = "wordcraft-docbin-fuzz"
+version = "0.0.0"
+publish = false
+edition = "2024"
+
+[package.metadata]
+cargo-fuzz = true
+
+[dependencies]
+libfuzzer-sys = "0.4"
+
+[dependencies.wordcraft-docbin]
+path = ".."
+
+# A fuzz crate is its own workspace: `cargo fuzz` builds it with nightly and a sanitizer, which
+# must not change how the parent workspace resolves dependencies.
+[workspace]
+members = ["."]
+
+[profile.release]
+debug = 1
+
+[[bin]]
+name = "read"
+path = "fuzz_targets/read.rs"
+test = false
+doc = false
+bench = false
