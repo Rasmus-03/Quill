@@ -5,6 +5,9 @@
 //! derived from: only Maxima's own documented batch interface plus the
 //! user's own optional runtime packages under ~/.local/share/mathcraft.
 
+use std::ffi::OsStr;
+use std::path::{Path, PathBuf};
+
 use serde_json::{Value, json};
 
 use super::equation::{equation_at_caret, math_del_anchor, nodes_of, with_eq};
@@ -15,13 +18,59 @@ use crate::doc::para::{InlineObject, OBJ};
 use crate::doc::props::{CharProps, Rgb};
 use crate::{CmdError, CmdResult, CommandSpec, Selection, Session};
 
-/// True when Maxima is on PATH (checked once at startup for a Danish hint).
-pub fn maxima_available() -> bool {
-    std::env::var_os("PATH").is_some_and(|paths| std::env::split_paths(&paths).any(|d| d.join("maxima").is_file() || d.join("maxima.exe").is_file()))
+/// The executable's name on this platform.
+fn maxima_name() -> &'static str {
+    if cfg!(windows) { "maxima.exe" } else { "maxima" }
 }
 
-fn maxima_bin() -> &'static str {
-    "maxima"
+/// Prefixes a launcher-started macOS app never gets in `PATH`: a bundle
+/// opened from Finder starts with `/usr/bin:/bin:/usr/sbin:/sbin`, so
+/// `brew install maxima` would otherwise be invisible to the maths tab.
+#[cfg(target_os = "macos")]
+const MAC_EXTRA_DIRS: &[&str] = &["/opt/homebrew/bin", "/usr/local/bin", "/opt/local/bin"];
+#[cfg(not(target_os = "macos"))]
+const MAC_EXTRA_DIRS: &[&str] = &[];
+
+/// Find Maxima: `PATH` first (a developer install wins), then the prefixes
+/// macOS hides. `exists` is a probe, so the search is testable without a
+/// Maxima on the machine.
+fn resolve_maxima(path: Option<&OsStr>, exists: &dyn Fn(&Path) -> bool) -> Option<PathBuf> {
+    let name = maxima_name();
+    let on_path = path.and_then(|p| std::env::split_paths(p).map(|d| d.join(name)).find(|c| exists(c)));
+    on_path.or_else(|| MAC_EXTRA_DIRS.iter().map(|d| Path::new(d).join(name)).find(|c| exists(c)))
+}
+
+fn maxima_program() -> Option<PathBuf> {
+    resolve_maxima(std::env::var_os("PATH").as_deref(), &|p| p.is_file())
+}
+
+/// True when Maxima can be found (checked once at startup for a hint).
+pub fn maxima_available() -> bool {
+    maxima_program().is_some()
+}
+
+/// How to get Maxima on this platform: the line the status bar and the spawn
+/// error show.
+pub fn install_hint() -> &'static str {
+    #[cfg(target_os = "macos")]
+    {
+        "brew install maxima"
+    }
+    #[cfg(target_os = "windows")]
+    {
+        "download it from maxima.sourceforge.io"
+    }
+    #[cfg(not(any(target_os = "macos", target_os = "windows")))]
+    {
+        "install it from your distribution (e.g. sudo pacman -S maxima)"
+    }
+}
+
+/// The path to run. When nothing is found the bare name is returned, so the
+/// spawn fails with the platform's own "not found" error and the caller turns
+/// it into one message that says what to install.
+fn maxima_bin() -> PathBuf {
+    maxima_program().unwrap_or_else(|| PathBuf::from(maxima_name()))
 }
 
 /// Optional SolveReal package path from the environment (no filesystem
@@ -87,7 +136,10 @@ const MAXIMA_ARGV_BATCH_BYTES: usize = 8 * 1024;
 /// taking the machine down before [`MAXIMA_TIMEOUT_S`] fires. Applied with
 /// `ulimit -v` from `sh`; `pre_exec`/setrlimit would need `unsafe`, which the
 /// workspace forbids. Generous for school calculations.
-#[cfg(all(unix, not(target_arch = "wasm32")))]
+/// macOS is excluded: it has no `RLIMIT_AS`, so `ulimit -v` fails there and
+/// would only print a warning into every Maxima call's stderr. The timeout
+/// still bounds such an expression on a Mac.
+#[cfg(all(unix, not(target_arch = "wasm32"), not(target_os = "macos")))]
 const MAXIMA_MEMORY_LIMIT_KIB: u64 = 2 * 1024 * 1024;
 
 /// Run one Maxima batch string, bounded by [`MAXIMA_TIMEOUT_S`] and
@@ -133,18 +185,17 @@ fn run_maxima(batch_string: &str) -> Result<(String, String), String> {
             if handle.is_finished() { handle.join().unwrap_or_default() } else { Vec::new() }
         }
 
-        /// The Maxima process, with a memory cap on Unix. `sh` runs the
-        /// constant script with the binary as `$0` and every argument as
-        /// `$@`: no user text is ever interpreted by the shell, and a
-        /// platform without `ulimit -v` simply ignores the failure and runs.
+        /// The Maxima process, with a memory cap where the platform has one.
+        /// `sh` runs the constant script with the binary as `$0` and every
+        /// argument as `$@`: no user text is ever interpreted by the shell.
         fn maxima_command() -> std::process::Command {
-            #[cfg(unix)]
+            #[cfg(all(unix, not(target_os = "macos")))]
             {
                 let mut c = std::process::Command::new("sh");
                 c.arg("-c").arg(format!("ulimit -v {MAXIMA_MEMORY_LIMIT_KIB} 2>/dev/null || true; exec \"$0\" \"$@\"")).arg(maxima_bin());
                 c
             }
-            #[cfg(not(unix))]
+            #[cfg(any(not(unix), target_os = "macos"))]
             {
                 std::process::Command::new(maxima_bin())
             }
@@ -164,7 +215,7 @@ fn run_maxima(batch_string: &str) -> Result<(String, String), String> {
             .stdout(std::process::Stdio::piped())
             .stderr(std::process::Stdio::piped())
             .spawn()
-            .map_err(|e| format!("Maxima kan ikke startes ({} mangler? installér den, f.eks. `sudo pacman -S maxima`): {e}", maxima_bin()))?;
+            .map_err(|e| format!("Maxima kan ikke startes ({} mangler? installér den: {}): {e}", maxima_bin().display(), install_hint()))?;
         // Feed the batch on its own thread: the wait loop below must stay
         // free to enforce the timeout even if Maxima never reads stdin.
         if use_stdin {
@@ -230,7 +281,7 @@ fn run_maxima(batch_string: &str) -> Result<(String, String), String> {
             // 127 is the shell's "command not found": with the Unix `sh`
             // wrapper Maxima itself can no longer fail at spawn().
             if status.code() == Some(127) {
-                return Err(format!("Maxima kan ikke startes ({} mangler? installér den, f.eks. `sudo pacman -S maxima`)", maxima_bin()));
+                return Err(format!("Maxima kan ikke startes ({} mangler? installér den: {})", maxima_bin().display(), install_hint()));
             }
             return Err("Maxima fejlede".to_string());
         }
@@ -3079,6 +3130,39 @@ mod tests {
         run(s, "select.all", json!({}));
     }
 
+    /// The search itself: a `PATH` hit wins, and the answer is the full path
+    /// (so the process starts even when `PATH` names a different Maxima).
+    #[test]
+    fn maxima_is_found_through_path() {
+        let name = maxima_name();
+        let found = PathBuf::from("/a/dev/bin").join(name);
+        let probe = |p: &Path| p == found;
+        assert_eq!(resolve_maxima(Some(OsStr::new("/usr/bin:/a/dev/bin")), &probe), Some(found));
+        // A PATH without it, and no macOS prefixes: no answer, so the caller
+        // shows the install hint instead of spawning something that is not there.
+        assert_eq!(resolve_maxima(Some(OsStr::new("/usr/bin:/bin")), &|_| false), None);
+        assert_eq!(resolve_maxima(None, &|_| false), None);
+    }
+
+    /// A Finder-launched Mac app has a bare `PATH`; Homebrew's prefix must
+    /// still be searched, or `brew install maxima` looks like no Maxima.
+    #[cfg(target_os = "macos")]
+    #[test]
+    fn a_mac_app_finds_homebrew_maxima_outside_path() {
+        let found = Path::new(MAC_EXTRA_DIRS[0]).join(maxima_name());
+        let probe = |p: &Path| p == found;
+        assert_eq!(resolve_maxima(Some(OsStr::new("/usr/bin:/bin")), &probe), Some(found));
+    }
+
+    /// The hint names a way to install it on this platform, so a missing
+    /// Maxima is actionable rather than just an error.
+    #[test]
+    fn the_install_hint_fits_the_platform() {
+        assert!(!install_hint().is_empty());
+        #[cfg(target_os = "macos")]
+        assert!(install_hint().contains("brew"), "{}", install_hint());
+    }
+
     /// The four outcomes of a solve are told apart, so the message says what happened and what
     /// to do next (the maths tab is a Danish school feature).
     #[test]
@@ -3504,7 +3588,7 @@ mod tests {
     }
 
     #[test]
-    #[cfg(unix)]
+    #[cfg(all(unix, not(target_os = "macos")))]
     #[ignore]
     fn memory_hungry_expression_fails_fast() {
         // ulimit -v must turn `2^2^40` into a quick, contained failure

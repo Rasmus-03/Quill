@@ -564,7 +564,7 @@ impl WordApp {
         // First run (or wiped prefs): the math tab builds itself.
         wordcraft_engine::cmd::mathcraft::ensure_wordmat_tab(&mut session);
         if !wordcraft_engine::cmd::mathcraft::maxima_available() {
-            session.status = "Maxima is missing — install it before calculating (e.g. sudo pacman -S maxima)".to_string();
+            session.status = format!("Maxima is missing — install it before calculating: {}", wordcraft_engine::cmd::mathcraft::install_hint());
         }
         WordApp {
             session,

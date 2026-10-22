@@ -693,6 +693,6 @@ mod tests {
         let before = s.doc.media.len();
         s.run("math.graf", &json!({})).unwrap();
         assert!(s.doc.media.len() > before);
-        assert!(s.status.contains("Graph"));
+        assert!(s.status.contains("Graf"), "status: {}", s.status);
     }
 }

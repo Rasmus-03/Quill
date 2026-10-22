@@ -12,6 +12,13 @@ the build is trustworthy again, and the app carries its own name everywhere a us
   name, the class and the date, the task, room for the answer and for notes), a
   *Rapportforside* (the title, the author, the subject, the class, the date and the supervisor)
   and a two-column *Håndout* for a lesson. The text and the layout are ours
+- **The maths tab finds Maxima on a Mac**. An app started from Finder runs with
+  `/usr/bin:/bin:/usr/sbin:/sbin` and nothing else, so `brew install maxima` was invisible and the
+  tab claimed Maxima was missing. The engine now searches the Homebrew and MacPorts prefixes after
+  `PATH`, the status line and the error name the platform's own install command (`brew install
+  maxima` on macOS), and macOS no longer runs the `ulimit -v` wrapper — it has no `RLIMIT_AS`, so
+  the wrapper only printed a warning into every call. The 26 Maxima-backed tests run and pass on a
+  Mac; one of them still expected an English status and is fixed
 - **The maths tab says what happened, in Danish**. A solve that found nothing now says which
   of the four cases it was: no solution ("Ligningen har ingen løsning"), every number is a
   solution ("Løsningen er alle tal — skriv et uligheds- eller intervalkrav"), only complex roots
