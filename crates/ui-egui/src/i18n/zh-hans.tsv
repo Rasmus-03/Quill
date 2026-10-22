@@ -58,6 +58,7 @@
 	Apply Styles	选择并应用样式
 	Arrange	排列
 	Arrange\nAll	全部重排
+	Arrange All	全部重排
 	Arrow	箭头
 	Artistic Effects	艺术效果
 	As you type	键入时
@@ -111,6 +112,7 @@
 	Include level number from:	包含的级别编号来自：
 	Initials:	缩写：
 	Ink	墨迹
+	Ink Equation	墨迹公式
 	Insertions and Deletions	插入和删除
 	Insertions:	插入内容：
 	Interface	界面
@@ -189,6 +191,7 @@
 	Blank document	空白文档
 	Blank Page	空白页
 	Block\nAuthors	阻止作者
+	Block Authors	阻止作者
 	Bold	加粗
 	Bookmark	书签
 	Bookmark name:	书签名：
@@ -196,9 +199,14 @@
 	Border\nPainter	边框刷
 	Borders	边框
 	Show the mini toolbar when text is selected	选择文本时显示浮动工具栏
+	Side\nby Side	并排\n查看
 	Spaces	空格
 	Spelling	拼写
 	Spelling and grammar are checked in English (United States).	拼写和语法按英语（美国）检查。
+	Switch Windows	切换窗口
+	Switch\nWindows	切换\n窗口
+	Synchronous Scrolling	同步滚动
+	Synchronous\nScrolling	同步\n滚动
 	Tab characters	制表符
 	Tab stop position:	制表位位置：
 	Default tab stops:	默认制表位：
@@ -215,6 +223,7 @@
 	Typing replaces selected text	键入内容替换所选文字
 	Update fields before printing	打印前更新域
 	Use the Insert key to switch overtype on and off	用 Insert 键切换改写模式
+	View Side by Side	并排查看
 	Whole document	整篇文档
 	This section	本节
 	Fill	填充
@@ -477,6 +486,7 @@
 	Index	索引
 	Info	信息
 	Ink to\nMath	墨迹转公式
+	Ink to Math	墨迹转换为数学公式
 	Ink to\nShape	墨迹转形状
 	Ink\nReplay	墨迹重播
 	Insert	插入

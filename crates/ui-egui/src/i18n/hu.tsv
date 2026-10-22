@@ -55,6 +55,7 @@
 	Apply Style	Stílus alkalmazása
 	Arrange	Elhelyezés
 	Arrange\nAll	Ablakok\nrendezése
+	Arrange All	Összes elrendezése
 	Arrow	Nyíl
 	Artistic Effects	Művészi effektusok
 	Author	Szerző
@@ -82,6 +83,7 @@
 	Blank document	Üres dokumentum
 	Blank Page	Üres oldal
 	Block\nAuthors	Szerzők\nletiltása
+	Block Authors	Szerzők letiltása
 	Body text in a short paragraph to show spacing.	Szövegtörzs egy rövid bekezdésben, hogy látszódjon a térköz.
 	Bold	Félkövér
 	Book Title	Könyvcím
@@ -336,7 +338,9 @@
 	Index Heading	Tárgymutató-címsor
 	Index {n}	Tárgymutató {n}
 	Info	Információ
+	Ink Equation	Kézzel írt egyenlet
 	Ink to\nMath	Tintából\nképlet
+	Ink to Math	Kézírás matematikába
 	Ink to\nShape	Tintából\nalakzat
 	Ink\nReplay	Tinta\nvisszajátszása
 	Insert	Beszúrás
@@ -670,6 +674,7 @@
 	Show\nComments	Megjegyzések\nmegjelenítése
 	Shrink Font 1 Point	Betűméret csökkentése 1 ponttal
 	Side to Side	Egymás mellett
+	Side\nby Side	Egymás\nmellett
 	Side\nto Side	Egymás\nmellett
 	Signature Line	Aláírássor
 	Single	Szimpla
@@ -716,9 +721,13 @@
 	Subtle Reference	Finom hivatkozás
 	Superscript	Felső index
 	Switch Modes	Módváltás
+	Switch Windows	Ablakváltás
 	Switch\nModes	Módváltás
+	Switch\nWindows	Ablak\nváltás
 	Symbol	Szimbólum
 	Symbols	Szimbólumok
+	Synchronous Scrolling	Szinkron görgetés
+	Synchronous\nScrolling	Szinkron\ngörgetés
 	Synonyms	Szinonimák
 	Tab	Tabulátor
 	Table	Táblázat
@@ -796,6 +805,7 @@
 	Vertical Alignment	Függőleges igazítás
 	View	Nézet
 	View Gridlines	Rácsvonalak megjelenítése
+	View Side by Side	Egymás mellett
 	View State	Nézet állapota
 	Views	Nézetek
 	Voice	Hang

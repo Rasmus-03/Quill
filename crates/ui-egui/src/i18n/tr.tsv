@@ -52,6 +52,7 @@
 	Apply Style	Stil Uygula
 	Arrange	Yerleştir
 	Arrange\nAll	Tümünü\nYerleştir
+	Arrange All	Tümünü Yerleştir
 	Arrow	Ok
 	Artistic Effects	Sanatsal Efektler
 	Author	Yazar
@@ -79,6 +80,7 @@
 	Blank document	Boş belge
 	Blank Page	Boş Sayfa
 	Block\nAuthors	Yazarları\nEngelle
+	Block Authors	Yazarları Engelle
 	Body text in a short paragraph to show spacing.	Aralığı göstermek için kısa bir paragrafta gövde metni.
 	Bold	Kalın
 	Book Title	Kitap Başlığı
@@ -334,7 +336,9 @@
 	Index Heading	Dizin Başlığı
 	Index {n}	Dizin {n}
 	Info	Bilgi
+	Ink Equation	Mürekkep Denklemi
 	Ink to\nMath	Mürekkebi\nMatematiğe Dönüştür
+	Ink to Math	Mürekkebi Matematiğe Dönüştür
 	Ink to\nShape	Mürekkebi\nŞekle Dönüştür
 	Ink\nReplay	Mürekkebi\nYeniden Oynat
 	Insert	Ekle
@@ -676,6 +680,7 @@
 	Show\nComments	Yorumları\nGöster
 	Shrink Font 1 Point	Yazı Tipini 1 Punto Küçült
 	Side to Side	Yan Yana
+	Side\nby Side	Yan Yana\nGörüntüle
 	Side\nto Side	Yan\nYana
 	Signature Line	İmza Satırı
 	Single	Tek
@@ -721,9 +726,13 @@
 	Subtle Reference	Hafif Başvuru
 	Superscript	Üst Simge
 	Switch Modes	Mod Değiştir
+	Switch Windows	Pencereleri Değiştir
 	Switch\nModes	Mod\nDeğiştir
+	Switch\nWindows	Pencereleri\nDeğiştir
 	Symbol	Sembol
 	Symbols	Semboller
+	Synchronous Scrolling	Eşzamanlı Kaydırma
+	Synchronous\nScrolling	Eşzamanlı\nKaydırma
 	Synonyms	Eş Anlamlılar
 	Tab	Sekme
 	Table	Tablo
@@ -810,6 +819,7 @@ preview	Title	Örnek
 	Vertical Alignment	Dikey Hizalama
 	View	Görünüm
 	View Gridlines	Kılavuz Çizgilerini Göster
+	View Side by Side	Yan Yana Görüntüle
 	View State	Görünüm Durumu
 	Views	Görünümler
 	Voice	Ses

@@ -56,6 +56,7 @@
 	Apply Style	Appliquer le style
 	Arrange	Organiser
 	Arrange\nAll	Organiser\ntout
+	Arrange All	Réorganiser tout
 	Arrow	Flèche
 	Artistic Effects	Effets artistiques
 	Asian Typography	Typographie asiatique
@@ -88,6 +89,7 @@
 	Formatting exceptions	Exceptions de mise en forme
 	Include level number from:	Inclure le numéro de niveau de :
 	Ink	Encre
+	Ink Equation	Équation manuscrite
 	Insertions and Deletions	Insertions et suppressions
 	Insertions:	Insertions :
 	Inside:	Intérieur :
@@ -121,12 +123,18 @@
 	Blank document	Document vierge
 	Blank Page	Page vierge
 	Block\nAuthors	Bloquer\nles auteurs
+	Block Authors	Bloquer les auteurs
 	Bold	Gras
 	Bookmark	Signet
 	Bookmark name:	Nom du signet :
 	Border Painter	Pinceau de bordure
 	Border\nPainter	Pinceau\nde bordure
 	Borders	Bordures
+	Side\nby Side	Côte à\ncôte
+	Switch Windows	Changer de fenêtre
+	Switch\nWindows	Changer de\nfenêtre
+	Synchronous Scrolling	Défilement synchrone
+	Synchronous\nScrolling	Défilement\nsynchrone
 	Tab stop position:	Position du taquet de tabulation :
 	Default tab stops:	Taquets de tabulation par défaut :
 	Tab stops to be cleared:	Taquets de tabulation à supprimer :
@@ -137,6 +145,7 @@
 	Set	Définir
 	Page Border	Bordure de page
 	Apply to:	Appliquer à :
+	View Side by Side	Afficher côte à côte
 	Whole document	Tout le document
 	This section	Cette section
 	Fill	Remplissage
@@ -423,6 +432,7 @@
 	Index	Index
 	Info	Informations
 	Ink to\nMath	Entrée manuscrite\nen équation
+	Ink to Math	Encre vers mathématiques
 	Ink to\nShape	Entrée manuscrite\nen forme
 	Ink\nReplay	Relecture\nmanuscrite
 	Insert	Insertion

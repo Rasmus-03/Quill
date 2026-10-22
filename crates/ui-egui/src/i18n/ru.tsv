@@ -53,6 +53,7 @@
 	Apply Style	Применить стиль
 	Arrange	Упорядочить
 	Arrange\nAll	Упорядочить\nвсе
+	Arrange All	Упорядочить все
 	Arrow	Стрелка
 	Artistic Effects	Художественные эффекты
 	Author	Автор
@@ -80,6 +81,7 @@
 	Blank document	Новый документ
 	Blank Page	Пустая страница
 	Block\nAuthors	Блокировать\nавторов
+	Block Authors	Блокировка авторов
 	Body text in a short paragraph to show spacing.	Основной текст в коротком абзаце, чтобы показать интервалы.
 	Bold	Полужирный
 	Book Title	Название книги
@@ -189,7 +191,13 @@
 	Delete Style	Удалить стиль
 	Delete Table	Удалить таблицу
 	Design	Дизайн
+	Ink Equation	Формула от руки
 	Search	Поиск
+	Side\nby Side	Рядом
+	Switch Windows	Переключение окон
+	Switch\nWindows	Переключение\nокон
+	Synchronous Scrolling	Синхронная прокрутка
+	Synchronous\nScrolling	Синхронная\nпрокрутка
 	Title Bar	Строка заголовка
 	development build	сборка для разработки
 	Diagonal	Диагональ
@@ -337,6 +345,7 @@
 	Index {n}	Указатель {n}
 	Info	Сведения
 	Ink to\nMath	Рукопись\nв формулу
+	Ink to Math	Рукописный ввод в формулу
 	Ink to\nShape	Рукопись\nв фигуру
 	Ink\nReplay	Воспроизвести\nрукопись
 	Insert	Вставка
@@ -803,6 +812,7 @@ preview	Title	Пример
 	Vertical Alignment	Вертикальное выравнивание
 	View	Вид
 	View Gridlines	Показать сетку
+	View Side by Side	Рядом
 	View State	Состояние вида
 	Views	Режимы просмотра
 	Voice	Голос

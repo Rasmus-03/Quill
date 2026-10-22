@@ -89,6 +89,7 @@
 	Apply to:	Použít na:
 	Arrange	Uspořádat
 	Arrange\nAll	Uspořádat\nvše
+	Arrange All	Uspořádat vše
 	Arrow	Šipka
 	Artistic Effects	Umělecké efekty
 	As Recommended	Podle doporučení
@@ -128,6 +129,7 @@
 	Blank document	Prázdný dokument
 	Blank Page	Prázdná stránka
 	Block\nAuthors	Blokovat\nautory
+	Block Authors	Blokovat autory
 	Body Text	Základní text
 	Bold	Tučné
 	Bookmark	Záložka
@@ -525,7 +527,9 @@
 	Index and Tables	Rejstřík a seznamy
 	Info	Informace
 	Ink	Rukopis
+	Ink Equation	Rovnice rukopisem
 	Ink to\nMath	Rukopis na\nrovnici
+	Ink to Math	Rukopis do matematiky
 	Ink to\nShape	Rukopis na\ntvar
 	Ink\nReplay	Přehrát\nrukopis
 	Inline	Vnořená
@@ -1029,6 +1033,7 @@
 	Show\nComments	Zobrazit\nkomentáře
 	Shrink Font 1 Point	Zmenšit písmo o 1 bod
 	Side to Side	Vedle sebe
+	Side\nby Side	Vedle\nsebe
 	Side\nto Side	Vedle\nsebe
 	Signature Line	Řádek podpisu
 	Single	Jednoduché
@@ -1096,9 +1101,13 @@
 	Superscript	Horní index
 	Suppress line numbers	Potlačit čísla řádků
 	Switch Modes	Přepnout režimy
+	Switch Windows	Přepnout okna
 	Switch\nModes	Přepnout\nrežimy
+	Switch\nWindows	Přepnout\nokna
 	Symbol	Symbol
 	Symbols	Symboly
+	Synchronous Scrolling	Synchronní posouvání
+	Synchronous\nScrolling	Synchronní\nposouvání
 	Synonyms	Synonyma
 	Tab	Tabulátor
 	Tab character	Znak tabulátoru
@@ -1214,6 +1223,7 @@
 	Vertical alignment:	Svislé zarovnání:
 	View	Zobrazení
 	View Gridlines	Zobrazit mřížku
+	View Side by Side	Zobrazení vedle sebe
 	View State	Stav zobrazení
 	Views	Zobrazení
 	Voice	Hlas

@@ -51,6 +51,7 @@
 	Apply Style	Anvend typografi
 	Arrange	Arranger
 	Arrange\nAll	Arranger\nalle
+	Arrange All	Arranger alle
 	Arrow	Pil
 	Artistic Effects	Kunstneriske effekter
 	Author	Forfatter
@@ -78,6 +79,7 @@
 	Blank document	Tomt dokument
 	Blank Page	Tom side
 	Block\nAuthors	Bloker\nautorer
+	Block Authors	Bloker forfattere
 	Body text in a short paragraph to show spacing.	Brødtekst i et kort afsnit for at vise afstand.
 	Bold	Fed
 	Book Title	Bogtitel
@@ -187,7 +189,13 @@
 	Delete Style	Slet typografi
 	Delete Table	Slet tabel
 	Design	Design
+	Ink Equation	Håndskrevet ligning
 	Search	Søg
+	Side\nby Side	Side om\nside
+	Switch Windows	Skift vindue
+	Switch\nWindows	Skift\nvindue
+	Synchronous Scrolling	Synkron rulning
+	Synchronous\nScrolling	Synkron\nrulning
 	Title Bar	Titellinje
 	development build	udviklingsversion
 	Diagonal	Diagonal
@@ -335,6 +343,7 @@
 	Index {n}	Indeks {n}
 	Info	Oplysninger
 	Ink to\nMath	Blæk til\nligning
+	Ink to Math	Håndskrift til matematik
 	Ink to\nShape	Blæk til\nfigur
 	Ink\nReplay	Blæk\ngenspil
 	Insert	Indsæt
@@ -799,6 +808,7 @@
 	Vertical Alignment	Lodret justering
 	View	Vis
 	View Gridlines	Vis rudenet
+	View Side by Side	Vis side om side
 	View State	Vis tilstand
 	Views	Visninger
 	Voice	Stemme

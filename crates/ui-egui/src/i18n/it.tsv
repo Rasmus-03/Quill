@@ -61,6 +61,7 @@
 	Apply Style	Applica stile
 	Arrange	Disponi
 	Arrange\nAll	Disponi\ntutto
+	Arrange All	Disponi tutto
 	Arrow	Freccia
 	Artistic Effects	Effetti artistici
 	Asian Typography	Tipografia asiatica
@@ -87,6 +88,7 @@
 	Formatting	Formattazione
 	Include level number from:	Includi numero di livello da:
 	Ink	Penna
+	Ink Equation	Equazione a mano libera
 	Insertions and Deletions	Inserimenti ed eliminazioni
 	Insertions:	Inserimenti:
 	Left border	Bordo sinistro
@@ -120,12 +122,18 @@
 	Blank Page	Pagina vuota
 	Blank document	Documento vuoto
 	Block\nAuthors	Blocca\nautori
+	Block Authors	Blocca autori
 	Bold	Grassetto
 	Bookmark	Segnalibro
 	Bookmark name:	Nome segnalibro:
 	Border Painter	Copia bordi
 	Border\nPainter	Copia\nbordi
 	Borders	Bordi
+	Side\nby Side	Visualizza\naffiancati
+	Switch Windows	Cambia finestra
+	Switch\nWindows	Cambia\nfinestra
+	Synchronous Scrolling	Scorrimento sincrono
+	Synchronous\nScrolling	Scorrimento\nsincrono
 	Tab stop position:	Posizione tabulazione:
 	Default tab stops:	Tabulazioni predefinite:
 	Tab stops to be cleared:	Tabulazioni da cancellare:
@@ -136,6 +144,7 @@
 	Set	Imposta
 	Page Border	Bordo pagina
 	Apply to:	Applica a:
+	View Side by Side	Visualizza affiancati
 	Whole document	Tutto il documento
 	This section	Questa sezione
 	Fill	Riempimento
@@ -406,6 +415,7 @@
 	Index	Indice analitico
 	Info	Informazioni
 	Ink to\nMath	Input penna\nin formula
+	Ink to Math	Input penna in matematica
 	Ink to\nShape	Input penna\nin forma
 	Ink\nReplay	Riproduci\ninput penna
 	Insert	Inserisci

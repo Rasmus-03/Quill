@@ -60,6 +60,7 @@
 	Apply Style	Aplicar estilo
 	Arrange	Organizar
 	Arrange\nAll	Organizar\ntodo
+	Arrange All	Organizar todo
 	Arrow	Flecha
 	Artistic Effects	Efectos artísticos
 	As you type	Mientras escribes
@@ -101,6 +102,7 @@
 	Include level number from:	Incluir número de nivel de:
 	Initials:	Iniciales:
 	Ink	Entrada de lápiz
+	Ink Equation	Ecuación de tinta
 	Insertions and Deletions	Inserciones y eliminaciones
 	Insertions:	Inserciones:
 	Interface	Interfaz
@@ -160,6 +162,7 @@
 	Blank Page	Página en blanco
 	Blank document	Documento en blanco
 	Block\nAuthors	Bloquear\nautores
+	Block Authors	Bloquear autores
 	Bold	Negrita
 	Bookmark	Marcador
 	Bookmark name:	Nombre del marcador:
@@ -169,9 +172,14 @@
 	Borders	Bordes
 	Search	Buscar
 	Show the mini toolbar when text is selected	Mostrar la minibarra de herramientas al seleccionar texto
+	Side\nby Side	En\nparalelo
 	Spaces	Espacios
 	Spelling	Ortografía
 	Spelling and grammar are checked in English (United States).	La ortografía y la gramática se revisan en inglés (Estados Unidos).
+	Switch Windows	Cambiar ventanas
+	Switch\nWindows	Cambiar\nventanas
+	Synchronous Scrolling	Desplazamiento sincrónico
+	Synchronous\nScrolling	Desplazamiento\nsincrónico
 	Tab characters	Caracteres de tabulación
 	Tab stop position:	Posición de la tabulación:
 	Default tab stops:	Tabulaciones predeterminadas:
@@ -188,6 +196,7 @@
 	Typing replaces selected text	Lo que escribes reemplaza el texto seleccionado
 	Update fields before printing	Actualizar campos antes de imprimir
 	Use the Insert key to switch overtype on and off	Usar la tecla Insert para activar y desactivar la sobrescritura
+	View Side by Side	Ver en paralelo
 	Whole document	Todo el documento
 	This section	Esta sección
 	Fill	Relleno de color
@@ -471,6 +480,7 @@
 	Index	Índice
 	Info	Información
 	Ink to\nMath	Tinta a\nfórmula
+	Ink to Math	Tinta a matemáticas
 	Ink to\nShape	Tinta a\nforma
 	Ink\nReplay	Reproducir\ntinta
 	Insert	Insertar

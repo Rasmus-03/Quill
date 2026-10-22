@@ -57,6 +57,7 @@
 	Apply Styles	Formatvorlagen anwenden
 	Arrange	Anordnen
 	Arrange\nAll	Alle\nanordnen
+	Arrange All	Alle anordnen
 	Arrow	Pfeil
 	Artistic Effects	Künstlerische Effekte
 	Asian Typography	Asiatische Typografie
@@ -94,6 +95,7 @@
 	Formatting	Formatierung
 	Include level number from:	Ebenennummer übernehmen aus:
 	Ink	Freihand
+	Ink Equation	Freihandformel
 	Insertions and Deletions	Einfügungen und Löschungen
 	Insertions:	Einfügungen:
 	Left border	Linke Rahmenlinie
@@ -135,12 +137,18 @@
 	Blank document	Leeres Dokument
 	Blank Page	Leere Seite
 	Block\nAuthors	Block-\nAutoren
+	Block Authors	Autoren blockieren
 	Bold	Fett
 	Bookmark	Textmarke
 	Bookmark name:	Textmarkenname:
 	Border Painter	Rahmenlinien-Maler
 	Border\nPainter	Rahmenlinien-\nMaler
 	Borders	Rahmenlinien
+	Side\nby Side	Nebeneinander\nanzeigen
+	Switch Windows	Fenster wechseln
+	Switch\nWindows	Fenster\nwechseln
+	Synchronous Scrolling	Synchrones Scrollen
+	Synchronous\nScrolling	Synchrones\nScrollen
 	Tab stop position:	Tabstoppposition:
 	Default tab stops:	Standardtabstopps:
 	Tab stops to be cleared:	Zu löschende Tabstopps:
@@ -151,6 +159,7 @@
 	Set	Festlegen
 	Page Border	Seitenrahmen
 	Apply to:	Übernehmen für:
+	View Side by Side	Nebeneinander anzeigen
 	Whole document	Gesamtes Dokument
 	This section	Dieser Abschnitt
 	Fill	Füllung
@@ -410,6 +419,7 @@
 	Index	Index
 	Info	Info
 	Ink to\nMath	Freihand zu\nFormel
+	Ink to Math	Freihand zu Formel
 	Ink to\nShape	Freihand zu\nForm
 	Ink\nReplay	Freihand-\nWiedergabe
 	Insert	Einfügen

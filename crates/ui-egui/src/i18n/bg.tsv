@@ -63,6 +63,7 @@
 	Apply Style	Прилагане на стил
 	Arrange	Подреждане
 	Arrange\nAll	Подреждане\nна всички
+	Arrange All	Подреждане на всички
 	Arrow	Стрелка
 	Artistic Effects	Художествени ефекти
 	Asian Typography	Азиатска типография
@@ -89,6 +90,7 @@
 	Formatting	Форматиране
 	Include level number from:	Включване на номер на ниво от:
 	Ink	Мастило
+	Ink Equation	Уравнение с ръкопис
 	Insertions and Deletions	Вмъквания и изтривания
 	Insertions:	Вмъквания:
 	Left border	Лява граница
@@ -123,12 +125,18 @@
 	Blank Page	Празна страница
 	Blank document	Празен документ
 	Block\nAuthors	Блокиране\nна автори
+	Block Authors	Блокиране на автори
 	Bold	Получер
 	Bookmark	Отметка
 	Bookmark name:	Име на отметката:
 	Border Painter	Рисуване на граници
 	Border\nPainter	Рисуване\nна граници
 	Borders	Граници
+	Side\nby Side	Един до\nдруг
+	Switch Windows	Превключване на прозорци
+	Switch\nWindows	Превключване на\nпрозорци
+	Synchronous Scrolling	Синхронно превъртане
+	Synchronous\nScrolling	Синхронно\nпревъртане
 	Tab stop position:	Позиция на табулатора:
 	Default tab stops:	Позиции на табулатора по подразбиране:
 	Tab stops to be cleared:	Позиции на табулатора за изчистване:
@@ -139,6 +147,7 @@
 	Set	Задаване
 	Page Border	Рамка на страницата
 	Apply to:	Прилагане към:
+	View Side by Side	Преглед един до друг
 	Whole document	Целия документ
 	This section	Този раздел
 	Fill	Запълване
@@ -411,6 +420,7 @@
 	Index	Индекс
 	Info	Информация
 	Ink to\nMath	Мастило към\nматематика
+	Ink to Math	Рукопис към математика
 	Ink to\nShape	Мастило към\nфигура
 	Ink\nReplay	Възпроизвеждане\nна мастило
 	Insert	Вмъкване

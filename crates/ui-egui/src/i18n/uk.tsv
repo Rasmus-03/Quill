@@ -58,6 +58,7 @@
 	Apply Style	Застосувати стиль
 	Arrange	Упорядкувати
 	Arrange\nAll	Упорядкувати\nвсі
+	Arrange All	Упорядкувати все
 	Arrow	Стрілка
 	Artistic Effects	Художні ефекти
 	As you type	Під час введення
@@ -104,6 +105,7 @@
 	Include level number from:	Додати номер рівня:
 	Initials:	Ініціали:
 	Ink	Рукописні примітки
+	Ink Equation	Рівняння рукописом
 	Insertions and Deletions	Вставлення й видалення
 	Insertions:	Вставлення:
 	Interface	Інтерфейс
@@ -158,6 +160,7 @@
 	Blank document	Порожній документ
 	Blank Page	Порожня сторінка
 	Block\nAuthors	Блокувати\nавторів
+	Block Authors	Блокувати авторів
 	Bold	Напівжирний
 	Bookmark	Закладка
 	Bookmark name:	Назва закладки:
@@ -166,9 +169,14 @@
 	Borders	Межі
 	Search	Пошук
 	Show the mini toolbar when text is selected	Показувати міні-панель інструментів під час виділення тексту
+	Side\nby Side	Поруч
 	Spaces	Пробіли
 	Spelling	Правопис
 	Spelling and grammar are checked in English (United States).	Правопис і граматика перевіряються англійською (США).
+	Switch Windows	Перемкнути вікна
+	Switch\nWindows	Перемкнути\nвікна
+	Synchronous Scrolling	Синхронне прокручування
+	Synchronous\nScrolling	Синхронне\nпрокручування
 	Tab characters	Символи табуляції
 	Tab stop position:	Позиція табуляції:
 	Default tab stops:	Типові позиції табуляції:
@@ -185,6 +193,7 @@
 	Typing replaces selected text	Введення замінює виділений текст
 	Update fields before printing	Оновлювати поля перед друком
 	Use the Insert key to switch overtype on and off	Клавіша Insert вмикає та вимикає режим заміни
+	View Side by Side	Поруч
 	Whole document	Увесь документ
 	This section	Цей розділ
 	Fill	Колір заливки
@@ -478,6 +487,7 @@
 	Index	Покажчик
 	Info	Відомості
 	Ink to\nMath	Рукопис\nу формулу
+	Ink to Math	Рукопис у математику
 	Ink to\nShape	Рукопис\nу фігуру
 	Ink\nReplay	Відтворити\nрукопис
 	Insert	Вставлення
