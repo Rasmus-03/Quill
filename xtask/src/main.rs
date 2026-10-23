@@ -11,6 +11,7 @@ mod install;
 mod layers;
 mod parity;
 mod pkg_names;
+mod review;
 mod stats;
 mod version;
 
@@ -41,6 +42,9 @@ commands:
   corpus [--download | --docx]
                   show where test corpora live; --download fetches PngSuite into corpus/pngsuite,
                   --docx fetches the .docx corpus into corpus/docx (pinned by SHA-256)
+  review <action> the author→reviewer hand-over: submit, list, next, show, accept (send it
+                  further), changes (send it back with a message), status, wait, reviewer
+                  (docs/review-loop.md; `cargo xtask review` for the actions)
   stats [--exact] count tests and lines per crate (--exact: ask the test harness via `-- --list`)
   parity          recompute the Word feature-parity summary in docs/parity-checklist.md
   ico <out.ico> <in.png>...
@@ -60,6 +64,7 @@ fn main() -> ExitCode {
         Some("pkg-names") => pkg_names::run(&root()),
         Some("ci") => cmd_ci(),
         Some("corpus") => cmd_corpus(&rest),
+        Some("review") => review::run(&root(), &rest),
         Some("stats") => stats::run(&root(), rest.contains(&"--exact")),
         Some("parity") => parity::run(&root()),
         Some("ico") => ico::run(&rest),

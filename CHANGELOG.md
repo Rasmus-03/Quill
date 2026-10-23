@@ -79,6 +79,14 @@ speaks Danish.
 - **Files Quill writes say Quill**: the PDF, ODT, HTML, RTF and LaTeX exports, the .docx
   "Application" property and a new document's author carry the Quill name, and the MCP server
   introduces itself as Quill
+- **Work is reviewed before it is called done**: `cargo xtask review` is the hand-over between the
+  agent that built something and the agent that checks it. The author submits the work — the
+  commit range, the diff (uncommitted changes included), the gates it ran and its terminal — and
+  waits for a verdict; the reviewer takes the oldest request and either sends it on (to the
+  integration line, or to another agent's terminal) or sends it back with a message saying, file
+  by file, what has to change. The queue lives in the repository's git common directory, so every
+  worktree sees it and none of it is committed, and `docs/review-loop.md` is the protocol with the
+  reviewer's checklist
 
 ## 1.1.0 — Nextcloud, Obsidian depth and Focus mode
 

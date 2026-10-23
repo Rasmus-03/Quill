@@ -49,11 +49,17 @@ People trust WordCraft with their writing; a crash loses their work. **This outr
 ## Rituals (always, every time)
 - **After a test run, the old artifacts go.** `cargo xtask clean` removes the build directories older than a week, the incremental caches, the scratch folders a crashed test left in the temporary directory and the half-written files a killed save left behind. `cargo xtask ci` ends with it. `cargo xtask clean --all` also removes this checkout's build directory (use it when your own `CARGO_TARGET_DIR` is in the way).
 - **The app on this machine follows the checkout.** `cargo xtask install` builds the release app and puts it in `~/Applications/Quill.app` (the command line tool in `~/bin/quill`). `cargo xtask install --hook` writes the git hooks that do it after every commit and every merge, so a push to GitHub leaves the local copy current; `--unhook` takes them away. The hook builds in the background and logs to `.git/quill-install.log`.
-- **Tests clean up after themselves.** A test that writes files puts them in a scratch folder that a `Drop` removes when the test ends, so a run leaves nothing behind. Keep it that way.
-- Nothing is left in the working tree either: `git status` shows only the files the work changed.
+- **Tests clean up after themselves.** A test that writes files puts them in a scratch folder that a `Drop` removes when the test ends, so a run leaves nothing behind. Keep it that way.- Nothing is left in the working tree either: `git status` shows only the files the work changed.
+- **Finished means reviewed.** When you believe the work is done, hand it over instead of calling it done: `cargo xtask review submit --title "…" --note "what you changed, what you checked, what you are unsure about" --gate "cargo xtask ci: pass"`, then `cargo xtask review wait`. The reviewer either sends it further (`accept`) or sends it back with the changes it needs (`changes --note "file, what is wrong, what done looks like"`); a returned request is fixed and resubmitted, not argued with. It goes to another agent; reviewing your own work does not count.
 
 ## Quality gates
+
 Before every commit: `cargo xtask ci` (fmt, clippy -D warnings, tests, assets, layers, wasm). Commit after every arc of work that builds, with a task id in the message (`M2.1: line spacing dialog`).
+
+## Review loop
+
+Work is done when a second agent has read it, not when you think it is. The queue is shared by every worktree of this checkout and never committed: `$(git rev-parse --git-common-dir)/wordcraft-review`. The author runs `cargo xtask review submit` — it captures the commit range, the diff (uncommitted work included), the gates you ran and your terminal — and then `cargo xtask review wait`. The reviewer runs `cargo xtask review next`, then `accept` (sent further: the integration line by default, or `--to term_…` for another agent) or `changes --note "…"` (sent back; that note is the whole review the author gets). `cargo xtask review list` is what is waiting. Point a machine at its reviewer once with `cargo xtask review reviewer --terminal HANDLE --name NAME`. [`docs/review-loop.md`](docs/review-loop.md) has the reviewer's checklist: walk it, and read the diff rather than the hand-off note.
+
 
 ## Typing behaves like Word
 Typing, Enter, Backspace, Tab, lists, AutoCorrect and AutoFormat follow Word's observed behaviour in [`docs/typing-parity.md`](docs/typing-parity.md), pinned by `crates/engine/src/tests_typing.rs` (keys go through the same commands as the keyboard). Change behaviour, doc and tests together; a typing fix lands with a test there. Compare headlessly (`ui_shot`); don't drive GUIs with keystrokes on the shared machine.
