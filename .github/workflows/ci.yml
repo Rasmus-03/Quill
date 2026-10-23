@@ -66,3 +66,27 @@ jobs:
 
       - name: WebAssembly
         run: cargo xtask wasm
+
+  # The real-world .docx corpus (`crates/docx/tests/corpus.rs`) skips when the corpus is absent,
+  # so the job above passes without it. This job fetches the files the manifest pins by SHA-256
+  # and runs the round trip for real: a file that loses its formatting, or that an upstream change
+  # made unrecognisable to the pinned hash, fails here.
+  corpus:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@683b588c487a69d01f6c6ddf40f036ff682cc2c8 # v1
+
+      - name: Cache cargo
+        uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
+
+      # Apache POI's test documents (Apache-2.0), fetched by name and hash, never committed:
+      # every file that Word, Outlook or LibreOffice wrote is read → written → read again.
+      - name: Fetch the corpus
+        run: cargo xtask corpus --docx
+
+      - name: Round-trip every corpus file
+        run: cargo test -p wordcraft-docx --test corpus -- --nocapture

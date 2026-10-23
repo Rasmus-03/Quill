@@ -24,6 +24,11 @@ cargo test -p wordcraft-docx --test corpus    # check every file
 The test skips cleanly when there is no corpus, so a machine without one is unaffected. Point
 `QUILL_DOCX_CORPUS` at a corpus somewhere else to use another one.
 
+CI has a job of its own for it (`.github/workflows/ci.yml`, `corpus`): it runs
+`cargo xtask corpus --docx` and then the test, so a push is checked against the real files and not
+only against the synthetic fixtures. A file that is missing — because a fetch refused it after an
+upstream change — fails the test, so the job cannot pass by checking less than the manifest says.
+
 ## Where the files come from
 
 | Source | Licence | Files |
@@ -65,10 +70,41 @@ has to be noted here. A file that Word produced may be *tested* but never *commi
 
 ## What the check does
 
-For every file: **read → write → read**. The second read has to hold the same text, the same
-tables (their rows, their cells and their text), the same parts (headers, footers, notes,
-comments) and the same pictures. Writing what was read has to give the same document again, so a
+For every file: **read → write → read**. The second read has to hold the same document — not only
+the same words:
+
+| Compared | What that covers |
+|---|---|
+| The text, paragraph by paragraph | Order, characters |
+| The tables | Rows, cells, cell text |
+| The parts | The text of every header, footer, note and comment |
+| The pictures | Their bytes, not their names (a save may name a picture differently) |
+| **Every paragraph's runs and properties** | Bold, italic, colour, font, size, highlighting, hyperlinks, field codes, alignment, indents, spacing, numbering, borders, shading, content controls, the section a paragraph ends |
+| **The inline objects** | A picture's size, crop, wrap, alt text and position; a shape, a group, a text box's content; a bookmark; an equation |
+| **The sections** | Page size, orientation, margins, gutter, columns, header and footer distances, title page, page numbering, line numbers, page borders, the document grid, note options |
+| **The numbering** | Every list definition, its levels, formats, starts and overrides |
+| **The styles** | The style sheet as written, name by name |
+| **The fields, comments and tracked changes** | Field codes and their results, who wrote a comment and when, insertions, deletions, moves and formatting revisions |
+| **The settings and properties** | Track changes, hyphenation, autoformat, the document's own properties and bibliography sources |
+
+Writing what was read has to give the same document again — the same comparison, twice — so a
 reader that quietly loses something shows up as a document that keeps changing.
+
+The comparison is the document as JSON, with three things relaxed, because the save invents them
+and a reader cannot tell one from the other: a float rounded to a hundredth of a point (a save
+writes twips, so `273.59998` comes back as `273.6`), a relationship id (`rId4` and `rId1` name the
+same picture when the target is the same), and a part number (a save numbers the parts in the
+order it writes them, so parts are compared by their content). Zero-width markers — a bookmark,
+the end of a content control — may come back in another order at the same place; anything with a
+size keeps its place.
+
+Run it with `QUILL_CORPUS_DIAG=1` and a failing file says where the two documents part company,
+as a path: `body.4.Para.runs.0.props.bold`.
+
+**What the wider check found.** Two files (`60329.docx`, `form_footnotes.docx`) have headers and
+footers that are only a table, and every save added an empty paragraph after it — a line of
+height, so a header grew a little with each save. Word's own file ends with the table, so the
+writer no longer adds a paragraph outside the body and the table cells, where Word does need one.
 
 Two files are **refused on purpose**, and the manifest says so:
 

@@ -759,6 +759,17 @@ fn home(app: &mut WordApp, ui: &mut Ui) {
             });
         });
     });
+    // The three things a new document usually needs next, where the hand goes looking for them:
+    // Word keeps them on Insert and in the status bar, which is a tab and a glance away from the
+    // first line someone types. The command ids are Insert's own, so nothing here is a second
+    // implementation.
+    group(ui, "Insert", None, app, |ui, app| {
+        stack(ui, |ui| {
+            small(ui, app, "table", Some("Table"), "Add a Table", "insert.table", json!({}), false);
+            small(ui, app, "picture", Some("Pictures"), "Picture", "insert.picture", json!({}), false);
+            small(ui, app, "wordCount", Some("Word Count"), "Word Count", "ui.dialog", json!({"name": "wordCount"}), false);
+        });
+    });
     group(ui, "Voice", None, app, |ui, app| {
         big(ui, app, "dictate", "Dictate", "tools.dictate", json!({}), false);
     });

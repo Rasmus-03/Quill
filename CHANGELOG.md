@@ -15,6 +15,10 @@ speaks Danish.
   terms that read wrong — the highlighter was called a strike-through pen, `Vault Tags` had a
   compound that is not a word, and `Default Paragraph Font` named a style where it meant a font —
   and left four for a native speaker to decide
+- **Table, picture and word count without leaving Home**: the first three things a new document
+  usually needs are a compact group on the Home tab, beside Editing, so a school report does not
+  start with a tour of the ribbon. They are Insert's and Review's own commands — nothing here is a
+  second implementation, and Word Count still opens from the status bar's word total
 - **Danish proofing**: spelling from an installed Hunspell Danish dictionary (Stavekontrolden and
   friends; nothing is bundled), our own conservative grammar rules (doubled words, a missing
   capital after a full stop, `og og`), and Danish hyphenation from the hyph-utf8 patterns. A
