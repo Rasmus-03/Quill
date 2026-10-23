@@ -1,8 +1,11 @@
 # The .docx corpus
 
-The corpus is a set of **real** .docx files: documents that Word, Google Docs, LibreOffice and
-Pages actually wrote. The synthetic fixtures in `crates/docx/tests/` prove that the reader and the
-writer agree with each other; only these files prove that they agree with **Word**.
+The corpus is a set of **real** .docx files: documents somebody else's software actually wrote.
+71 of them, from Apache POI's test data — 59 carry "Microsoft Word" or "Outlook" as their
+producer, 7 carry LibreOffice, and 5 name none (a tool that never filled `docProps/app.xml` in).
+None come from Google Docs or Pages yet. The synthetic fixtures in `crates/docx/tests/` prove that
+the reader and the writer agree with each other; only these files prove that they agree with
+**Word**.
 
 It answers the question the work list has carried since 2026-10-06 ([`docs/gaps.md`](gaps.md),
 gap #1): *DOCX never tested on real-world files*.
@@ -86,6 +89,24 @@ the check compared the numbers and the names rather than the content, so a real 
 have been hidden among them. The check now compares what the document *is* — the text, the
 tables, the parts and the pictures' bytes — and the part numbers and picture names are left to
 the writer.
+
+## Do the pages come out right?
+
+The corpus can answer that too, without staging a comparison: Word writes the page count it
+computed into every file it saves (`docProps/app.xml`, `<Pages>`). That is the reference
+implementation's own answer for that document, recorded before Quill existed.
+
+Measured 2026-10-23: 65 of the 71 files carry such a count, and **62 of them come out of Quill at
+one page per page of Word's**. Three are one page apart — `60329.docx` (3 → 4), `drawing.docx`
+(20 → 21) and `form_footnotes.docx` (3 → 2). The six without a count are three files written by
+tools that never paginated, the empty one, and the two refusals.
+
+A matching total is not a matching page: lines can break elsewhere, a picture can sit a
+centimetre lower, a heading can move to the next page without changing the count. And `<Pages>` is
+what Word computed at its last save, on that machine, with those fonts. So the number says the
+layout is close to Word, not that the pages look the same — the page-by-page render comparison is
+still the open item. What each difference is, and what the check does not cover, is in
+[`file-format-parity.md`](file-format-parity.md#pagination-against-word).
 
 The full state of the format — what is read, what is written and what is lost on the way — is in
 [`docs/file-format-parity.md`](file-format-parity.md).

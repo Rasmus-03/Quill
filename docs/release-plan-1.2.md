@@ -1,8 +1,11 @@
 # Quill 1.2 — release plan
 
-> **Last reviewed:** 2026-10-22 · **Last updated:** 2026-10-22 · **Change:** minor (the 1.2 work
-> branches are integrated: Danish proofing, the Danish catalog, fuzzing and the parity wins; D4
-> and D5 landed the fork boundary and the release checklist) ·
+> **Last reviewed:** 2026-10-23 · **Last updated:** 2026-10-23 · **Change:** minor (an outside
+> critic read 1.2 and eight findings are answered in §10 — the maths tab is Danish at its
+> failure points, the README and status page no longer contradict the release, and the corpus
+> page count is measured against Word: 62 of 65 exact; previously minor: the 1.2 work branches
+> are integrated: Danish proofing, the Danish catalog, fuzzing and the parity wins; D4 and D5
+> landed the fork boundary and the release checklist) ·
 > **Status:** draft — the owner decisions in §8 are open · **Baseline:** 1.1.0 (Nextcloud, deeper
 > Obsidian vaults, Focus mode), version `1.1.0` in `Cargo.toml:7`
 
@@ -396,7 +399,8 @@ own; `cargo xtask ci` before you commit; one commit per arc, with a task id in t
 ## 6. Definition of done for 1.2
 
 - [ ] `cargo xtask ci` is green locally **and** in CI, on Linux, macOS and Windows. *(green
-      locally in arc 0; the CI proof comes with the first push of the new workflows)*
+      locally at `d7ab447` except the wasm step, which this machine has no rustup target for;
+      the CI proof comes with the first push of the new workflows)*
 - [x] `cargo test --workspace` runs in CI, including the 173 DOCX tests. *(arc 0)*
 - [x] `cargo xtask assets`, `cargo xtask layers` and `cargo xtask wasm` run in CI. *(arc 0)*
 - [x] macOS, Windows and Linux packages build from a clean checkout and are named `quill-*`.
@@ -404,8 +408,13 @@ own; `cargo xtask ci` before you commit; one commit per arc, with a task id in t
       macOS DMG and the macOS bundle were built locally; the Windows MSI needs Windows)*
 - [x] The corpus harness runs over the real-world corpus; every known difference is in the
       compatibility table (B3), not a surprise. *(landed 2026-10-21: 71 Apache-POI files pinned by
-      SHA-256, read → write → read, every one round-trips; the page-by-page comparison with Word
-      remains open in gap #1)*
+      SHA-256, read → write → read, every one round-trips; 2026-10-23: the page count is compared
+      with Word's own recorded count — 62 of 65 exact, three one page apart, all three named —
+      though not yet asserted in the harness. The page-by-page render comparison remains open in
+      gap #1)*
+- [x] The interface is Danish at the points a student meets it, errors included. *(2026-10-23:
+      the maths tab's 24 English error and status strings and its formula gallery are Danish; the
+      Maths tab reads Danish in all 20 interfaces, which is the open item for the others)*
 - [ ] Fuzzing runs nightly over the DOCX, `.doc`, RTF/ODT and font readers. *(A7: the four
       `cargo-fuzz` workspaces, their seeds and `fuzz.yml` landed and type-check; the nightly run
       itself still needs a machine with rustup, a nightly toolchain and `cargo-fuzz`)*
@@ -461,10 +470,49 @@ spent on the file that breaks a student's assignment.
 | The maths tab is one file and one agent | Parallel edits collide | One agent for C3–C4 (see §5) |
 | Upstream merges keep coming | Ports grow | `FORK.md` ledger; keep Quill's code in new files wherever possible |
 
-## 10. Revision history
+## 10. An outside critic read 1.2
+
+The whole point of a fresh reader is that they have not spent three days staring at the same
+gates. On 2026-10-23 a critic agent was given the 1.2 line at `d7ab447` and one instruction the
+owner added: *be a critic, and be very creative*. It read the plan, the changelog, the status
+page, the README, the corpus and the workflows against the code, and wrote
+[`review-1.2.md`](review-1.2.md) (committed as written). It did not build the app, and says so.
+
+Its verdict, in one line: **the release's trust story contradicted itself in the places a
+newcomer actually reads.** Eight findings, and what became of each:
+
+| # | What it found | Now |
+|---|---|---|
+| F1 | The README said Danish was *not* among the interface languages, put the corpus at **489 of 504** (the generated number is 497) and credited it to four producers when every manifest URL is Apache POI. The status page said the corpus is checked "on every build". | **Fixed.** README: 497 of 504, 20 languages with Danish, the corpus named for what it is (POI's Word, Outlook and LibreOffice files, pinned by hash) and the page-count result. `docs/status.md` says the check runs where the corpus is fetched; `docs/releasing.md` makes fetching it a pre-publish step, because CI cannot |
+| F2 | The maths tab was Danish in its labels and **English in the errors a student actually hits** (`Could not solve ODE`, `Select e.g. …`), and the i18n coverage test excludes the whole Math namespace, so a green badge could coexist with it | **Fixed.** 24 error and status strings and the formula gallery's labels are Danish (`Kunne ikke løse differentialligningen: …`, `ingen reel løsning`, `2 < x eller x < -2`), the two tests that pinned the English text follow, and the exclusion's comment now says what is true instead of calling the tab English. The tab being Danish-only for all 20 interfaces is the open item, not English prose |
+| F3 | `corpus.rs` returns normally when the corpus is absent and CI never fetches it, so a green CI run says nothing about the corpus | **Half fixed.** The docs no longer claim otherwise, and the release checklist runs the fetch and the test. **Open:** give it its own job — the cost is that an upstream POI change turns it red, which is the point of a pinned hash but also a flaky build |
+| F4 | The round-trip predicate compares text, tables, parts and picture bytes — not formatting, page settings, fields or pagination, which the user-facing table also promises | **Partly.** Pagination is measured now (below), and `docs/file-format-parity.md` separates what the corpus proves from what the synthetic round-trip tests prove. **Open:** widen the harness (fields, sections, numbering) |
+| F5 | Ten Danish terms "deserve review", including `Ceiling` → "Loft" and `Vault` → "Boks" | **Checked one by one.** Three were right and are fixed (Highlighter, Vault Tags, Default Paragraph Font); two of the critic's own suggestions were wrong — "Loft"/"Gulv" *are* the standard Danish terms for ceiling and floor, and "Boks" is the strongbox reading every other catalog uses. Four are left for a native speaker (see [`localization-parity.md`](localization-parity.md)) |
+| F6 | The release recipe cannot be followed to a proven release: no `release` branch, the workflow never ran, signing is blocked by the environment's branch rule | **Open, owner decision** (§8.5, §8.6). The dry run needs the branch the owner has not created yet |
+| F7 | Home's last two big groups are Voice and Editor, while Insert Table, Insert Picture and Word Count — what a school user reaches for first — are a tab away | **Open, product decision.** Recorded here rather than redesigned in a docs commit; it is a ribbon change with a screenshot to check |
+| F8 | Green gates do not prove native readers, a Danish dictionary present, a screen reader, or a package that launches on each platform | **Accepted and named.** These are the limits the plan already admits (§9); the critic's "evidence sheet" is a good shape for the release checklist, and §6 now says which of these have to be walked by hand |
+
+Two of its "surprises" were the ones worth having: that the translation test removed the Math
+feature before checking it, and that three documents of prose (README, status page, reply to a
+student) described three different products. Both are now false.
+
+### The page count (B1) was measurable all along
+
+The corpus carried a pagination check nobody had opened: Word writes the page count it computed
+into every file it saves (`docProps/app.xml`). 65 of the 71 corpus files carry one; **62 come out
+of Quill at one page per page of Word's**, three are one page apart (`60329.docx` 3 → 4,
+`drawing.docx` 20 → 21, `form_footnotes.docx` 3 → 2). That is B1's page count measured against
+Word, and it says plainly what it does not prove — a matching total is not a matching page. It is
+a measurement, not yet an assertion in the harness: a test that asserts it would depend on the
+fonts installed on the machine running it, so the numbers are recorded and the check stays in the
+release checklist. The detail, and how to repeat it, is in
+[`file-format-parity.md`](file-format-parity.md#pagination-against-word).
+
+## 11. Revision history
 
 | Date | Change | Summary |
 |---|---|---|
+| 2026-10-23 | minor | An outside critic read the 1.2 line (`docs/review-1.2.md`, crossed in §10). Fixed from it: the maths tab's 24 English error and status strings and its formula gallery are Danish (a student's mistake no longer answers in English), the README's stale catalog number and its false "Danish is not among the languages" and "checked on every build" claims, the status page's corpus claim, and three Danish terms that read wrong. Opened and named: the corpus check in CI, the round-trip harness's narrower-than-claimed predicate, the release dry run, Home's ribbon order. Pagination against Word measured: 62 of the 65 corpus files whose count Word recorded match exactly |
 | 2026-10-22 | minor | The 1.2 line is integrated: Danish UI (C1), Danish proofing (C2), nightly fuzzing (A7), the parity wins (E1–E3) and D4/D5 merged into one branch, plus the two bugs the merge exposed (seven untranslated commands, seven unattributed fuzz seeds). The Danish and proofing rows of the progress docs say what landed. The gates are green except the wasm step, which this machine cannot run |
 | 2026-10-22 | minor | D4 and D5 landed: `FORK.md` now says what is Quill's own code and the rules a port follows; `docs/releasing.md` carries the changelog convention, the pre-publish checklist and who publishes |
 | 2026-10-22 | minor | A7 landed: `cargo-fuzz` workspaces for the DOCX, `.doc`, RTF/ODT and font readers with synthetic seeds, and a nightly workflow that runs each target for 60 seconds, caches the corpus and uploads crashes. The targets type-check; the first real fuzz run waits for a machine with rustup, nightly and `cargo-fuzz` |

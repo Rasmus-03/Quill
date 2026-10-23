@@ -77,10 +77,10 @@ and [`docs/status.md`](docs/status.md).
 
 | | |
 |---|---|
-| **Writing and formatting** | Text, styles, lists, tables, headers and footers, footnotes, comments, tracked changes, content controls, fields, equations, pictures, text boxes, page setup, a table of contents, cross-references, citations (Zotero). The Word feature catalog is at **489 of 504** ([`docs/parity-checklist.md`](docs/parity-checklist.md)). |
-| **.docx** | Opens and saves Word's format. 71 real documents from Word, Google Docs, LibreOffice and Pages are checked on every build: the text, the tables, the headers and footers, the notes, the comments and the pictures all survive ([`docs/docx-corpus.md`](docs/docx-corpus.md)). |
+| **Writing and formatting** | Text, styles, lists, tables, headers and footers, footnotes, comments, tracked changes, content controls, fields, equations, pictures, text boxes, page setup, a table of contents, cross-references, citations (Zotero). The Word feature catalog is at **497 of 504** ([`docs/parity-checklist.md`](docs/parity-checklist.md)). |
+| **.docx** | Opens and saves Word's format. 71 real documents — the Word, Outlook and LibreOffice files in Apache POI's test data, pinned by SHA-256 — read → write → read with their text, tables, headers and footers, notes, comments and pictures intact, and 62 of the 65 whose page count Word recorded paginate to the same number of pages. Fetch the corpus with `cargo xtask corpus --docx`; the check skips without it ([`docs/docx-corpus.md`](docs/docx-corpus.md)). |
 | **Other formats** | `.doc` (read), `.rtf`, `.odt`, `.md`, `.html`, `.txt`, `.tex` — read and write; PDF export; PDFs open as editable documents (PDF Reflow). |
-| **Not yet** | Charts and SmartArt from Word are shown but not editable; embedded OLE objects show as their picture; 3-D models, legacy form fields and East Asian text layout are dropped; `.doc` cannot be written; macros are kept but never run; the interface is in 19 languages but the Danish one is not among them yet. |
+| **Not yet** | Charts and SmartArt from Word are shown but not editable; embedded OLE objects show as their picture; 3-D models, legacy form fields and East Asian text layout are dropped; `.doc` cannot be written; macros are kept but never run; the interface is in 20 languages, Danish among them, but the maths tab's messages are still English. |
 
 ## For developers
 

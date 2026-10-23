@@ -1,6 +1,6 @@
 # File-format parity with Microsoft Word
 
-> **Last reviewed:** 2026-10-11 · **Last updated:** 2026-10-21 · **Change:** minor (a real-world .docx corpus: 71 files from Apache POI, pinned by hash, every one of them round-tripped; the user-facing table of what survives a round trip; previously minor: Obsidian vault import/export with frontmatter, wikilinks, embeds and byte-safe raw fallback; previously trivial: symbol-font text exported as Unicode, #776; previously trivial: text-box margins, Resize shape to fit text and freeforms in groups, #743; previously trivial: formatted paste from the system clipboard's HTML and RTF, #687; previously trivial: independent complex-script formatting inheritance and round-trip regression tests; previously trivial: import/export fixes for TXT, RTF, ODT, HTML and LaTeX, #433–#440; previously major: first version; every format Word reads or writes, measured from the readers and writers on origin/main) · **Target:** Microsoft Word (Microsoft 365) for Mac 16.113.4, plus Word for Windows' extra formats
+> **Last reviewed:** 2026-10-11 · **Last updated:** 2026-10-23 · **Change:** minor (pagination against Word: 62 of the 65 corpus files whose page count Word wrote come out at the same number of pages, three are one page apart, and the comparison says what it does not prove; previously minor: a real-world .docx corpus: 71 files from Apache POI, pinned by hash, every one of them round-tripped; the user-facing table of what survives a round trip; previously minor: Obsidian vault import/export with frontmatter, wikilinks, embeds and byte-safe raw fallback; previously trivial: symbol-font text exported as Unicode, #776; previously trivial: text-box margins, Resize shape to fit text and freeforms in groups, #743; previously trivial: formatted paste from the system clipboard's HTML and RTF, #687; previously trivial: independent complex-script formatting inheritance and round-trip regression tests; previously trivial: import/export fixes for TXT, RTF, ODT, HTML and LaTeX, #433–#440; previously major: first version; every format Word reads or writes, measured from the readers and writers on origin/main) · **Target:** Microsoft Word (Microsoft 365) for Mac 16.113.4, plus Word for Windows' extra formats
 
 Every format Word opens or saves, what WordCraft does with it, and how it's tested. Fidelity is the
 share of a typical real-world file's content and formatting that survives (read: shows correctly;
@@ -19,7 +19,7 @@ Weights are the share of a Word user's file traffic (estimate). Read/write: ✅ 
 
 | Format | Weight | Word | WordCraft read | WordCraft write | Fidelity | Hours | How it's tested | Notes |
 |---|---|---|---|---|---|---|---|---|
-| `.docx` Word Document (ECMA-376 Transitional) | 70% | R/W | ✅ | ✅ | ~65% | 70–110 | `crates/docx/tests` (roundtrip 34, fixtures 29, malformed 8, bidi 5, citations 5); synthetic fixtures only | Word opens our files. Untested on a real-world corpus. Details below |
+| `.docx` Word Document (ECMA-376 Transitional) | 70% | R/W | ✅ | ✅ | ~65% | 70–110 | `crates/docx/tests` (roundtrip 34, fixtures 29, malformed 8, bidi 5, citations 5); the synthetic fixtures, plus the 71-file real-world corpus (round trip and page count against Word's own recorded count) | Word opens our files. 62 of 65 corpus files paginate to Word's page count, three are one page apart. Details below |
 | `.docx` Strict Open XML | 1% | R/W | ✅ (namespace mapping in `xml.rs`) | ❌ | ~60% | 2–4 | one fixture | Writing Strict is rare |
 | `.docm` / `.dotx` / `.dotm` | 3% | R/W | ✅ | ✅ | ~65% | incl. above | `macro_packages.rs` | Macros and signatures kept on save (#172); macros never run |
 | `.doc` Word 97-2003 (and `.dot`) | 8% | R/W | 🟡 | ❌ | ~60% | 25–40 | `crates/docbin/src/tests.rs`, `tests/drawing.rs` (56) | Spec-based reader ([MS-DOC]): text, formatting, styles, sections, headers/footers, tables, lists, notes, fields, bookmarks; inline and floating pictures (PNG, JPEG, DIB, TIFF, EMF, WMF; Macintosh PICT as a sized placeholder) with crop, alt text, position and wrap; basic shapes, lines, groups and text boxes ([MS-ODRAW]). Freeform shapes, z-order and Word 6/95 or encrypted files are dropped or refused. No writer |
@@ -133,9 +133,12 @@ Windows/Linux runtime behavior, ACLs and extended metadata, real disk-full condi
 ## What a user actually gets
 
 The table above is written for the format. This one is written for the person who opens a file
-someone else sent. Every row was checked against **real documents** — 71 files that Word, Google
-Docs, LibreOffice and Pages wrote (see [`docx-corpus.md`](docx-corpus.md)), read → written →
-read again, with the text, the tables, the headers and footers and the pictures compared.
+someone else sent. Every row was checked against **real documents** — 71 files from Apache POI's
+test data, 59 written by Microsoft Word or Outlook and 7 by LibreOffice (see
+[`docx-corpus.md`](docx-corpus.md)) — read → written → read again, with the text, the tables, the
+headers and footers and the pictures compared. What the corpus checks and what only the synthetic
+round-trip tests check is said where it differs; the corpus does not look at formatting, fields or
+page settings.
 
 | In the file you were sent | What Quill does with it |
 |---|---|
@@ -167,13 +170,62 @@ through untouched — which is what the 71 real files show.
 (15,005 levels of XML, deeper than the reader's nesting limit) and a package that was cut in
 half. The reader refuses them instead of trying, so a hostile file cannot make it work hard.
 
+## Pagination against Word
+
+A document's page count is the first thing anyone notices about it. Word writes the count it
+computed into the file it saved (`docProps/app.xml`, `<Pages>`), which makes every corpus file
+that came out of Word a pagination check we did not have to stage: the reference implementation's
+own answer, recorded before Quill existed. Compare it with the pages our layout produces
+(`wordcraft-cli info <file>`, the `pages` field) and the corpus stops being silent about layout.
+
+Measured 2026-10-23 over the 71 files in [`docx-corpus.md`](docx-corpus.md):
+
+| | Files |
+|---|---|
+| Record a page count (written by Word, Outlook or their Mac versions) | 65 |
+| **Same number of pages as Quill** | **62** |
+| One page apart | 3 |
+| No recorded count to compare with | 6 |
+
+The three that differ:
+
+| File | Word | Quill | What the document is |
+|---|---|---|---|
+| `60329.docx` | 3 | 4 | A government protocol: dense tables, footnotes and endnotes |
+| `drawing.docx` | 20 | 21 | 8,800 words of media monitoring, laid out with drawings |
+| `form_footnotes.docx` | 3 | 2 | A consular form with footnotes and endnotes |
+
+Two of the three are documents with notes, and they disagree in opposite directions, so this is
+not one rule being off by a line — it is three documents to open side by side and explain.
+
+What the comparison does **not** say. A page count can be right and the page still wrong: the
+lines can break in other places, a picture can sit a centimetre lower, a heading can land on the
+next page without changing the total. And `<Pages>` is what Word computed at its last save, on
+that machine, with those fonts and that default printer — a file whose fonts we substitute can
+differ by a page without our layout being wrong. So 62 of 65 is evidence that the layout is
+close to Word, not proof that the pages look the same; the page-by-page render comparison is
+still open (below). Where a count is missing, three files were written by tools that never
+paginated (they open here at 1, 1 and 2 pages), one is empty, and two are refused on purpose.
+
+To repeat the measurement: `cargo xtask corpus --docx`, then for each file compare
+`unzip -p corpus/docx/<file> docProps/app.xml`'s `<Pages>` with `wordcraft-cli info
+corpus/docx/<file>`'s `pages` field.
+
+Word's `<Words>` is in the same files and is *not* a usable reference: Word only rewrites it when
+it saves, so most of these files carry a stale figure, and `wordcraft-cli info` reports the body's
+words rather than the status bar's Word-compatible count (text boxes, notes and endnotes
+included), so the two numbers are not measuring the same thing.
+
 ## What decides beta for formats
 
 1. A **real-world DOCX corpus** opened, rendered and round-tripped, compared page by page with
    Word (local only: Word output can't be committed; keep a manifest and our own renders).
    *The corpus and the round trip exist* (71 real files, pinned by hash, all of them keeping
-   their content — [`docx-corpus.md`](docx-corpus.md)); *the page-by-page comparison with Word*
-   is what is left.
+   their content — [`docx-corpus.md`](docx-corpus.md)), and so does the **page count**: 62 of the
+   65 files whose recorded count Word wrote come out at the same number of pages, three are one
+   page apart (above). *What is left:* the page-by-page comparison — the same lines breaking in
+   the same places, side by side with a Word render; and files from the other producers
+   (Google Docs, Pages, LibreOffice).
 2. **Preserve what we can't render**: remaining ink forms and unsupported graphics survive a round trip
    (keep the parts and the run). Charts, SmartArt and OLE objects do (#292, #319); drawing-level native ink now keeps its InkML and optional picture fallback.
 3. Move tracking (`w:moveFrom`/`w:moveTo`) read and written (formatting revisions: #41; content controls: #381).
@@ -204,6 +256,7 @@ raise readiness estimates. No Word-derived files are fixtures.
 
 | Date | Change | Summary |
 |---|---|---|
+| 2026-10-23 | minor | Pagination against Word, measured on the corpus: each file Word saved carries the page count Word computed (`docProps/app.xml` `<Pages>`). 65 of the 71 files record one; 62 come out at the same number of pages in Quill, three are one page apart (`60329.docx` 3→4, `drawing.docx` 20→21, `form_footnotes.docx` 3→2). Written down with what the number does not prove — a matching count is not a matching page, `<Pages>` is Word's count at its last save, and `<Words>` in the same file is too often stale to use. Adds the `wordcraft-cli info <file>` check to the `.docx` row |
 | 2026-10-21 | minor | A real-world .docx corpus: 71 files from Apache POI's test documents (Apache-2.0), fetched with `cargo xtask corpus --docx`, pinned by SHA-256 in `crates/docx/tests/corpus-manifest.tsv` and kept out of the repository (the clean-room rule). `crates/docx/tests/corpus.rs` reads → writes → reads every file and compares the text, the tables, the parts and the pictures: all 71 keep everything, two are refused on purpose (5,000 nested tables, a truncated package). Adds the user-facing table of what survives a round trip |
 | 2026-10-20 | minor | PDF Reflow, desktop v1: a PDF opens as an editable document — glyphs reflowed into lines and paragraphs (pitch, hyphen joins), headings from a size step up, bullets/numbers as list items, centred paragraphs, the MediaBox page with measured margins, picture XObjects decoded in place (JPEG kept byte-for-byte, the rest re-encoded PNG); hazard-tested against truncated and hostile PDFs |
 | 2026-10-12 | trivial | ODT page size, orientation and margins read back from `styles.xml` on open, so they survive a save and reopen (#810) |

@@ -138,9 +138,13 @@ fn every_tab_and_command_is_translated() {
     let mut missing = Vec::new();
     for l in Lang::all().filter(|l| *l != Lang::EN) {
         let tabs = crate::ribbon::TABS.iter().chain(&["Table Design", "Table Layout"]).copied();
-        // The Math tab is an English-language feature for now (school math;
-        // tracked: needs per-language math labels). Its registry strings are
-        // intentionally English-only.
+        // The Math tab is the Danish school-maths feature (C3/C4): its command
+        // labels, locations and messages are written in Danish in the source, so
+        // there is no English string for a catalog to translate and a Danish
+        // interface is right while every other one shows Danish here. Tracked as
+        // an open item for the other languages. The exclusion is honest only
+        // while that stays true, so drop it the day the tab gains an English
+        // source string.
         let commands = session
             .registry
             .all()

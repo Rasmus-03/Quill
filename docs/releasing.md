@@ -73,6 +73,10 @@ The rules:
   turned into the version.
 - `ROADMAP.md`, `docs/gaps.md`, `docs/roadmap.md`, `docs/status.md`, the parity documents and
   `docs/release-plan-1.2.md` are updated, each with its status line and revision history bumped.
+- The real-world corpus was fetched and checked on this commit, because CI cannot: `cargo xtask
+  corpus --docx && cargo test -p wordcraft-docx --test corpus`. The test passes when the corpus
+  is absent, so a green CI run says nothing about it — the number to report is the one from this
+  step (71 files, every one round-tripping).
 - The release plan's definition of done (`docs/release-plan-1.2.md` §6) is walked item by item,
   and the ones that cannot be proven on this machine say so.
 - Every artifact carries the Quill name: `quill-…` files, `Quill.app`, `quill.exe`. The

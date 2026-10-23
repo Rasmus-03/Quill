@@ -11,6 +11,10 @@ speaks Danish.
   line. It follows your system's language on a Danish machine and can be chosen in Settings ›
   Language. Nothing is machine-translated and shipped unseen: the catalog is open for a native
   review, and the i18n coverage test fails if a new string is added without every language
+  getting an entry. One read-through of all 2,495 entries (an agent's, not a Dane's) fixed three
+  terms that read wrong — the highlighter was called a strike-through pen, `Vault Tags` had a
+  compound that is not a word, and `Default Paragraph Font` named a style where it meant a font —
+  and left four for a native speaker to decide
 - **Danish proofing**: spelling from an installed Hunspell Danish dictionary (Stavekontrolden and
   friends; nothing is bundled), our own conservative grammar rules (doubled words, a missing
   capital after a full stop, `og og`), and Danish hyphenation from the hyph-utf8 patterns. A

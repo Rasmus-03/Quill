@@ -176,7 +176,7 @@
 	Decrease Font Size	Formindsk skriftstørrelse
 	Decrease Indent	Formindsk indrykning
 	Default	Standard
-	Default Paragraph Font	Standardafsnitstypografi
+	Default Paragraph Font	Standardafsnitsskrift
 	Define New Bullet	Definer nyt punkt
 	Define New Number Format	Definer nyt talformat
 	Delete	Slet
@@ -321,7 +321,7 @@
 	Hidden	Skjult
 	Highlight Merge Fields	Fremhæv flettefelter
 	Highlight\nMerge Fields	Fremhæv\nflettefelter
-	Highlighter	Overstregningstusch
+	Highlighter	Tekstmarker
 	Home	Startside
 	Horizontal	Vandret
 	Horizontal Line	Vandret linje
@@ -2502,7 +2502,7 @@
 	Open an Obsidian vault folder to see the tags its notes carry.	Åbn en Obsidian-boksmappe for at se de tags, noterne har.
 	Index Vault Notes	Indeksér boksnoter
 	Vault Backlinks	Boks-tilbagelinks
-	Vault Tags	Bokstags
+	Vault Tags	Boks-tags
 	Insert Note Link	Indsæt notelink
 	Paste as Equation	Sæt ind som ligning
 	Open Obsidian Vault…	Åbn Obsidian-boks…

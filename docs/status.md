@@ -14,7 +14,7 @@ you can run, or from a file in this repository — not from an impression.
 | Area | State | Measured by |
 |---|---|---|
 | **Writing and formatting** | **Ready for daily use.** Text, styles, lists, tables, headers and footers, footnotes and endnotes, comments, tracked changes, content controls, fields, equations, pictures, text boxes, page setup, a table of contents, cross-references, citations (Zotero), printing and PDF export. | The Word feature catalog is at **497 of 504** (98.6 %): [`docs/parity-checklist.md`](parity-checklist.md). Every ribbon tab is at 100 % except Insert (48/53), Review (30/31) and Home (102/103). |
-| **.docx compatibility** | **Ready for daily use, checked against real files.** 71 documents that Word, Google Docs, LibreOffice and Pages wrote are read → written → read on every build: the text, the tables, the headers and footers, the parts and the pictures all survive. | [`crates/docx/tests/corpus.rs`](../crates/docx/tests/corpus.rs) with the pinned manifest; what is lost is listed in [`docs/file-format-parity.md`](file-format-parity.md). |
+| **.docx compatibility** | **Ready for daily use, checked against real files.** 71 documents — the Word, Outlook and LibreOffice files in Apache POI's test data — are read → written → read: the text, the tables, the headers and footers, the parts and the pictures all survive, and 62 of the 65 whose page count Word recorded come out at the same number of pages. | [`crates/docx/tests/corpus.rs`](../crates/docx/tests/corpus.rs) with the pinned manifest. The check runs where the corpus is fetched (`cargo xtask corpus --docx`) and passes without it, so it is a step in the release checklist rather than in CI (`docs/releasing.md`); what is lost is listed in [`docs/file-format-parity.md`](file-format-parity.md). |
 | **The maths tab** | **Ready for school use.** Calculate, solve (exactly, numerically, by isolating a variable, systems, ODEs), units, definitions, matrices, statistics, calculus, formulas, graphs. Answers appear in green in the equation. | 70+ tests in `crates/engine/src/cmd/mathcraft.rs` and `mathgraf.rs`; the engine is Maxima, which must be installed. |
 | **Cloud and notes** | **Ready for use.** Nextcloud (browse, open, save, share, search, versions) and Obsidian vaults (search, backlinks, tags, links, byte-for-byte unchanged notes). | 31 tests in `crates/cloud`, the vault tests in `crates/engine/src/vault.rs`. |
 | **Other formats** | **Partly.** `.doc` reads; `.rtf`, `.odt`, `.md`, `.html`, `.txt` and `.tex` read and write; PDF exports; PDFs open as editable documents. | [`docs/file-format-parity.md`](file-format-parity.md) — every format, with its fidelity. |
@@ -33,7 +33,7 @@ you can run, or from a file in this repository — not from an impression.
 | Tests | **2,147** (plus 4 property-test blocks) |
 | Code | **~206,000 lines** of Rust in 21 crates |
 | Crates | 17 library crates + 3 apps + the build tool (`xtask`) |
-| Corpus files checked on every build | 71 |
+| Corpus files checked when the corpus is fetched | 71 |
 
 ## What is not ready
 
