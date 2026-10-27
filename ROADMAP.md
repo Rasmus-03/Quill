@@ -2,7 +2,7 @@
 
 **Stage: alpha** · next: beta, ~15 points (60% → 75% ready for real work) and ~150–230 h away
 
-> **Last reviewed:** 2026-10-10 · **Last updated:** 2026-10-22 · **Change:** trivial (E1–E3 parity wins: the four View window commands, Ink Equation/Ink to Math and Block Authors; catalog 497/504; previously minor: progress log: release 1.1.0 — Nextcloud, deeper Obsidian vaults, Focus mode and the cleanup ritual; previously trivial: symbol fonts, #776; previously trivial: the save prompt answers from the keyboard, #861; previously trivial: table column and row markers on the rulers, #700; previously trivial: table borders and the resize handle drag on the page, #217; previously trivial: formatting revisions landed, #41; previously trivial: Draw tab ink, #307, and Draw Table and Eraser, #303, landed: catalog 402/434; previously minor: readiness table with hours per audience; full number back to the additive weighted sum, 60%; mainstream and essentials numbers added; alpha gate checked; previously major: full re-measure against Word for Mac 16.113.4; restructured to the craftrules progress-docs standard) · **Target:** Microsoft Word (Microsoft 365) for Mac 16.113.4
+> **Last reviewed:** 2026-10-10 · **Last updated:** 2026-10-27 · **Change:** minor (the measured numbers are re-measured on the 1.2 line: catalog 497/504, 678 commands, 2,198 tests, ~210,000 lines, 20 interface languages with Danish, four proofing languages; the real-world corpus makes "DOCX has never been tested on real-world files" false, and the localization row is reconciled with the 28% `localization-parity.md` computes; previously trivial: E1–E3 parity wins: the four View window commands, Ink Equation/Ink to Math and Block Authors; catalog 497/504; previously minor: progress log: release 1.1.0 — Nextcloud, deeper Obsidian vaults, Focus mode and the cleanup ritual; previously trivial: symbol fonts, #776; previously trivial: the save prompt answers from the keyboard, #861; previously trivial: table column and row markers on the rulers, #700; previously trivial: table borders and the resize handle drag on the page, #217; previously trivial: formatting revisions landed, #41; previously trivial: Draw tab ink, #307, and Draw Table and Eraser, #303, landed: catalog 402/434; previously minor: readiness table with hours per audience; full number back to the additive weighted sum, 60%; mainstream and essentials numbers added; alpha gate checked; previously major: full re-measure against Word for Mac 16.113.4; restructured to the craftrules progress-docs standard) · **Target:** Microsoft Word (Microsoft 365) for Mac 16.113.4
 
 > **Printing update:** 2026-10-12 · direct desktop printing through craft-print; details below.
 
@@ -12,18 +12,21 @@ agent control. This page is the summary; the assessment is
 [`docs/gaps.md`](docs/gaps.md), and milestones and the current focus are in
 [`docs/roadmap.md`](docs/roadmap.md).
 
-## Headline numbers (2026-10-10)
+## Headline numbers
+
+Measured rows re-taken on the 1.2 line (2026-10-27); the readiness estimates are the 2026-10-10
+pass, unchanged at this precision.
 
 | Number | Value | Kind |
 |---|---|---|
-| Ribbon/menu catalog coverage | **487 / 502 (97.0%)** | measured (`cargo xtask parity` → [`docs/parity-checklist.md`](docs/parity-checklist.md)) |
+| Ribbon/menu catalog coverage | **497 / 504 (98.6%)** | measured (`cargo xtask parity` → [`docs/parity-checklist.md`](docs/parity-checklist.md)) |
 | **Feature breadth** (weighted, incl. dialog options, styles, languages beyond the ribbon) | **~80%** | estimated |
 | **Ready for real work** (full target) | **~60%** (55–63%) | estimated, additive weighted sum over the dimensions |
 | **Mainstream practitioner** | **~55%** | estimated: weekly-work depth × discounts for interaction (×0.93), stability (×0.90), file exchange (×0.90) |
 | **Essentials user** | **~63%** | estimated: core-feature depth × discounts for launch (×0.90), discoverability (×0.95), opening received files (×0.92) |
 | Remaining to **beta** | **~150–230 h** of Opus 5.5 agent wall-clock (gaps #1–#7) | estimated |
 | Remaining to **full parity** with Word desktop | **~750–1,250 h** (70–80% parallelizable) | estimated |
-| Commands / tests / code | 669 commands · 2,133 tests + 4 property blocks · ~205,300 lines of Rust | measured (source, `cargo xtask stats`) |
+| Commands / tests / code | 678 commands · 2,198 tests + 4 property blocks · ~210,000 lines of Rust | measured (`quill-cli commands`, `cargo xtask stats`) |
 | Releases | v0.4.0 (2026-10-10): signed macOS universal DMG, Windows MSI x64/x86/arm64, Linux AppImage/deb/rpm/Flatpak x86_64 + aarch64, FreeBSD, web | measured |
 
 Hours are calibrated from this repo's PRs (equations #191: ~9.7k lines in ~5 h; `.doc` reader
@@ -43,10 +46,11 @@ discounts and the user evidence (120 issues from outside users, 4 praise, 0 "swi
 
 **Why alpha:** the core workflows (write, format, styles, lists, tables, references, review, mail
 merge, open and save .docx) work end to end and ship as signed builds on every desktop platform
-and the web. **Why not beta:** DOCX has never been tested on real-world files; charts, SmartArt and
-OLE objects are dropped silently; pagination differs from Word (no Aptos-metric font, no column
-balancing or footnote continuation); content controls are lost; there is open field evidence of
-a startup crash and several hangs; no native printing. Gaps #1–#7 in [`docs/gaps.md`](docs/gaps.md)
+and the web. **Why not beta:** the real-world corpus is one producer (71 Apache-POI files) and
+nobody has compared Quill's pages with Word's page by page; charts, SmartArt and OLE objects are
+shown and kept but not editable; pagination differs from Word (no Aptos-metric font, no column
+balancing or footnote continuation); form-control binding evaluation is absent; there is open
+field evidence of a startup crash and several hangs; no native printing. Gaps #1–#7 in [`docs/gaps.md`](docs/gaps.md)
 are the beta list. All six core workflows pass the
 [alpha gate](docs/roadmap.md#alpha-gate-core-workflows) end to end on macOS, with save and reopen;
 the two partial ones (real-world .docx, printing) complete, roughly.
@@ -60,7 +64,7 @@ the two partial ones (real-world .docx, printing) complete, roughly.
 | File formats | 60% | 185–300 | [file-format-parity.md](docs/file-format-parity.md) |
 | Layout and pagination fidelity | 55% | 90–145 | [layout-parity.md](docs/layout-parity.md) |
 | Hardware | 40% | 20–40 | [hardware-parity.md](docs/hardware-parity.md) |
-| Localization | 27% | 75–120 + native review | [localization-parity.md](docs/localization-parity.md) |
+| Localization | 27% (the owning doc computes 28%; the sum uses 27% — [why](docs/target-app-parity.md#by-dimension)) | 75–120 + native review | [localization-parity.md](docs/localization-parity.md) |
 | Performance | 75% | 10–20 | [layout-parity.md](docs/layout-parity.md#performance) |
 | Stability | 50% | 25–45 | [gaps.md](docs/gaps.md) (#3) |
 | Platforms | 95% (beyond Word on Linux, BSD, web) | 5–10 | this page |
@@ -124,7 +128,8 @@ Proofing: English, Polish, Portuguese and Danish (spelling, grammar, hyphenation
 Ranked, to beta (detail and remaining milestones in [docs/roadmap.md](docs/roadmap.md)):
 
 1. Review and merge the ~45 open PRs that already close gaps (owner).
-2. DOCX real-world corpus: open, render, round-trip, compare with Word (30–50 h).
+2. DOCX real-world corpus: 71 files round-trip; compare them with Word page by page and add the
+   other producers (Google Docs, Pages) (15–30 h).
 3. Preserve charts, SmartArt, OLE and ink through a round trip with fallback pictures (10–15 h).
 4. Stability sweep of the open crash, hang and write-failure issues; autosave soak test (20–30 h).
 5. Pagination fidelity: column balancing, footnote continuation, compat options, comparison
@@ -136,6 +141,7 @@ Ranked, to beta (detail and remaining milestones in [docs/roadmap.md](docs/roadm
 
 | Date | What landed |
 |---|---|
+| 2026-10-27 | The progress docs tell the 1.2 truth again. The measured numbers are re-run on this line instead of carried over from 1.1: this page and the assessment still said **487/502** where `cargo xtask parity` prints **497/504**, the command, test and line counts were three different sets (669/2,133/~205,300 here, 431/852/~88,700 in the assessment, 670/2,147/~206,000 on the status page — measured here: 678 commands, 2,198 tests, ~210,000 lines), the localization row differed from `localization-parity.md`'s 28% with no explanation, and the assessment said 13 UI languages, two proofing languages and "no real-world corpus test" — it is 20 languages with Danish, four proofing languages and 71 corpus files. Two duplicated rows in the assessment's feature table (Mailings, Pictures) said different things about the same area; merged into the newer one. The readiness estimates (~68% depth, ~60% ready) are left as the 2026-10-10 pass wrote them: what changed is the measurements and the evidence, not the model |
 | 2026-10-23 | The critic's three cheapest findings landed in code. The real-world corpus has its own CI job: it fetches the hash-pinned files and runs the round trip, and the test now fails when the manifest lists a file the corpus does not have, so a green build cannot mean "checked nothing". The round trip itself compares the whole document instead of a projection of it — every run and paragraph property, the inline objects, the tables, the sections' page setup, the numbering, the styles, the fields and their codes, the comments, the tracked changes, the settings and the properties — with twips rounding, relationship ids and part numbers relaxed; its first run found a header that was only a table growing an empty paragraph on every save, now fixed in the writer. Home ends with Table, Pictures and Word Count before Voice and Editor, so a new document's first three actions are one click away |
 | 2026-10-23 | The real-world corpus answers the page question, and a critic found the holes. Word writes the page count it computed into every file it saves, so the 71-file corpus is now a pagination check: 62 of the 65 files that carry a count paginate to Word's number, three are one page apart, and what the number does not prove is written next to it. An outside critic read 1.2 and its eight findings are answered in `docs/release-plan-1.2.md` §10: the maths tab's 24 English error and status strings and its formula gallery are Danish (a student's mistake no longer answers in English), the README stops saying Danish is missing and stops crediting the corpus to four producers, the status page stops saying the corpus is checked on every build, and three Danish terms that read wrong are fixed |
 | 2026-10-22 | Danish, all the way through: the interface has a Danish catalog (2,495 entries, "Dansk" in the language list, following the system's language), Danish proofing covers spelling (an installed Hunspell Danish dictionary), conservative grammar rules and hyph-utf8 hyphenation, and the maths tab's labels and messages are Danish. The readers are fuzzed nightly (four `cargo-fuzz` workspaces: .docx, `.doc`, RTF/ODT and fonts), and the four new View window commands, Ink Equation, Ink to Math and Block Authors close the last cheap parity rows |

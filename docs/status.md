@@ -5,7 +5,7 @@ you can run, or from a file in this repository — not from an impression.
 
 | | |
 |---|---|
-| **Measured** | 2026-10-22, the 1.2 line (Quill 1.1.0 plus the 1.2 work) |
+| **Measured** | 2026-10-27, the 1.2 line (Quill 1.1.0 plus the 1.2 work) |
 | **How to re-measure** | `cargo xtask stats`, `cargo xtask parity`, `cargo test --workspace` |
 | **The long list** | [`docs/gaps.md`](gaps.md) (what is missing), [`docs/roadmap.md`](roadmap.md) (the milestones) |
 
@@ -29,9 +29,9 @@ you can run, or from a file in this repository — not from an impression.
 | | |
 |---|---|
 | Word feature catalog covered | **497 / 504** (98.6 %) |
-| Commands | **670** |
-| Tests | **2,147** (plus 4 property-test blocks) |
-| Code | **~206,000 lines** of Rust in 21 crates |
+| Commands | **678** |
+| Tests | **2,198** (plus 4 property-test blocks) |
+| Code | **~210,000 lines** of Rust in 372 files across 21 crates |
 | Crates | 17 library crates + 3 apps + the build tool (`xtask`) |
 | Corpus files checked in CI, on every push | 71 |
 

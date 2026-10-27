@@ -1,7 +1,11 @@
 # Quill 1.2 — release plan
 
-> **Last reviewed:** 2026-10-23 · **Last updated:** 2026-10-23 · **Change:** minor (three of the
-> critic's eight findings are now closed in code as well: the corpus has its own CI job, the
+> **Last reviewed:** 2026-10-27 · **Last updated:** 2026-10-27 · **Change:** minor (the progress
+> docs tell the 1.2 truth: the measured numbers are re-run on this line in `ROADMAP.md`,
+> `docs/roadmap.md`, `docs/target-app-parity.md` and `docs/status.md`, the claims the corpus made
+> false are rewritten, and the assessment's duplicated rows are merged — §6's progress-docs item
+> is closed; previously minor: three of the critic's eight findings are now closed in code as
+> well: the corpus has its own CI job, the
 > round-trip harness compares the whole document instead of a projection of it, and Home carries
 > Table, Pictures and Word Count; previously minor: an outside critic read 1.2 and eight findings
 > are answered in §10 — the maths tab is Danish at its failure points, the README and status page
@@ -428,11 +432,16 @@ own; `cargo xtask ci` before you commit; one commit per arc, with a task id in t
       carries the measured maturity table.
 - [ ] `rg -i wordcraft` finds nothing user-visible outside the credits. *(arc 0 except the
       macOS DMG background's wordmark, which is artwork)*
-- [ ] `ROADMAP.md`, `docs/gaps.md`, `docs/roadmap.md`, `docs/target-app-parity.md`, the parity
+- [x] `ROADMAP.md`, `docs/gaps.md`, `docs/roadmap.md`, `docs/target-app-parity.md`, the parity
       checklists and `CHANGELOG.md` are updated, each with its status line and revision history
-      bumped (the craftrules progress-docs standard). *(partly: the Danish and parity rows and the
-      `CHANGELOG` entries landed with the integration; `docs/roadmap.md` and
-      `docs/target-app-parity.md` still carry their 1.1 numbers)*
+      bumped (the craftrules progress-docs standard). *(2026-10-27: the last of the 1.1 numbers are
+      gone. The measured rows are re-run on this line — catalog 497/504, 678 commands, 2,198
+      tests, ~210,000 lines, 20 interface languages with Danish, four proofing languages — and
+      the claims the corpus made false are rewritten (there is a real-world corpus and 62 of 65
+      page counts match Word's; content controls are kept; contour wrap landed). The two
+      duplicated feature rows in the assessment are merged, and the localization row explains why
+      it still carries 27% while `localization-parity.md` computes 28%. The readiness estimates
+      themselves are unchanged: this pass fixed the measurements and the evidence, not the model)*
 - [ ] The release checklist in `docs/releasing.md` was walked end to end once.
 
 ## 7. What this release deliberately does not do
@@ -515,6 +524,7 @@ release checklist. The detail, and how to repeat it, is in
 
 | Date | Change | Summary |
 |---|---|---|
+| 2026-10-27 | minor | §6's progress-docs item is closed: the measured numbers are re-run on the 1.2 line in `ROADMAP.md`, `docs/roadmap.md`, `docs/target-app-parity.md` and `docs/status.md` (catalog 497/504, 678 commands, 2,198 tests, ~210,000 lines, 20 interface languages, four proofing languages), the claims the corpus made false are rewritten, the assessment's two duplicated feature rows are merged, and the localization row explains the 27% it keeps against the 28% its own doc computes. Still open in §6: the CI proof on Linux, macOS and Windows, the nightly fuzz run, the README/status pair's remaining walk, the release checklist's end-to-end pass, and the two owner decisions behind them |
 | 2026-10-23 | minor | Three of the critic's findings closed in code: (1) **the corpus in CI** — a `corpus` job fetches the hash-pinned files and runs the round trip, and the test fails when the manifest lists a file that is missing, so the job cannot pass by checking nothing; (2) **the round-trip harness widened** — the comparison is now the document as JSON (runs and paragraph properties, inline objects, tables, sections, numbering, styles, fields, comments, tracked changes, settings, sources, custom properties) with twips rounding, relationship ids, part numbers and zero-width marker order relaxed; its first run fixed a header that is only a table growing an empty paragraph on every save; (3) **Home gets an Insert group** — Table, Pictures, Word Count before Voice and Editor, checked on a headless render; the ribbon still runs wider than a 1440 pt window, so group collapsing is open |
 | 2026-10-23 | minor | An outside critic read the 1.2 line (`docs/review-1.2.md`, crossed in §10). Fixed from it: the maths tab's 24 English error and status strings and its formula gallery are Danish (a student's mistake no longer answers in English), the README's stale catalog number and its false "Danish is not among the languages" and "checked on every build" claims, the status page's corpus claim, and three Danish terms that read wrong. Opened and named: the corpus check in CI, the round-trip harness's narrower-than-claimed predicate, the release dry run, Home's ribbon order. Pagination against Word measured: 62 of the 65 corpus files whose count Word recorded match exactly |
 | 2026-10-22 | minor | The 1.2 line is integrated: Danish UI (C1), Danish proofing (C2), nightly fuzzing (A7), the parity wins (E1–E3) and D4/D5 merged into one branch, plus the two bugs the merge exposed (seven untranslated commands, seven unattributed fuzz seeds). The Danish and proofing rows of the progress docs say what landed. The gates are green except the wasm step, which this machine cannot run |
