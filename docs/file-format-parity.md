@@ -176,7 +176,7 @@ A document's page count is the first thing anyone notices about it. Word writes 
 computed into the file it saved (`docProps/app.xml`, `<Pages>`), which makes every corpus file
 that came out of Word a pagination check we did not have to stage: the reference implementation's
 own answer, recorded before Quill existed. Compare it with the pages our layout produces
-(`wordcraft-cli info <file>`, the `pages` field) and the corpus stops being silent about layout.
+(`quill-cli info <file>`, the `pages` field) and the corpus stops being silent about layout.
 
 Measured 2026-10-23 over the 71 files in [`docx-corpus.md`](docx-corpus.md):
 
@@ -208,11 +208,11 @@ still open (below). Where a count is missing, three files were written by tools 
 paginated (they open here at 1, 1 and 2 pages), one is empty, and two are refused on purpose.
 
 To repeat the measurement: `cargo xtask corpus --docx`, then for each file compare
-`unzip -p corpus/docx/<file> docProps/app.xml`'s `<Pages>` with `wordcraft-cli info
+`unzip -p corpus/docx/<file> docProps/app.xml`'s `<Pages>` with `quill-cli info
 corpus/docx/<file>`'s `pages` field.
 
 Word's `<Words>` is in the same files and is *not* a usable reference: Word only rewrites it when
-it saves, so most of these files carry a stale figure, and `wordcraft-cli info` reports the body's
+it saves, so most of these files carry a stale figure, and `quill-cli info` reports the body's
 words rather than the status bar's Word-compatible count (text boxes, notes and endnotes
 included), so the two numbers are not measuring the same thing.
 
@@ -256,7 +256,7 @@ raise readiness estimates. No Word-derived files are fixtures.
 
 | Date | Change | Summary |
 |---|---|---|
-| 2026-10-23 | minor | Pagination against Word, measured on the corpus: each file Word saved carries the page count Word computed (`docProps/app.xml` `<Pages>`). 65 of the 71 files record one; 62 come out at the same number of pages in Quill, three are one page apart (`60329.docx` 3→4, `drawing.docx` 20→21, `form_footnotes.docx` 3→2). Written down with what the number does not prove — a matching count is not a matching page, `<Pages>` is Word's count at its last save, and `<Words>` in the same file is too often stale to use. Adds the `wordcraft-cli info <file>` check to the `.docx` row |
+| 2026-10-23 | minor | Pagination against Word, measured on the corpus: each file Word saved carries the page count Word computed (`docProps/app.xml` `<Pages>`). 65 of the 71 files record one; 62 come out at the same number of pages in Quill, three are one page apart (`60329.docx` 3→4, `drawing.docx` 20→21, `form_footnotes.docx` 3→2). Written down with what the number does not prove — a matching count is not a matching page, `<Pages>` is Word's count at its last save, and `<Words>` in the same file is too often stale to use. Adds the `quill-cli info <file>` check to the `.docx` row |
 | 2026-10-21 | minor | A real-world .docx corpus: 71 files from Apache POI's test documents (Apache-2.0), fetched with `cargo xtask corpus --docx`, pinned by SHA-256 in `crates/docx/tests/corpus-manifest.tsv` and kept out of the repository (the clean-room rule). `crates/docx/tests/corpus.rs` reads → writes → reads every file and compares the text, the tables, the parts and the pictures: all 71 keep everything, two are refused on purpose (5,000 nested tables, a truncated package). Adds the user-facing table of what survives a round trip |
 | 2026-10-20 | minor | PDF Reflow, desktop v1: a PDF opens as an editable document — glyphs reflowed into lines and paragraphs (pitch, hyphen joins), headings from a size step up, bullets/numbers as list items, centred paragraphs, the MediaBox page with measured margins, picture XObjects decoded in place (JPEG kept byte-for-byte, the rest re-encoded PNG); hazard-tested against truncated and hostile PDFs |
 | 2026-10-12 | trivial | ODT page size, orientation and margins read back from `styles.xml` on open, so they survive a save and reopen (#810) |

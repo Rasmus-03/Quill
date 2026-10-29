@@ -248,7 +248,7 @@
 	Equation	Denklem
 	Eraser	Silgi
 	Even Page	Çift Sayfa
-	Every command is available to scripts and AI agents: run `wordcraft-cli mcp` for an MCP server, or start the app with `--control <port>` for the JSON control channel.	Her komut betiklere ve AI ajanlarına açıktır: MCP sunucusu için `wordcraft-cli mcp` çalıştırın veya JSON denetim kanalı için uygulamayı `--control <port>` ile başlatın.
+	Every command is available to scripts and AI agents: run `quill-cli mcp` for an MCP server, or start the app with `--control <port>` for the JSON control channel.	Her komut betiklere ve AI ajanlarına açıktır: MCP sunucusu için `quill-cli mcp` çalıştırın veya JSON denetim kanalı için uygulamayı `--control <port>` ile başlatın.
 	Export	Dışa Aktar
 	Export a copy to share (PDF, Word document)	Paylaşmak için bir kopya dışa aktarın (PDF, Word belgesi)
 	Export Page as PNG	Sayfayı PNG Olarak Dışa Aktar
@@ -691,7 +691,6 @@
 	Small caps	Küçük büyük harf
 	SmartArt	SmartArt
 	Sort	Sırala
-	Source code: github.com/storytold/wordcraft	Kaynak kod: github.com/storytold/wordcraft
 	Space before/after:	Önce/sonra boşluk:
 	Spacing	Aralık
 	Spacing (pt):	Aralık (pt):
@@ -2538,3 +2537,4 @@ preview	Title	Örnek
 
 	Paste as Equation	Denklem olarak yapıştır
 	Open Obsidian Vault…	Obsidian kasasını aç…
+	Source code: github.com/Rasmus-03/Quill	Kaynak kod: github.com/Rasmus-03/Quill

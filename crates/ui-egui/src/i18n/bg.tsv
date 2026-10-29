@@ -334,7 +334,7 @@
 	Envelopes	Пликове
 	Eraser	Гума
 	Even Page	Четна страница
-	Every command is available to scripts and AI agents: run `wordcraft-cli mcp` for an MCP server, or start the app with `--control <port>` for the JSON control channel.	Всяка команда е достъпна за скриптове и AI агенти: изпълнете `wordcraft-cli mcp` за MCP сървър или стартирайте приложението с `--control <port>` за JSON канала за управление.
+	Every command is available to scripts and AI agents: run `quill-cli mcp` for an MCP server, or start the app with `--control <port>` for the JSON control channel.	Всяка команда е достъпна за скриптове и AI агенти: изпълнете `quill-cli mcp` за MCP сървър или стартирайте приложението с `--control <port>` за JSON канала за управление.
 	Export	Експортиране
 	Export PDF	Експортиране в PDF
 	Export Page as PNG	Експортиране на страницата като PNG
@@ -788,7 +788,6 @@
 	Small caps	Малки главни букви
 	SmartArt	SmartArt
 	Sort	Сортиране
-	Source code: github.com/storytold/wordcraft	Изходен код: github.com/storytold/wordcraft
 	Space	Интервал
 	Space before/after:	Разстояние преди/след:
 	Spacing	Разстояние
@@ -2529,3 +2528,4 @@
 
 	Paste as Equation	Поставяне като формула
 	Open Obsidian Vault…	Отваряне на хранилище на Obsidian…
+	Source code: github.com/Rasmus-03/Quill	Изходен код: github.com/Rasmus-03/Quill

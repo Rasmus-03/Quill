@@ -392,7 +392,7 @@
 	Equation	Equação
 	Eraser	Borracha
 	Even Page	Página par
-	Every command is available to scripts and AI agents: run `wordcraft-cli mcp` for an MCP server, or start the app with `--control <port>` for the JSON control channel.	Todo comando está disponível para scripts e agentes de IA: execute `wordcraft-cli mcp` para um servidor MCP, ou inicie o aplicativo com `--control <port>` para o canal de controle JSON.
+	Every command is available to scripts and AI agents: run `quill-cli mcp` for an MCP server, or start the app with `--control <port>` for the JSON control channel.	Todo comando está disponível para scripts e agentes de IA: execute `quill-cli mcp` para um servidor MCP, ou inicie o aplicativo com `--control <port>` para o canal de controle JSON.
 	Export	Exportar
 	Export a copy to share (PDF, Word document)	Exporte uma cópia para compartilhar (PDF, documento Word)
 	Export Page as PNG	Exportar página como PNG
@@ -826,7 +826,6 @@
 	Small caps	Versaletes
 	SmartArt	SmartArt
 	Sort	Classificar
-	Source code: github.com/storytold/wordcraft	Código-fonte: github.com/storytold/wordcraft
 	Space	Espaço
 	Space before/after:	Espaço antes/depois:
 	Spacing	Espaçamento
@@ -2141,3 +2140,4 @@
 
 	Paste as Equation	Colar como equação
 	Open Obsidian Vault…	Abrir cofre do Obsidian…
+	Source code: github.com/Rasmus-03/Quill	Código-fonte: github.com/Rasmus-03/Quill

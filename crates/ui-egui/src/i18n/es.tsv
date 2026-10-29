@@ -389,7 +389,7 @@
 	Envelopes	Sobres
 	Eraser	Borrador
 	Even Page	Página par
-	Every command is available to scripts and AI agents: run `wordcraft-cli mcp` for an MCP server, or start the app with `--control <port>` for the JSON control channel.	Todos los comandos están disponibles para scripts y agentes de IA: ejecuta `wordcraft-cli mcp` para un servidor MCP, o inicia la aplicación con `--control <puerto>` para el canal de control JSON.
+	Every command is available to scripts and AI agents: run `quill-cli mcp` for an MCP server, or start the app with `--control <port>` for the JSON control channel.	Todos los comandos están disponibles para scripts y agentes de IA: ejecuta `quill-cli mcp` para un servidor MCP, o inicia la aplicación con `--control <puerto>` para el canal de control JSON.
 	Export	Exportar
 	Export PDF	Exportar PDF
 	Export Page as PNG	Exportar página como PNG
@@ -862,7 +862,6 @@
 	Small caps	Versalitas
 	SmartArt	SmartArt
 	Sort	Ordenar
-	Source code: github.com/storytold/wordcraft	Código fuente: github.com/storytold/wordcraft
 	Space	Espacio
 	Space before/after:	Espacio antes y después:
 	Spacing	Espaciado
@@ -2495,3 +2494,4 @@ preview	Title	Título
 
 	Paste as Equation	Pegar como ecuación
 	Open Obsidian Vault…	Abrir almacén de Obsidian…
+	Source code: github.com/Rasmus-03/Quill	Código fuente: github.com/Rasmus-03/Quill

@@ -162,6 +162,39 @@ fn every_tab_and_command_is_translated() {
     assert!(missing.is_empty(), "untranslated: {missing:#?}");
 }
 
+/// A catalog key that has drifted from the source string stops being looked up, and nothing fails:
+/// the interface falls back to English and the catalog keeps a translation nobody sees. That is how
+/// nineteen catalogs came to tell their reader to run `wordcraft-cli mcp` — a binary this workspace
+/// has not built since the fork — while the source said `quill-cli`. Pin the one help line that
+/// quotes a binary name to the source string and to the name, so a rename in either place fails.
+#[test]
+fn every_catalog_names_the_real_cli_binary() {
+    let source = include_str!("../options.rs");
+    // English is the source language: it has no catalog, so its help line lives in `options.rs`
+    // itself and is pinned there.
+    assert!(
+        source.contains("Every command is available to scripts and AI agents: run `quill-cli mcp`"),
+        "the English help line should name the binary the workspace builds"
+    );
+    let mut names = Vec::new();
+    for l in LANGUAGES.iter().filter(|l| l.code != "en") {
+        let (entries, errors) = parse_entries(l.source);
+        assert!(errors.is_empty(), "{}: {errors:?}", l.code);
+        for e in &entries {
+            if e.source.contains("wordcraft-cli") || e.translation.contains("wordcraft-cli") {
+                names.push(format!("{}: {:?}", l.code, e.source));
+            }
+        }
+        let help = entries
+            .iter()
+            .find(|e| e.source.starts_with("Every command is available to scripts"))
+            .unwrap_or_else(|| panic!("{} has no entry for the settings help line", l.code));
+        assert!(source.contains(&help.source), "{}: the key no longer matches options.rs: {:?}", l.code, help.source);
+        assert!(help.translation.contains("`quill-cli mcp`"), "{}: {:?}", l.code, help.translation);
+    }
+    assert!(names.is_empty(), "these catalogs name a binary the workspace does not build: {names:#?}");
+}
+
 #[test]
 fn the_language_setting_is_a_ui_command_and_persists() {
     let mut app = crate::WordApp::new(wordcraft_engine::Session::new(wordcraft_doc::Document::new()), Default::default());

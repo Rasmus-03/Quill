@@ -2345,8 +2345,7 @@ fn body(app: &mut WordApp, ui: &mut Ui, d: &mut Dialog) -> bool {
                     ui.label(crate::i18n::fmt(tl!("Version {version} ({build})"), &[("version", env!("CARGO_PKG_VERSION")), ("build", build)]));
                     ui.label(tl!("A free, open-source word processor with Danish mathematics."));
                     ui.add_space(6.0);
-                    ui.hyperlink_to(tl!("github.com/Rasmus-03/Quill"), "https://github.com/Rasmus-03/Quill");
-                    ui.hyperlink_to(tl!("Source code: github.com/storytold/wordcraft"), "https://github.com/storytold/wordcraft");
+                    ui.hyperlink_to(tl!("Source code: github.com/Rasmus-03/Quill"), "https://github.com/Rasmus-03/Quill");
                     ui.add_space(6.0);
                     ui.label(
                         egui::RichText::new(tl!("MIT OR Apache-2.0. Based on WordCraft by the ArtCraft Team and contributors (see LICENSE files)."))

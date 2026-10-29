@@ -392,7 +392,7 @@
 	Equation	方程式
 	Eraser	橡皮擦
 	Even Page	偶數頁
-	Every command is available to scripts and AI agents: run `wordcraft-cli mcp` for an MCP server, or start the app with `--control <port>` for the JSON control channel.	每個命令都可供指令碼和 AI 代理程式使用：執行 `wordcraft-cli mcp` 啟動 MCP 伺服器，或以 `--control <port>` 啟動應用程式以開啟 JSON 控制通道。
+	Every command is available to scripts and AI agents: run `quill-cli mcp` for an MCP server, or start the app with `--control <port>` for the JSON control channel.	每個命令都可供指令碼和 AI 代理程式使用：執行 `quill-cli mcp` 啟動 MCP 伺服器，或以 `--control <port>` 啟動應用程式以開啟 JSON 控制通道。
 	Export	匯出
 	Export a copy to share (PDF, Word document)	匯出副本以共用（PDF、Word 文件）
 	Export Page as PNG	將頁面匯出為 PNG
@@ -826,7 +826,6 @@
 	Small caps	小型大寫字
 	SmartArt	SmartArt
 	Sort	排序
-	Source code: github.com/storytold/wordcraft	原始碼：github.com/storytold/wordcraft
 	Space	空格
 	Space before/after:	段落前/後間距：
 	Spacing	間距
@@ -2130,3 +2129,4 @@
 
 	Paste as Equation	貼上為公式
 	Open Obsidian Vault…	開啟 Obsidian 保存庫…
+	Source code: github.com/Rasmus-03/Quill	原始碼：github.com/Rasmus-03/Quill

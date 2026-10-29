@@ -391,7 +391,7 @@
 	Equation	数式
 	Eraser	消しゴム
 	Even Page	偶数ページから開始
-	Every command is available to scripts and AI agents: run `wordcraft-cli mcp` for an MCP server, or start the app with `--control <port>` for the JSON control channel.	すべてのコマンドはスクリプトと AI エージェントから利用できます。`wordcraft-cli mcp` で MCP サーバーを起動するか、`--control <port>` を付けてアプリを起動すると JSON 制御チャネルが使えます。
+	Every command is available to scripts and AI agents: run `quill-cli mcp` for an MCP server, or start the app with `--control <port>` for the JSON control channel.	すべてのコマンドはスクリプトと AI エージェントから利用できます。`quill-cli mcp` で MCP サーバーを起動するか、`--control <port>` を付けてアプリを起動すると JSON 制御チャネルが使えます。
 	Export	エクスポート
 	Export a copy to share (PDF, Word document)	共有用にコピーをエクスポート（PDF、Word 文書）
 	Export Page as PNG	ページを PNG としてエクスポート
@@ -825,7 +825,6 @@
 	Small caps	小型英大文字
 	SmartArt	SmartArt
 	Sort	並べ替え
-	Source code: github.com/storytold/wordcraft	ソース コード: github.com/storytold/wordcraft
 	Space	スペース
 	Space before/after:	段落前/後の間隔:
 	Spacing	間隔
@@ -2129,3 +2128,4 @@
 
 	Paste as Equation	数式として貼り付け
 	Open Obsidian Vault…	Obsidian の保管フォルダーを開く…
+	Source code: github.com/Rasmus-03/Quill	ソース コード: github.com/Rasmus-03/Quill

@@ -337,7 +337,7 @@
 	Equation	Formel
 	Eraser	Radierer
 	Even Page	Gerade Seite
-	Every command is available to scripts and AI agents: run `wordcraft-cli mcp` for an MCP server, or start the app with `--control <port>` for the JSON control channel.	Jeder Befehl steht Skripten und KI-Agenten zur Verfügung: Führen Sie `wordcraft-cli mcp` für einen MCP-Server aus, oder starten Sie die App mit `--control <Port>` für den JSON-Steuerkanal.
+	Every command is available to scripts and AI agents: run `quill-cli mcp` for an MCP server, or start the app with `--control <port>` for the JSON control channel.	Jeder Befehl steht Skripten und KI-Agenten zur Verfügung: Führen Sie `quill-cli mcp` für einen MCP-Server aus, oder starten Sie die App mit `--control <Port>` für den JSON-Steuerkanal.
 	Export	Exportieren
 	Export a copy to share (PDF, Word document)	Eine Kopie zum Teilen exportieren (PDF, Word-Dokument)
 	Export Page as PNG	Seite als PNG exportieren
@@ -756,7 +756,6 @@
 	Small caps	Kapitälchen
 	SmartArt	SmartArt
 	Sort	Sortieren
-	Source code: github.com/storytold/wordcraft	Quellcode: github.com/storytold/wordcraft
 	Space	Leerzeichen
 	Space before/after:	Abstand vor/nach:
 	Spacing	Abstand
@@ -2128,3 +2127,4 @@
 
 	Paste as Equation	Als Gleichung einfügen
 	Open Obsidian Vault…	Obsidian-Speicher öffnen…
+	Source code: github.com/Rasmus-03/Quill	Quellcode: github.com/Rasmus-03/Quill

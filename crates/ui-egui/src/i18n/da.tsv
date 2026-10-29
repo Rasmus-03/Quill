@@ -254,7 +254,7 @@
 	Equation	Ligning
 	Eraser	Viskelæder
 	Even Page	Lige side
-	Every command is available to scripts and AI agents: run `wordcraft-cli mcp` for an MCP server, or start the app with `--control <port>` for the JSON control channel.	Hver kommando er tilgængelig for scripts og AI-agenter: kør `wordcraft-cli mcp` for en MCP-server, eller start appen med `--control <port>` for JSON-kontrolkanalen.
+	Every command is available to scripts and AI agents: run `quill-cli mcp` for an MCP server, or start the app with `--control <port>` for the JSON control channel.	Hver kommando er tilgængelig for scripts og AI-agenter: kør `quill-cli mcp` for en MCP-server, eller start appen med `--control <port>` for JSON-kontrolkanalen.
 	Export	Eksportér
 	Export a copy to share (PDF, Word document)	Eksportér en kopi til deling (PDF, Word-dokument)
 	Export Page as PNG	Eksportér side som PNG
@@ -688,7 +688,6 @@
 	Small caps	Kapitæler
 	SmartArt	SmartArt
 	Sort	Sortér
-	Source code: github.com/storytold/wordcraft	Kildekode: github.com/storytold/wordcraft
 	Space before/after:	Afstand før/efter:
 	Spacing	Afstand
 	Spacing (pt):	Afstand (pt):
@@ -2506,3 +2505,4 @@
 	Insert Note Link	Indsæt notelink
 	Paste as Equation	Sæt ind som ligning
 	Open Obsidian Vault…	Åbn Obsidian-boks…
+	Source code: github.com/Rasmus-03/Quill	Kildekode: github.com/Rasmus-03/Quill

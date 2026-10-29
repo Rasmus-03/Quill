@@ -1,7 +1,7 @@
 # Serbian, Cyrillic script (sr) interface catalog. Transliterated from sr-latn.tsv (see that file
 # for the clean-room translation itself); change both files together so they don't drift apart.
 # Product names, key names, shortcuts, code, URLs, schemes and file extensions stay in Latin
-# letters here too (`wordcraft-cli mcp`, Backspace, ⌘V, .docx, http, Markdown).
+# letters here too (`quill-cli mcp`, Backspace, ⌘V, .docx, http, Markdown).
 #
 # Columns, separated by a TAB:
 #   context <TAB> English source <TAB> translation
@@ -443,7 +443,7 @@
 	Equation	Једначина
 	Eraser	Гумица
 	Even Page	Парна страна
-	Every command is available to scripts and AI agents: run `wordcraft-cli mcp` for an MCP server, or start the app with `--control <port>` for the JSON control channel.	Свака наредба је доступна скриптама и AI агентима: покрените `wordcraft-cli mcp` за MCP сервер, или покрените апликацију са `--control <port>` за JSON контролни канал.
+	Every command is available to scripts and AI agents: run `quill-cli mcp` for an MCP server, or start the app with `--control <port>` for the JSON control channel.	Свака наредба је доступна скриптама и AI агентима: покрените `quill-cli mcp` за MCP сервер, или покрените апликацију са `--control <port>` за JSON контролни канал.
 	Export	Извоз
 	Export a copy to share (PDF, Word document)	Извези копију за дељење (PDF, Word документ)
 	Export Page as PNG	Извези страну као PNG
@@ -881,7 +881,6 @@
 	Soft Edges	Меке ивице
 	Sort	Сортирај
 	Sort order:	Редослед сортирања:
-	Source code: github.com/storytold/wordcraft	Изворни код: github.com/storytold/wordcraft
 	Space	Размак
 	Space after: {pt} pt	Размак после: {pt} пт
 	Space before/after:	Размак пре/после:
@@ -2143,3 +2142,4 @@
 
 	Paste as Equation	Уметање као формула
 	Open Obsidian Vault…	Отварање складишта Obsidian…
+	Source code: github.com/Rasmus-03/Quill	Изворни код: github.com/Rasmus-03/Quill

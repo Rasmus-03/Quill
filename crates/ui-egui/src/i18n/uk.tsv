@@ -401,7 +401,7 @@
 	Equation	Рівняння
 	Eraser	Гумка
 	Even Page	Парна сторінка
-	Every command is available to scripts and AI agents: run `wordcraft-cli mcp` for an MCP server, or start the app with `--control <port>` for the JSON control channel.	Кожна команда доступна сценаріям і агентам ШІ: запустіть `wordcraft-cli mcp` для сервера MCP або відкрийте програму з `--control <port>` для каналу керування JSON.
+	Every command is available to scripts and AI agents: run `quill-cli mcp` for an MCP server, or start the app with `--control <port>` for the JSON control channel.	Кожна команда доступна сценаріям і агентам ШІ: запустіть `quill-cli mcp` для сервера MCP або відкрийте програму з `--control <port>` для каналу керування JSON.
 	Export	Експорт
 	Export a copy to share (PDF, Word document)	Експортувати копію для спільного доступу (PDF, документ Word)
 	Export Page as PNG	Експортувати сторінку у PNG
@@ -851,7 +851,6 @@
 	Small caps	Малі великі літери
 	SmartArt	SmartArt
 	Sort	Сортувати
-	Source code: github.com/storytold/wordcraft	Вихідний код: github.com/storytold/wordcraft
 	Space	Пробіл
 	Space before/after:	Інтервал перед/після:
 	Spacing	Інтервал
@@ -2141,3 +2140,4 @@
 
 	Paste as Equation	Вставити як формулу
 	Open Obsidian Vault…	Відкрити сховище Obsidian…
+	Source code: github.com/Rasmus-03/Quill	Вихідний код: github.com/Rasmus-03/Quill

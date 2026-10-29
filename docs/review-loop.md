@@ -127,6 +127,64 @@ Say the file and line, what is wrong, and what done looks like. "Please fix" is 
 neither is a list of preferences without a reason. If it is a judgement call you would accept
 either way, accept the work and write it in the note.
 
+## The review stage, unattended
+
+A queue nobody reads is a queue of work that never lands. `cargo xtask review agent` is the stage
+itself: it takes requests off the queue, puts them in front of a reviewer, and lets the verdict go
+back to the agent that wrote the work.
+
+```sh
+cargo xtask review agent                  # hand each request to the configured reviewer
+cargo xtask review agent --agent codex    # …or start a fresh Orca worker for each one
+cargo xtask review agent --mechanical     # …or run only what a machine can prove
+cargo xtask review agent --once           # one pass, then exit (what a cron job or a probe wants)
+```
+
+One pass:
+
+1. **Takes the oldest pending request** — or a request that is `reviewing` whose claim has expired
+   (`--claim-ttl`, 30 minutes by default), so a reviewer that died does not block the queue for ever.
+2. **Claims it** in the queue file (`status: reviewing`, `claim.by`, `claim.at`). A second pass
+   skips it: the claim is bookkeeping, not a verdict, so `accept`/`changes` still settle it, and
+   `cargo xtask review status` shows `under review`.
+3. **Puts it in front of a reviewer**, with the brief as the instruction: the title, the note, the
+   gates the author claims, the diffstat, and the checklist to walk.
+   - `--agent codex` (any Orca agent id) starts `orca orchestration worker-start … --worktree
+     path:<the author's worktree>`. The reviewer works in the tree the diff came from, because the
+     gates need the code, not the summary in the queue file.
+   - with no `--agent`, the terminal set once with `cargo xtask review reviewer` is messaged
+     instead — a standing reviewer agent, no new terminal per request.
+4. **Waits for the verdict** (`--timeout`, 30 minutes by default). `accept` sends the work further
+   and notifies the author; `changes` sends it back to the author's terminal with the note, which
+   is the half of the loop that used to depend on somebody noticing the queue had grown. A timeout
+   is a checkpoint: the request stays claimed, and another pass may take it over after the ttl.
+
+`--mechanical` is the part of a review a machine can be sure about, and nothing more. It sends the
+work back when either check fails:
+
+- `cargo xtask ci` in the author's worktree (skipped when the scan below already found something,
+  since the result would only be more of the same);
+- a scan of the lines the diff adds for `unwrap`, `expect`, `panic!`, `unreachable!`, `todo!`,
+  `unimplemented!` and `unsafe` in code that is not a test, reported by file and line.
+
+A `--mechanical` pass never *accepts*: when the checks pass, the request goes back to `pending`
+with `mechanical.verdict: pass` recorded, because a machine cannot do the reading that `accept`
+claims somebody did.
+
+Inside Orca the stage is a terminal like any other. On first run it registers itself as the
+reviewer (`--no-register` opts out), so `cargo xtask review submit` reaches the stage without
+anyone running `review reviewer` by hand. It is the door, not the reader: with `--agent` every
+request gets its own worker, which is what keeps a stage from grading the queue it is holding.
+Run it in its own terminal and leave it there:
+
+```sh
+cargo xtask review agent --agent codex --interval 30
+```
+
+The stage uses the same queue as everything else. `WORDCRAFT_REVIEW_DIR` points it at another
+directory, which is how a test — or a second machine script — gets a queue of its own without
+touching the shared one.
+
 ## Using the queue next to Orca
 
 Nothing here needs Orca, but it uses it when it is there: `submit` notifies the configured reviewer,
@@ -138,8 +196,10 @@ cargo xtask review reviewer            # who it is now
 ```
 
 If Orca is not running, the queue still works: the request is written, the verdict is recorded, and
-`cargo xtask review status` is where you read it. The queue is the record; the notification is a
-knock on the door.
+`cargo xtask review status --id rev-0007` is where you read it. Without `ORCA_TERMINAL_HANDLE` the
+queue cannot tell which request is yours, so `status` and `wait` ask for the id instead of guessing
+at the newest request (`--latest` reads the newest, whoever wrote it). The queue is the record; the
+notification is a knock on the door.
 
 ## The rule
 
