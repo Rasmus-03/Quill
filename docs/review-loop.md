@@ -138,6 +138,7 @@ cargo xtask review agent                  # hand each request to the configured 
 cargo xtask review agent --agent codex    # …or start a fresh Orca agent terminal for each one
 cargo xtask review agent --mechanical     # …or run only what a machine can prove
 cargo xtask review agent --once           # one pass, then exit (what a cron job or a probe wants)
+cargo xtask review agent --wait           # hold the pass open until the verdict arrives
 ```
 
 One pass:
@@ -157,10 +158,13 @@ One pass:
      author's task.
    - with no `--agent`, the terminal set once with `cargo xtask review reviewer` is messaged
      instead — a standing reviewer agent, no new terminal per request.
-4. **Waits for the verdict** (`--timeout`, 30 minutes by default). `accept` sends the work further
-   and notifies the author; `changes` sends it back to the author's terminal with the note, which
-   is the half of the loop that used to depend on somebody noticing the queue had grown. A timeout
-   is a checkpoint: the request stays claimed, and another pass may take it over after the ttl.
+4. **Does not wait for the verdict.** Dispatch is the stage's job and reading is not: the verdict
+   is written to the queue file and knocks on the author's terminal from there, so the next pass
+   takes the next request while the first one is still being read. `--wait` holds a pass open
+   instead (`--timeout`, 30 minutes by default) — one reviewer at a time, which is what a machine
+   with a single reviewer wants, and what a stalled reviewer makes expensive for everyone else.
+   A timeout is a checkpoint: the request stays claimed, and another pass may take it over after
+   the ttl.
 
 `--mechanical` is the part of a review a machine can be sure about, and nothing more. It sends the
 work back when either check fails:

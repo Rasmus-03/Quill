@@ -42,11 +42,13 @@ actions:
                   the work is good: send it further (WHERE defaults to `integration`)
   changes <id> --note TEXT
                   send it back: the note says, file by file, what has to change
-  agent [--once] [--agent ID] [--mechanical] [--interval SECS] [--claim-ttl SECS]
+  agent [--once] [--agent ID] [--mechanical] [--wait] [--interval SECS] [--claim-ttl SECS]
                   be the review stage: claim the oldest pending request, put it in front of a
-                  reviewer (an Orca worker in the author's worktree, or the configured reviewer
-                  terminal) and let the verdict go back to the author. --mechanical runs the
-                  hard checks here instead and sends the work back when they fail
+                  reviewer (an Orca agent terminal in the author's worktree, or the configured
+                  reviewer terminal) and let the verdict go back to the author. One request at a
+                  time, without blocking on the verdict; --wait holds the pass open for it.
+                  --mechanical runs the hard checks here instead and sends the work back when
+                  they fail
   status [--id ID] [--latest]
                   what happened to my request: the one carrying this terminal's handle
                   (--latest reads the newest in the queue, whoever wrote it)
@@ -669,6 +671,9 @@ const CLAIM_TTL: u64 = 1800;
 fn agent(root: &Path, args: &[&str]) -> Result<(), String> {
     let once = args.contains(&"--once");
     let mechanical = args.contains(&"--mechanical");
+    // Off by default: a stage that blocks on one verdict cannot take the next request, and a
+    // reviewer that is slow (or out of capacity) would then stall the whole queue behind it.
+    let wait = args.contains(&"--wait");
     let agent_id = args_of(args, "--agent").first().map(|s| s.to_string());
     let interval = args_of(args, "--interval").first().and_then(|s| s.parse::<u64>().ok()).unwrap_or(30).max(1);
     let ttl = args_of(args, "--claim-ttl").first().and_then(|s| s.parse::<u64>().ok()).unwrap_or(CLAIM_TTL);
@@ -716,7 +721,7 @@ fn agent(root: &Path, args: &[&str]) -> Result<(), String> {
     loop {
         // One refused hand-off is not the stage's end: it puts the request back in the queue and
         // the next pass tries again, which is what a standing stage is for. --once still reports it.
-        match one_pass(root, mechanical, agent_id.as_deref(), ttl, timeout) {
+        match one_pass(root, mechanical, agent_id.as_deref(), wait, ttl, timeout) {
             Ok(Some(line)) => println!("{line}"),
             Ok(None) => println!("Nothing pending; waiting {interval} s."),
             Err(e) if once => return Err(e),
@@ -733,7 +738,7 @@ fn agent(root: &Path, args: &[&str]) -> Result<(), String> {
 }
 
 /// One request through the stage, or `None` when the queue has nothing to give.
-fn one_pass(root: &Path, mechanical: bool, agent_id: Option<&str>, ttl: u64, timeout: u64) -> Result<Option<String>, String> {
+fn one_pass(root: &Path, mechanical: bool, agent_id: Option<&str>, wait: bool, ttl: u64, timeout: u64) -> Result<Option<String>, String> {
     let all = requests(root)?;
     let now = unix_secs();
     let mut picked: Option<(String, Value)> = None;
@@ -763,6 +768,11 @@ fn one_pass(root: &Path, mechanical: bool, agent_id: Option<&str>, ttl: u64, tim
         v["claim"] = Value::Null;
         store(root, &id, &v)?;
         return Err(e);
+    }
+    if !wait {
+        // Dispatch and move on. The verdict is written to the queue file and knocks on the author's
+        // door from there, so holding this pass open would only delay the next request.
+        return Ok(Some(format!("{id}: handed off; the verdict settles in the queue and reaches the author.")));
     }
     wait_for_verdict(root, &id, timeout).map(Some)
 }
