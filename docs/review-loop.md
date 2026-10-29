@@ -135,7 +135,7 @@ back to the agent that wrote the work.
 
 ```sh
 cargo xtask review agent                  # hand each request to the configured reviewer
-cargo xtask review agent --agent codex    # …or start a fresh Orca worker for each one
+cargo xtask review agent --agent codex    # …or start a fresh Orca agent terminal for each one
 cargo xtask review agent --mechanical     # …or run only what a machine can prove
 cargo xtask review agent --once           # one pass, then exit (what a cron job or a probe wants)
 ```
@@ -149,9 +149,12 @@ One pass:
    `cargo xtask review status` shows `under review`.
 3. **Puts it in front of a reviewer**, with the brief as the instruction: the title, the note, the
    gates the author claims, the diffstat, and the checklist to walk.
-   - `--agent codex` (any Orca agent id) starts `orca orchestration worker-start … --worktree
-     path:<the author's worktree>`. The reviewer works in the tree the diff came from, because the
-     gates need the code, not the summary in the queue file.
+   - `--agent codex` (any Orca agent id) starts `orca agent launch --agent <id> --worktree
+     path:<the author's worktree> --prompt <the brief> --surface terminal`: an agent terminal of its
+     own, in the tree the diff came from, because the gates need the code and not the summary in the
+     queue file. Not `orca orchestration worker-start`, which is fenced to the coordinator terminal
+     bound to a Task Run (`consumer_fenced`) and is refused to a stage that is not part of the
+     author's task.
    - with no `--agent`, the terminal set once with `cargo xtask review reviewer` is messaged
      instead — a standing reviewer agent, no new terminal per request.
 4. **Waits for the verdict** (`--timeout`, 30 minutes by default). `accept` sends the work further
@@ -174,12 +177,16 @@ claims somebody did.
 Inside Orca the stage is a terminal like any other. On first run it registers itself as the
 reviewer (`--no-register` opts out), so `cargo xtask review submit` reaches the stage without
 anyone running `review reviewer` by hand. It is the door, not the reader: with `--agent` every
-request gets its own worker, which is what keeps a stage from grading the queue it is holding.
-Run it in its own terminal and leave it there:
+request gets its own reader, which is what keeps a stage from grading the queue it is holding.
+Run it in its own terminal and leave it there — `orca terminal create --title "Review stage"
+--command "cargo xtask review agent --agent codex --interval 30"` is the whole installation:
 
 ```sh
 cargo xtask review agent --agent codex --interval 30
 ```
+
+A refused hand-off does not end the stage: the request goes back to `pending`, the error is
+printed, and the next pass tries again. Only `--once` reports the error as its exit status.
 
 The stage uses the same queue as everything else. `WORDCRAFT_REVIEW_DIR` points it at another
 directory, which is how a test — or a second machine script — gets a queue of its own without
