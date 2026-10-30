@@ -468,7 +468,8 @@ own; `cargo xtask ci` before you commit; one commit per arc, with a task id in t
       SHA-256, read → write → read, every one round-trips; 2026-10-23: the page count is compared
       with Word's own recorded count — 62 of 65 exact, three one page apart, all three named —
       though not yet asserted in the harness. The page-by-page render comparison remains open in
-      gap #1)*
+      gap #1; 2026-10-30: the harness was run on this line after `zip` 3 → 9 and all 71 files still
+      round-trip)*
 - [x] The interface is Danish at the points a student meets it, errors included. *(2026-10-23:
       the maths tab's 24 English error and status strings and its formula gallery are Danish; the
       Maths tab reads Danish in all 20 interfaces, which is the open item for the others)*
@@ -496,7 +497,14 @@ own; `cargo xtask ci` before you commit; one commit per arc, with a task id in t
       duplicated feature rows in the assessment are merged, and the localization row explains why
       it still carries 27% while `localization-parity.md` computes 28%. The readiness estimates
       themselves are unchanged: this pass fixed the measurements and the evidence, not the model)*
-- [ ] The release checklist in `docs/releasing.md` was walked end to end once.
+- [ ] The release checklist in `docs/releasing.md` was walked end to end once. *(2026-10-30: walked as
+      far as this machine allows — `cargo xtask ci` green; the corpus fetched (`cargo xtask corpus
+      --docx`, 71 files) and `crates/docx/tests/corpus.rs` green over all 71 with `zip` 9.1.3; and
+      `packaging/macos/package.sh --arch aarch64` produced `quill-1.1.0-macos-aarch64.dmg` (valid on
+      disk, ad-hoc signed, 24 MB) and `quill-cli-1.1.0-macos-aarch64.zip`, whose binary reports
+      `quill-cli 1.1.0`. **Not walked:** the universal DMG (no x86_64 target on this machine), the
+      Windows and Linux packages, the CI matrix and the `release.yml` dry run — those need other
+      machines or the remote — and the packaged app was not opened to check About.)*
 
 ## 7. What this release deliberately does not do
 
