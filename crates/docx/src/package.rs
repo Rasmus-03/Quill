@@ -192,8 +192,9 @@ impl Package {
             if f.is_dir() {
                 continue;
             }
-            // zip 9 hands the name back as a `Result`: an entry whose name is not valid UTF-8
-            // is not a part of any package, so it is skipped like an unreadable one.
+            // zip 9 hands the name back as a `Result`. In 9.1.3 a non-UTF-8 name is decoded
+            // lossily (CP437) rather than rejected, so this arm is defensive — but an entry the
+            // crate does reject must not take the whole document down with it.
             let name = match f.name() {
                 Ok(n) => n.trim_start_matches('/').to_string(),
                 Err(e) => {

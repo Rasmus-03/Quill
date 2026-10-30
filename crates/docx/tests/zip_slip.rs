@@ -262,3 +262,111 @@ fn a_root_level_part_and_its_rels_are_written_without_a_leading_slash() {
     assert_eq!(doc2.plain_text(StoryRef::Body), "Hello");
     assert!(doc2.passthrough.contains_key("store.xml"), "{:?}", doc2.passthrough.keys().collect::<Vec<_>>());
 }
+
+/// CRC-32 (the polynomial ZIP uses), so a hand-built entry is a valid one.
+fn crc32(data: &[u8]) -> u32 {
+    let mut crc = 0xFFFF_FFFFu32;
+    for &b in data {
+        crc ^= u32::from(b);
+        for _ in 0..8 {
+            crc = if crc & 1 == 1 { (crc >> 1) ^ 0xEDB8_8320 } else { crc >> 1 };
+        }
+    }
+    !crc
+}
+
+/// A stored ZIP whose entry names are raw bytes, because the `zip` writer takes `&str` and a name
+/// that is not UTF-8 is exactly what this test needs to build.
+fn raw_zip(entries: &[(&[u8], &[u8])]) -> Vec<u8> {
+    raw_zip_flags(entries, 0)
+}
+
+fn raw_zip_flags(entries: &[(&[u8], &[u8])], flags: u16) -> Vec<u8> {
+    fn put16(out: &mut Vec<u8>, v: u16) {
+        out.extend_from_slice(&v.to_le_bytes());
+    }
+    fn put32(out: &mut Vec<u8>, v: u32) {
+        out.extend_from_slice(&v.to_le_bytes());
+    }
+
+    let mut out = Vec::new();
+    let mut central = Vec::new();
+    for (name, data) in entries {
+        let crc = crc32(data);
+        let size = u32::try_from(data.len()).unwrap();
+        let name_len = u16::try_from(name.len()).unwrap();
+        let offset = u32::try_from(out.len()).unwrap();
+
+        // Local file header, then the stored bytes.
+        put32(&mut out, 0x0403_4b50);
+        put16(&mut out, 20); // version needed
+        put16(&mut out, flags);
+        put16(&mut out, 0); // stored
+        put16(&mut out, 0); // time
+        put16(&mut out, 0); // date
+        put32(&mut out, crc);
+        put32(&mut out, size);
+        put32(&mut out, size);
+        put16(&mut out, name_len);
+        put16(&mut out, 0); // extra field length
+        out.extend_from_slice(name);
+        out.extend_from_slice(data);
+
+        // The matching central directory record.
+        put32(&mut central, 0x0201_4b50);
+        put16(&mut central, 20); // version made by
+        put16(&mut central, 20); // version needed
+        put16(&mut central, flags);
+        put16(&mut central, 0); // stored
+        put16(&mut central, 0); // time
+        put16(&mut central, 0); // date
+        put32(&mut central, crc);
+        put32(&mut central, size);
+        put32(&mut central, size);
+        put16(&mut central, name_len);
+        put16(&mut central, 0); // extra
+        put16(&mut central, 0); // comment
+        put16(&mut central, 0); // disk
+        put16(&mut central, 0); // internal attributes
+        put32(&mut central, 0); // external attributes
+        put32(&mut central, offset);
+        central.extend_from_slice(name);
+    }
+
+    let cd_offset = u32::try_from(out.len()).unwrap();
+    let cd_size = u32::try_from(central.len()).unwrap();
+    let count = u16::try_from(entries.len()).unwrap();
+    out.extend_from_slice(&central);
+    put32(&mut out, 0x0605_4b50);
+    put16(&mut out, 0); // this disk
+    put16(&mut out, 0); // disk with the central directory
+    put16(&mut out, count);
+    put16(&mut out, count);
+    put32(&mut out, cd_size);
+    put32(&mut out, cd_offset);
+    put16(&mut out, 0); // comment length
+    out
+}
+
+/// An entry whose name is not UTF-8 must not take the document down with it.
+///
+/// `zip` 9 gives the name back as a `Result`; in 9.1.3 it decodes a non-UTF-8 name lossily (CP437,
+/// per the spec) rather than failing, so today this entry survives with a substituted name. The
+/// reader's arm for the `Err` case is defensive and unproven — what this test pins is the part
+/// that must hold either way: one odd entry name, one document that still opens and still has its
+/// text.
+#[test]
+fn a_part_name_that_is_not_utf8_does_not_take_the_document_down() {
+    let root_rels =
+        format!(r#"<Relationships xmlns="{PKG_RELS}"><Relationship Id="rId1" Type="{OFFICE_DOC}" Target="word/document.xml"/></Relationships>"#);
+    let document = format!(r#"<w:document {W_NS}><w:body><w:p><w:r><w:t>Hello</w:t></w:r></w:p></w:body></w:document>"#);
+    let package = raw_zip(&[
+        (b"_rels/.rels", root_rels.as_bytes()),
+        (b"word/document.xml", document.as_bytes()),
+        // A name CP437 would spell and UTF-8 cannot: no encoding flag is set for this entry.
+        (b"word/\xff\xfe.xml", b"not a part of this package"),
+    ]);
+
+    let d = read_doc(&package);
+    assert_eq!(d.plain_text(StoryRef::Body), "Hello", "the good part is still read");
+}

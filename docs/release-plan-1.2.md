@@ -178,6 +178,14 @@ Seven further advisories are "unmaintained" warnings (`rustybuzz`, `ttf-parser`,
 `cargo audit` now exits 0. The seven unmaintained-crate warnings remain and are reported, not
 hidden. Nothing was suppressed: no advisory was allow-listed, and the fix is the upgrade.
 
+The two dependencies `zip` 9 adds are not a packaging risk: `nix` is gated to
+`cfg(any(target_os = "macos", "freebsd", "openbsd", "netbsd", "dragonfly"))` in its manifest, so
+the Linux and Windows builds never compile it, and `typed-path` is pure Rust.
+*Still owed:* the skip arm for a name `zip` rejects has no reachable test — 9.1.3 decodes a
+non-UTF-8 name lossily (CP437, per the spec) instead of failing, so the arm is defensive. The
+test added with this item pins what must hold either way: one odd entry name does not stop the
+document opening.
+
 **A7. Nightly fuzzing of the hostile boundaries** — 4–8 h
 *What:* `cargo-fuzz` targets for the DOCX ZIP/XML reader, the `.doc` piece-table reader, the
 RTF/ODT readers and the font/TTC parser; promote the existing proptest cases in
