@@ -441,8 +441,12 @@ own; `cargo xtask ci` before you commit; one commit per arc, with a task id in t
 - [x] The app is Danish: interface, proofing and maths messages. *(the catalog covers all 2,495
       entries the interface uses and Danish proofing landed; the native-speaker review in §8.7 is
       still open and is the owner's call)*
-- [ ] `README.md` describes every platform, the feature matrix and the limits; `docs/status.md`
-      carries the measured maturity table.
+- [x] `README.md` describes every platform, the feature matrix and the limits; `docs/status.md`
+      carries the measured maturity table. *(2026-10-30: the README has the platform table, the
+      "What works, and what does not" matrix and the "Not yet" row; the row's claim that the
+      maths tab's messages are still English was false — `crates/engine/src/cmd/mathcraft.rs`
+      has no English user-facing sentence left — and is corrected, with the open native-speaker
+      review of the Danish strings named instead)*
 - [ ] `rg -i wordcraft` finds nothing user-visible outside the credits. *(arc 0 except the
       macOS DMG background's wordmark, which is artwork)*
 - [x] `ROADMAP.md`, `docs/gaps.md`, `docs/roadmap.md`, `docs/target-app-parity.md`, the parity
@@ -537,6 +541,7 @@ release checklist. The detail, and how to repeat it, is in
 
 | Date | Change | Summary |
 |---|---|---|
+| 2026-10-30 | minor | §6's README item is closed. The README's "Not yet" row claimed the maths tab's messages are still English; the code says otherwise — every user-facing string in `crates/engine/src/cmd/mathcraft.rs` is Danish and no English sentence is left in it — so the row now says the tab is Danish and names what is actually open, the native-speaker review of the Danish strings. The platform table, the feature matrix and the limits themselves were already there |
 | 2026-10-30 | minor | A5 is closed: the last two mutable references in `.github/workflows/` (the `taiki-e/install-action` tool tags `@cargo-audit` and `@cargo-llvm-cov`) are pinned to the commits those tags pointed at, so every `uses:` is a 40-hex commit. `zizmor`/`actionlint` are not installed here, so that half of the done-when is named as unrun rather than claimed. The gate was re-run on this line: `cargo xtask ci` passes all 8 steps at `f687951` with this change, wasm included — which corrects §6's claim that this machine cannot run the wasm step |
 | 2026-10-27 | minor | §6's progress-docs item is closed: the measured numbers are re-run on the 1.2 line in `ROADMAP.md`, `docs/roadmap.md`, `docs/target-app-parity.md` and `docs/status.md` (catalog 497/504, 678 commands, 2,198 tests, ~210,000 lines, 20 interface languages, four proofing languages), the claims the corpus made false are rewritten, the assessment's two duplicated feature rows are merged, and the localization row explains the 27% it keeps against the 28% its own doc computes. Still open in §6: the CI proof on Linux, macOS and Windows, the nightly fuzz run, the README/status pair's remaining walk, the release checklist's end-to-end pass, and the two owner decisions behind them |
 | 2026-10-23 | minor | Three of the critic's findings closed in code: (1) **the corpus in CI** — a `corpus` job fetches the hash-pinned files and runs the round trip, and the test fails when the manifest lists a file that is missing, so the job cannot pass by checking nothing; (2) **the round-trip harness widened** — the comparison is now the document as JSON (runs and paragraph properties, inline objects, tables, sections, numbering, styles, fields, comments, tracked changes, settings, sources, custom properties) with twips rounding, relationship ids, part numbers and zero-width marker order relaxed; its first run fixed a header that is only a table growing an empty paragraph on every save; (3) **Home gets an Insert group** — Table, Pictures, Word Count before Voice and Editor, checked on a headless render; the ribbon still runs wider than a 1440 pt window, so group collapsing is open |
