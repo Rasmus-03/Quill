@@ -1,6 +1,9 @@
 # Quill 1.2 — release plan
 
-> **Last reviewed:** 2026-10-27 · **Last updated:** 2026-10-27 · **Change:** minor (the progress
+> **Last reviewed:** 2026-10-30 · **Last updated:** 2026-10-30 · **Change:** minor (A5 closes the
+> supply chain — the two `taiki-e/install-action` tool tags are pinned, so every `uses:` in the
+> workflows is a commit — and the gate is re-run on this line: all 8 steps pass, wasm included,
+> which retires the note that this machine cannot run it; previously minor: the progress
 > docs tell the 1.2 truth: the measured numbers are re-run on this line in `ROADMAP.md`,
 > `docs/roadmap.md`, `docs/target-app-parity.md` and `docs/status.md`, the claims the corpus made
 > false are rewritten, and the assessment's duplicated rows are merged — §6's progress-docs item
@@ -129,11 +132,19 @@ paragraph whose text is only hashes (`##`) was read back as an empty heading and
 toolchain), so a missing attribution, a layering violation or a broken browser build fails the
 push. `cargo xtask ci` gained the `pkg-names` step too.
 
-**A5. Pin the supply chain** — 1–2 h
+**A5. Pin the supply chain** — 1–2 h — **done 2026-10-30**
 *What:* SHA-pin every action and reusable workflow reference, including the four `@main`
 reusable workflows (`release.yml` holds `contents: write` and the Apple/Azure signing secrets).
 *Where:* `.github/workflows/*.yml`.
 *Done when:* no `@v4`/`@v2`/`@main` reference remains; `zizmor`/`actionlint` passes.
+*What landed:* the four reusable workflows were already pinned to one commit
+(`39962f26…`, with the `# main` they were pinned from kept as the comment), so the last
+mutable references were the two `taiki-e/install-action` tool tags in `supply-chain.yml`:
+`@cargo-audit` and `@cargo-llvm-cov` are now pinned to the commits those tags pointed at on
+2026-10-30. Every `uses:` in `.github/workflows/` is a 40-hex commit, which is what
+`rg -P 'uses:.*@(?![0-9a-f]{40}\b)' .github/workflows/` now reports: nothing.
+*Not proved:* `zizmor` and `actionlint` are not installed on this machine, so the linter half of
+the done-when is unrun rather than passed. The pin itself needs no tool to check.
 
 **A6. Guard against dependency and toolchain drift** — 2–4 h
 *What:* `cargo audit` (or `cargo deny` with a `deny.toml`) on a schedule and on lockfile changes;
@@ -406,8 +417,10 @@ own; `cargo xtask ci` before you commit; one commit per arc, with a task id in t
 ## 6. Definition of done for 1.2
 
 - [ ] `cargo xtask ci` is green locally **and** in CI, on Linux, macOS and Windows. *(green
-      locally at `d7ab447` except the wasm step, which this machine has no rustup target for;
-      the CI proof comes with the first push of the new workflows)*
+      locally at `f687951` with A5 on top: all 8 steps — fmt, clippy, test, assets, layers,
+      pkg-names, wasm, clean — pass on this machine, wasm included, so the earlier note that
+      this machine could not run the wasm step was wrong; the CI proof still comes with the
+      first push of the new workflows)*
 - [x] `cargo test --workspace` runs in CI, including the 173 DOCX tests. *(arc 0)*
 - [x] `cargo xtask assets`, `cargo xtask layers` and `cargo xtask wasm` run in CI. *(arc 0)*
 - [x] macOS, Windows and Linux packages build from a clean checkout and are named `quill-*`.
@@ -524,6 +537,7 @@ release checklist. The detail, and how to repeat it, is in
 
 | Date | Change | Summary |
 |---|---|---|
+| 2026-10-30 | minor | A5 is closed: the last two mutable references in `.github/workflows/` (the `taiki-e/install-action` tool tags `@cargo-audit` and `@cargo-llvm-cov`) are pinned to the commits those tags pointed at, so every `uses:` is a 40-hex commit. `zizmor`/`actionlint` are not installed here, so that half of the done-when is named as unrun rather than claimed. The gate was re-run on this line: `cargo xtask ci` passes all 8 steps at `f687951` with this change, wasm included — which corrects §6's claim that this machine cannot run the wasm step |
 | 2026-10-27 | minor | §6's progress-docs item is closed: the measured numbers are re-run on the 1.2 line in `ROADMAP.md`, `docs/roadmap.md`, `docs/target-app-parity.md` and `docs/status.md` (catalog 497/504, 678 commands, 2,198 tests, ~210,000 lines, 20 interface languages, four proofing languages), the claims the corpus made false are rewritten, the assessment's two duplicated feature rows are merged, and the localization row explains the 27% it keeps against the 28% its own doc computes. Still open in §6: the CI proof on Linux, macOS and Windows, the nightly fuzz run, the README/status pair's remaining walk, the release checklist's end-to-end pass, and the two owner decisions behind them |
 | 2026-10-23 | minor | Three of the critic's findings closed in code: (1) **the corpus in CI** — a `corpus` job fetches the hash-pinned files and runs the round trip, and the test fails when the manifest lists a file that is missing, so the job cannot pass by checking nothing; (2) **the round-trip harness widened** — the comparison is now the document as JSON (runs and paragraph properties, inline objects, tables, sections, numbering, styles, fields, comments, tracked changes, settings, sources, custom properties) with twips rounding, relationship ids, part numbers and zero-width marker order relaxed; its first run fixed a header that is only a table growing an empty paragraph on every save; (3) **Home gets an Insert group** — Table, Pictures, Word Count before Voice and Editor, checked on a headless render; the ribbon still runs wider than a 1440 pt window, so group collapsing is open |
 | 2026-10-23 | minor | An outside critic read the 1.2 line (`docs/review-1.2.md`, crossed in §10). Fixed from it: the maths tab's 24 English error and status strings and its formula gallery are Danish (a student's mistake no longer answers in English), the README's stale catalog number and its false "Danish is not among the languages" and "checked on every build" claims, the status page's corpus claim, and three Danish terms that read wrong. Opened and named: the corpus check in CI, the round-trip harness's narrower-than-claimed predicate, the release dry run, Home's ribbon order. Pagination against Word measured: 62 of the 65 corpus files whose count Word recorded match exactly |
