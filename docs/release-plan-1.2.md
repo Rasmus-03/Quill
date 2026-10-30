@@ -146,7 +146,7 @@ mutable references were the two `taiki-e/install-action` tool tags in `supply-ch
 *Not proved:* `zizmor` and `actionlint` are not installed on this machine, so the linter half of
 the done-when is unrun rather than passed. The pin itself needs no tool to check.
 
-**A6. Guard against dependency and toolchain drift** — 2–4 h — **done 2026-10-30 (the gate works; it is red)**
+**A6. Guard against dependency and toolchain drift** — 2–4 h — **done 2026-10-30 (the gate works, and it is now green)**
 *What:* `cargo audit` (or `cargo deny` with a `deny.toml`) on a schedule and on lockfile changes;
 an MSRV job on Rust 1.95 (`rust-version` is declared but never enforced); a weekly full-workspace
 job; a coverage job (`cargo llvm-cov`) uploaded as an artifact.
@@ -167,11 +167,16 @@ so "an advisory in `zip` fails the build" is now demonstrated rather than assume
 
 Seven further advisories are "unmaintained" warnings (`rustybuzz`, `ttf-parser`, `zbus_names`,
 `clipboard-win`), which the audit reports without failing.
-*Open, and it is the owner's call (§8):* the `audit` job is **red on this line**, so CI cannot be
-called green until `zip` moves to a fixed major (3 → 9, a breaking change in `crates/docx`) or
-the three unreachable advisories are allow-listed with that reasoning in `.cargo/audit.toml`.
-`ctutils` should be bumped either way. Nothing was suppressed here: the finding is reported, not
-silenced.
+*Resolved the same day, by upgrading rather than allow-listing:*
+
+- **`zip` 3.0.0 → 9.1.3.** The major bump cost one real API change: `ZipFile::name()` now returns
+  `Result<Cow<str>, ZipError>` because an entry's name may not be UTF-8. In `crates/docx/src/package.rs`
+  an unreadable name is now skipped like an unreadable entry, with a warning, instead of aborting
+  the whole document; the tests that read names take them with `expect("zip entry name")`.
+- **`ctutils` 0.4.3 → 0.4.7**, the patch the advisory asked for.
+
+`cargo audit` now exits 0. The seven unmaintained-crate warnings remain and are reported, not
+hidden. Nothing was suppressed: no advisory was allow-listed, and the fix is the upgrade.
 
 **A7. Nightly fuzzing of the hostile boundaries** — 4–8 h
 *What:* `cargo-fuzz` targets for the DOCX ZIP/XML reader, the `.doc` piece-table reader, the
@@ -441,11 +446,10 @@ own; `cargo xtask ci` before you commit; one commit per arc, with a task id in t
       pkg-names, wasm, clean — pass on this machine, wasm included, so the earlier note that
       this machine could not run the wasm step was wrong; the CI proof still comes with the
       first push of the new workflows)*
-- [ ] **The supply-chain audit is green.** It is not: `cargo audit` exits 1 on this line with
-      four advisories — three in `zip 3.0.0` (all in the `extract` API Quill never calls) and one
-      in `ctutils 0.4.3` (a patch release fixes it). A1–A7's build trust does not survive a red
-      audit job, so this needs a decision: move `zip` to a fixed major, or allow-list the three
-      unreachable ones with their reasoning (§8).
+- [x] **The supply-chain audit is green.** *(2026-10-30: it was red — four advisories, three in
+      `zip 3.0.0` and one in `ctutils 0.4.3`. Both are upgraded (`zip` 9.1.3, `ctutils` 0.4.7),
+      `cargo audit` exits 0, and `cargo xtask ci` still passes all 8 steps on the new `zip`. No
+      advisory was allow-listed)*
 - [x] `cargo test --workspace` runs in CI, including the 173 DOCX tests. *(arc 0)*
 - [x] `cargo xtask assets`, `cargo xtask layers` and `cargo xtask wasm` run in CI. *(arc 0)*
 - [x] macOS, Windows and Linux packages build from a clean checkout and are named `quill-*`.
@@ -566,6 +570,7 @@ release checklist. The detail, and how to repeat it, is in
 
 | Date | Change | Summary |
 |---|---|---|
+| 2026-10-30 | minor | The four audit advisories are gone without suppressing any of them: `zip` 3.0.0 → 9.1.3 (one real API break — `ZipFile::name()` is a `Result` now, so a non-UTF-8 entry name is skipped like an unreadable entry instead of failing the document) and `ctutils` 0.4.3 → 0.4.7. `cargo audit` exits 0, and `cargo xtask ci` passes all 8 steps on the new `zip`. Separately, the fuzz corpus that had collected in the working tree is coverage only: 2,050 inputs and **no** `crash-*`/`timeout-*` artifact, so nothing was promoted to a named seed and the tree is clean |
 | 2026-10-30 | minor | A6 is closed by proving it, and the proof is red. `cargo-audit 0.22.2` on this line exits 1 with four advisories: three in `zip 3.0.0` (SUID/SGID preservation, symlink escape, permissions applied through symlinks — rated up to 9.1 critical, all in `ZipArchive::extract`, which Quill never calls; the DOCX reader reads entries and validates names itself) and `ctutils 0.4.3` (non-constant-time masks, reachable through `digest → hmac` in the DOCX package, fixed by a patch). Seven unmaintained-crate warnings do not fail the run. The `supply-chain.yml` jobs already existed; what was missing was this proof. Nothing was allow-listed or silenced — the release now carries an open decision: upgrade `zip` 3 → 9, or allow-list the three unreachable advisories with that reasoning |
 | 2026-10-30 | minor | §6's README item is closed. The README's "Not yet" row claimed the maths tab's messages are still English; the code says otherwise — every user-facing string in `crates/engine/src/cmd/mathcraft.rs` is Danish and no English sentence is left in it — so the row now says the tab is Danish and names what is actually open, the native-speaker review of the Danish strings. The platform table, the feature matrix and the limits themselves were already there |
 | 2026-10-30 | minor | A5 is closed: the last two mutable references in `.github/workflows/` (the `taiki-e/install-action` tool tags `@cargo-audit` and `@cargo-llvm-cov`) are pinned to the commits those tags pointed at, so every `uses:` is a 40-hex commit. `zizmor`/`actionlint` are not installed here, so that half of the done-when is named as unrun rather than claimed. The gate was re-run on this line: `cargo xtask ci` passes all 8 steps at `f687951` with this change, wasm included — which corrects §6's claim that this machine cannot run the wasm step |

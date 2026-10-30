@@ -94,7 +94,7 @@ fn header_text_around_an_unmodelled_child_survives() {
     let d = wordcraft_docx::read(&z).unwrap();
     let written = wordcraft_docx::write(&d).unwrap();
     let mut arc = zip::ZipArchive::new(std::io::Cursor::new(&written)).unwrap();
-    let mut names: Vec<String> = arc.file_names().map(str::to_owned).collect();
+    let mut names: Vec<String> = arc.file_names().map(|n| n.expect("zip entry name").into_owned()).collect();
     names.retain(|n| n.contains("header"));
     let mut all = String::new();
     for n in names {

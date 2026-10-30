@@ -86,7 +86,7 @@ fn saved_names(bytes: &[u8]) -> Vec<String> {
     let mut a = zip::ZipArchive::new(Cursor::new(bytes.to_vec())).unwrap();
     let mut names = Vec::new();
     for i in 0..a.len() {
-        let name = a.by_index(i).unwrap().name().to_string();
+        let name = a.by_index(i).unwrap().name().expect("zip entry name").to_string();
         assert!(clean(&name), "hostile part name written: {name:?}");
         names.push(name);
     }
@@ -164,7 +164,7 @@ fn a_hostile_manifest_cannot_make_the_writer_emit_a_hostile_name() {
     assert!(!names.iter().any(|n| matches!(n.as_bytes(), [c, b':', ..] if c.is_ascii_alphabetic())), "drive-prefixed part written: {names:?}");
     let mut a = zip::ZipArchive::new(Cursor::new(out)).unwrap();
     for i in 0..a.len() {
-        let name = a.by_index(i).unwrap().name().to_string();
+        let name = a.by_index(i).unwrap().name().expect("zip entry name").to_string();
         if !name.ends_with(".rels") {
             continue;
         }

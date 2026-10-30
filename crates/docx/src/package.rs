@@ -192,7 +192,15 @@ impl Package {
             if f.is_dir() {
                 continue;
             }
-            let name = f.name().trim_start_matches('/').to_string();
+            // zip 9 hands the name back as a `Result`: an entry whose name is not valid UTF-8
+            // is not a part of any package, so it is skipped like an unreadable one.
+            let name = match f.name() {
+                Ok(n) => n.trim_start_matches('/').to_string(),
+                Err(e) => {
+                    log::warn!("docx: skipping zip entry {i} with an unreadable name: {e}");
+                    continue;
+                }
+            };
             // A name a Windows extractor would read as a path (`..\evil`, `C:evil`, `..`) is
             // not a part of any package: drop the entry before it can be carried into a save.
             if !part_name_ok(&name) {
