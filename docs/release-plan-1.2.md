@@ -146,12 +146,32 @@ mutable references were the two `taiki-e/install-action` tool tags in `supply-ch
 *Not proved:* `zizmor` and `actionlint` are not installed on this machine, so the linter half of
 the done-when is unrun rather than passed. The pin itself needs no tool to check.
 
-**A6. Guard against dependency and toolchain drift** — 2–4 h
+**A6. Guard against dependency and toolchain drift** — 2–4 h — **done 2026-10-30 (the gate works; it is red)**
 *What:* `cargo audit` (or `cargo deny` with a `deny.toml`) on a schedule and on lockfile changes;
 an MSRV job on Rust 1.95 (`rust-version` is declared but never enforced); a weekly full-workspace
 job; a coverage job (`cargo llvm-cov`) uploaded as an artifact.
 *Where:* `.github/workflows/ci.yml` (+ new `audit.yml`).
 *Done when:* an advisory in `zip`/`quick-xml`/`krilla`/`image` fails the build.
+*What landed:* the four jobs are `supply-chain.yml` (audit, MSRV 1.95, weekly `cargo xtask ci`,
+coverage) — that part was already in the tree. What was missing was the proof, and running
+`cargo-audit 0.22.2` on this line supplies it: **the gate exits 1 on four real advisories**,
+so "an advisory in `zip` fails the build" is now demonstrated rather than assumed.
+*The four, and what they mean for Quill:*
+
+| Advisory | Crate | Reachable? |
+|---|---|---|
+| RUSTSEC-2026-0369 (9.1 critical) | `zip 3.0.0` | **No** — it is in `ZipArchive::extract`, and Quill never extracts: `crates/docx/src/package.rs` reads entries and validates names itself (zip-slip checks at `package.rs:20-24,196,373`) |
+| RUSTSEC-2026-0368 | `zip 3.0.0` | **No** — same `extract` API |
+| RUSTSEC-2026-0367 (7.3 high) | `zip 3.0.0` | **No** — same `extract` API |
+| RUSTSEC-2026-0385 | `ctutils 0.4.3` | **Unknown** — it reaches the tree through `digest 0.11.3 → hmac 0.13.0` in `crates/docx`, so it is on the package-integrity path; the fix is a patch release (`>=0.4.4`) |
+
+Seven further advisories are "unmaintained" warnings (`rustybuzz`, `ttf-parser`, `zbus_names`,
+`clipboard-win`), which the audit reports without failing.
+*Open, and it is the owner's call (§8):* the `audit` job is **red on this line**, so CI cannot be
+called green until `zip` moves to a fixed major (3 → 9, a breaking change in `crates/docx`) or
+the three unreachable advisories are allow-listed with that reasoning in `.cargo/audit.toml`.
+`ctutils` should be bumped either way. Nothing was suppressed here: the finding is reported, not
+silenced.
 
 **A7. Nightly fuzzing of the hostile boundaries** — 4–8 h
 *What:* `cargo-fuzz` targets for the DOCX ZIP/XML reader, the `.doc` piece-table reader, the
@@ -421,6 +441,11 @@ own; `cargo xtask ci` before you commit; one commit per arc, with a task id in t
       pkg-names, wasm, clean — pass on this machine, wasm included, so the earlier note that
       this machine could not run the wasm step was wrong; the CI proof still comes with the
       first push of the new workflows)*
+- [ ] **The supply-chain audit is green.** It is not: `cargo audit` exits 1 on this line with
+      four advisories — three in `zip 3.0.0` (all in the `extract` API Quill never calls) and one
+      in `ctutils 0.4.3` (a patch release fixes it). A1–A7's build trust does not survive a red
+      audit job, so this needs a decision: move `zip` to a fixed major, or allow-list the three
+      unreachable ones with their reasoning (§8).
 - [x] `cargo test --workspace` runs in CI, including the 173 DOCX tests. *(arc 0)*
 - [x] `cargo xtask assets`, `cargo xtask layers` and `cargo xtask wasm` run in CI. *(arc 0)*
 - [x] macOS, Windows and Linux packages build from a clean checkout and are named `quill-*`.
@@ -541,6 +566,7 @@ release checklist. The detail, and how to repeat it, is in
 
 | Date | Change | Summary |
 |---|---|---|
+| 2026-10-30 | minor | A6 is closed by proving it, and the proof is red. `cargo-audit 0.22.2` on this line exits 1 with four advisories: three in `zip 3.0.0` (SUID/SGID preservation, symlink escape, permissions applied through symlinks — rated up to 9.1 critical, all in `ZipArchive::extract`, which Quill never calls; the DOCX reader reads entries and validates names itself) and `ctutils 0.4.3` (non-constant-time masks, reachable through `digest → hmac` in the DOCX package, fixed by a patch). Seven unmaintained-crate warnings do not fail the run. The `supply-chain.yml` jobs already existed; what was missing was this proof. Nothing was allow-listed or silenced — the release now carries an open decision: upgrade `zip` 3 → 9, or allow-list the three unreachable advisories with that reasoning |
 | 2026-10-30 | minor | §6's README item is closed. The README's "Not yet" row claimed the maths tab's messages are still English; the code says otherwise — every user-facing string in `crates/engine/src/cmd/mathcraft.rs` is Danish and no English sentence is left in it — so the row now says the tab is Danish and names what is actually open, the native-speaker review of the Danish strings. The platform table, the feature matrix and the limits themselves were already there |
 | 2026-10-30 | minor | A5 is closed: the last two mutable references in `.github/workflows/` (the `taiki-e/install-action` tool tags `@cargo-audit` and `@cargo-llvm-cov`) are pinned to the commits those tags pointed at, so every `uses:` is a 40-hex commit. `zizmor`/`actionlint` are not installed here, so that half of the done-when is named as unrun rather than claimed. The gate was re-run on this line: `cargo xtask ci` passes all 8 steps at `f687951` with this change, wasm included — which corrects §6's claim that this machine cannot run the wasm step |
 | 2026-10-27 | minor | §6's progress-docs item is closed: the measured numbers are re-run on the 1.2 line in `ROADMAP.md`, `docs/roadmap.md`, `docs/target-app-parity.md` and `docs/status.md` (catalog 497/504, 678 commands, 2,198 tests, ~210,000 lines, 20 interface languages, four proofing languages), the claims the corpus made false are rewritten, the assessment's two duplicated feature rows are merged, and the localization row explains the 27% it keeps against the 28% its own doc computes. Still open in §6: the CI proof on Linux, macOS and Windows, the nightly fuzz run, the README/status pair's remaining walk, the release checklist's end-to-end pass, and the two owner decisions behind them |
