@@ -152,12 +152,13 @@ rm -f "$DMG" "$WORK/raw.dmg"
 # makehybrid + convert builds the image without attaching a device, unlike `create -srcfolder`,
 # which is flaky on CI runners ("Resource busy") and hangs in sandboxed sessions.
 # The volume name has no version: .DS_Store finds the background through an alias that includes it.
+# The mounted volume is called Quill, not Quill <version>, matching the app bundle name.
 # The HFS writer stamps com.apple.FinderInfo on the .icns itself, and `codesign --verify --strict`
 # refuses that on a mounted app as detritus ("resource fork, Finder information, or similar"). It is
 # not in the stage — a two-file test image gets it with no xattr in the source at all — so it is
 # cleared on the raw image, before the final compression. A signature does not cover xattrs, so
 # this touches no code.
-hdiutil makehybrid -hfs -hfs-volume-name "WordCraft" -hfs-openfolder "$STAGE" -o "$WORK/raw.dmg" "$STAGE"
+hdiutil makehybrid -hfs -hfs-volume-name "Quill" -hfs-openfolder "$STAGE" -o "$WORK/raw.dmg" "$STAGE"
 strip_detritus "$WORK/raw.dmg"
 hdiutil convert "$WORK/raw.dmg" -format UDZO -imagekey zlib-level=9 -o "$DMG"
 rm -f "$WORK/raw.dmg"
