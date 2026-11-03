@@ -1,7 +1,9 @@
 # Quill 1.2 — release plan
 
-> **Last reviewed:** 2026-10-30 · **Last updated:** 2026-10-30 · **Change:** minor (A5 closes the
-> supply chain — the two `taiki-e/install-action` tool tags are pinned, so every `uses:` in the
+> **Last reviewed:** 2026-11-03 · **Last updated:** 2026-11-03 · **Change:** minor (the release
+> line exists — `main` and every 1.2 arc merged cleanly as `release/1.2.0`, the branch roster is
+> decided and two branches are recruited for what this machine cannot close; previously minor:
+> A5 closes the supply chain — the two `taiki-e/install-action` tool tags are pinned, so every `uses:` in the
 > workflows is a commit — and the gate is re-run on this line: all 8 steps pass, wasm included,
 > which retires the note that this machine cannot run it; previously minor: the progress
 > docs tell the 1.2 truth: the measured numbers are re-run on this line in `ROADMAP.md`,
@@ -445,7 +447,35 @@ manifest, `docs/docx-corpus.md`), so the corpus task is a re-run of a test, not 
 
 Rules that apply to every agent: separate `CARGO_TARGET_DIR` per agent; edit only the crates you
 own; `cargo xtask ci` before you commit; one commit per arc, with a task id in the message
-(`1.2/A3: run the whole suite in CI`); nothing left in the working tree.
+(`1.2/A3: run the whole suite in CI`); nothing left in the working tree. Work reaches the line
+through `cargo xtask review` ([`review-loop.md`](review-loop.md)), not by being called done.
+
+### The release line and the branch roster, 2026-11-03
+
+`release/1.2.0` is `main` (`a4022a7`) with every 1.2 arc merged into it: 42 commits, 193 files,
++11,879/−878. `git merge-tree main Rasmus-03/1.2` reports no conflict, so the release is one push
+and one pull request away. What the line still does not carry is exactly §6's open boxes — the CI
+proof on the three platforms, one nightly fuzz run, the DMG wordmark, the checklist walk — and
+§8's owner decisions, which no agent can answer.
+
+| Branch | What it holds | Decision |
+|---|---|---|
+| `release/1.2.0` | `main` + the whole 1.2 line, merged clean | **the release line**; the pull request comes from here |
+| `Rasmus-03/1.2` (same commit as `math-degrees`) | the 42 commits the line was built from | frozen, no new commits |
+| `1.2-danish-ui`, `1.2-danish-proof`, `1.2-fuzz`, `1.2-parity`, `1.2-docs` | one arc each, all merged into 1.2 | retire |
+| `quill-1.2-corpus`, `quill-1.2-review` (= `docs-sweep`), `quill-1.2-render-stability` (= `review-delta`) | merged into 1.2; two pairs are the same commit | retire |
+| `feat-qill-word-features` | the tip of PR #2: 15 of the 42 commits | close #2 as superseded by the release line |
+| `kaluga`, `cero`, `gudgeon`, `mac-release`, `seadragon`, `sprog-wizard`, `task-go` | all at `main` | retire |
+| `1.1.0-shared`, `permit`, `cite-sources`, `keyboard-defaults`, `shortcut-batch-2`, `shortcuts-2`, `packaging-rename`, `enforce-umniroute-all-agents` | work that is not on the 1.2 line | the owner decides per branch; none of them blocks 1.2 |
+
+Two branches are recruited for what §6 cannot close from here:
+
+| New branch | Owns | Done when | Cost |
+|---|---|---|---|
+| `1.2/page-compare` | the last piece of B1: render a corpus file and the pages Word wrote for it, and diff them page by page (Word is observed black-box, screenshots by window id under the gitignored `plan/word/`) | the three files that are one page apart are explained or fixed, and a page count that moves fails the harness | 6–10 h |
+| `1.2/wordmark` | the macOS DMG background still carries upstream's outlined wordmark (`packaging/macos/dmg/background.svg`) | `rg -i wordcraft` finds nothing user-visible outside the credits, `cargo xtask assets` green | 2–4 h |
+
+Both own files no other row of §5 touches, so they run beside the release-line work.
 
 ## 6. Definition of done for 1.2
 
@@ -586,6 +616,7 @@ release checklist. The detail, and how to repeat it, is in
 
 | Date | Change | Summary |
 |---|---|---|
+| 2026-11-03 | minor | The release line exists and the branch zoo is decided. `release/1.2.0` merges all 42 commits of the 1.2 arcs into `main` with no conflict (checked with `git merge-tree`), so the release is one push and one PR away; PR #2 is superseded, because it carries 15 of those 42 commits from an older tip. Nine merged or duplicate branches and seven empty ones are retired from the plan's roster, and two branches are recruited for what this machine cannot prove: `1.2/page-compare` (the page-by-page comparison with Word that B1 leaves open) and `1.2/wordmark` (the DMG background that still carries upstream's wordmark). No code changed |
 | 2026-10-30 | minor | The four audit advisories are gone without suppressing any of them: `zip` 3.0.0 → 9.1.3 (one real API break — `ZipFile::name()` is a `Result` now, so a non-UTF-8 entry name is skipped like an unreadable entry instead of failing the document) and `ctutils` 0.4.3 → 0.4.7. `cargo audit` exits 0, and `cargo xtask ci` passes all 8 steps on the new `zip`. Separately, the fuzz corpus that had collected in the working tree is coverage only: 2,050 inputs and **no** `crash-*`/`timeout-*` artifact, so nothing was promoted to a named seed and the tree is clean |
 | 2026-10-30 | minor | A6 is closed by proving it, and the proof is red. `cargo-audit 0.22.2` on this line exits 1 with four advisories: three in `zip 3.0.0` (SUID/SGID preservation, symlink escape, permissions applied through symlinks — rated up to 9.1 critical, all in `ZipArchive::extract`, which Quill never calls; the DOCX reader reads entries and validates names itself) and `ctutils 0.4.3` (non-constant-time masks, reachable through `digest → hmac` in the DOCX package, fixed by a patch). Seven unmaintained-crate warnings do not fail the run. The `supply-chain.yml` jobs already existed; what was missing was this proof. Nothing was allow-listed or silenced — the release now carries an open decision: upgrade `zip` 3 → 9, or allow-list the three unreachable advisories with that reasoning |
 | 2026-10-30 | minor | §6's README item is closed. The README's "Not yet" row claimed the maths tab's messages are still English; the code says otherwise — every user-facing string in `crates/engine/src/cmd/mathcraft.rs` is Danish and no English sentence is left in it — so the row now says the tab is Danish and names what is actually open, the native-speaker review of the Danish strings. The platform table, the feature matrix and the limits themselves were already there |
