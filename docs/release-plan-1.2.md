@@ -473,7 +473,7 @@ Two branches are recruited for what §6 cannot close from here:
 | New branch | Owns | Done when | Cost |
 |---|---|---|---|
 | `1.2/page-compare` | the last piece of B1: render a corpus file and the pages Word wrote for it, and diff them page by page (Word is observed black-box, screenshots by window id under the gitignored `plan/word/`) | the three files that are one page apart are explained or fixed, and a page count that moves fails the harness | 6–10 h |
-| `1.2/wordmark` | the macOS DMG background still carries upstream's outlined wordmark (`packaging/macos/dmg/background.svg`) | `rg -i wordcraft` finds nothing user-visible outside the credits, `cargo xtask assets` green | 2–4 h |
+| `1.2/wordmark` | the macOS DMG background's `#text` group is still upstream's outlined "WordCraft" (`packaging/macos/dmg/background.svg`; the glyphs are paths, so it is redrawn from open outlines, not retyped) | `rg -i wordcraft` finds nothing user-visible outside the credits, `cargo xtask assets` green | 2–4 h |
 
 Both own files no other row of §5 touches, so they run beside the release-line work.
 
@@ -516,7 +516,8 @@ Both own files no other row of §5 touches, so they run beside the release-line 
       has no English user-facing sentence left — and is corrected, with the open native-speaker
       review of the Danish strings named instead)*
 - [ ] `rg -i wordcraft` finds nothing user-visible outside the credits. *(arc 0 except the
-      macOS DMG background's wordmark, which is artwork)*
+      macOS DMG background's wordmark, which is artwork; 2026-11-03: `SECURITY.md` now says Quill
+      throughout, so the wordmark is the last one)*
 - [x] `ROADMAP.md`, `docs/gaps.md`, `docs/roadmap.md`, `docs/target-app-parity.md`, the parity
       checklists and `CHANGELOG.md` are updated, each with its status line and revision history
       bumped (the craftrules progress-docs standard). *(2026-10-27: the last of the 1.1 numbers are
