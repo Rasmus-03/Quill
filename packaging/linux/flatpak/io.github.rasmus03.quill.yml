@@ -44,7 +44,7 @@ modules:
         CARGO_HOME: /run/build/wordcraft/cargo
         CARGO_NET_OFFLINE: 'true'
     build-commands:
-      - cargo --offline build --release --locked -p wordcraft -p quill-cli
+      - cargo --offline build --release --locked -p quill -p quill-cli
       - install -Dm755 target/release/wordcraft /app/bin/wordcraft
       - install -Dm755 target/release/quill-cli /app/bin/quill-cli
       - install -Dm644 packaging/linux/io.github.rasmus03.quill.desktop /app/share/applications/io.github.rasmus03.quill.desktop
