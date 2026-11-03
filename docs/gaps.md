@@ -116,6 +116,8 @@ The same gaps grouped the way the parity documents are, for agents working in on
 | 2026-10-11 | trivial | #16: right-to-left tables (`w:bidiVisual`) and sections (`w:bidi`) laid out mirrored, with `table.rtl` and `layout.sectionRtl` (#362) |
 | 2026-10-11 | trivial | #4: columns balance before a continuous section break (#350) |
 | 2026-11-03 | trivial | DOCX corpus gate: real files in the git-ignored `corpus/docx/` need a provenance row in `manifest.tsv` and are opened, saved, reopened and saved again, with the model and the second save required to match; the gate skips while the corpus is empty, so gap #1 and readiness are unchanged |
+| 2026-11-03 | trivial | Layout changes made in WordCraft are now tracked, labelled and reversible: table borders and shading, row height, cell shading, and page setup in a section lead (their models were round-tripped but never recorded), so Reviewing Pane and reject all cover them |
+| 2026-11-03 | trivial | DOCX corpus gate: real files in the git-ignored `corpus/docx/` need a provenance row in `manifest.tsv` and are opened, saved, reopened and saved again, with the model and the second save required to match; the gate skips while the corpus is empty, so gap #1 and readiness are unchanged |
 | 2026-10-11 | trivial | #21: Excel (.xlsx/.xlsm) and OpenDocument (.ods) spreadsheets as recipient lists (#334); hours 6–10 → 4–8 |
 | 2026-10-11 | trivial | Insert › Icons landed (#309); removed from the objects gap |
 | 2026-10-12 | minor | Preserve opaque custom XML data/properties through saves; gap #5 and readiness remain unchanged |

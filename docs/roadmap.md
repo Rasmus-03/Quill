@@ -13,9 +13,11 @@ Opus 5.5 agent wall-clock.
    fixes #155–#164) or add languages (nb, nn, he). Owner review needed.
 2. **DOCX real-world corpus** (gap #1, 30–50 h): collect openly licensed real-world .docx files,
    open/render/round-trip them, compare with Word locally, fix what breaks. Omitted/empty
-   Omitted/empty paragraph defaults now have synthetic save/reopen coverage. The gate is in place
-   (`crates/docx/tests/corpus.rs`, `corpus/docx/manifest.tsv`, `cargo xtask corpus`); collecting the
-   files is the remaining work.
+   Omitted/empty paragraph defaults now have synthetic save/reopen coverage.   The gate is in place (`crates/docx/tests/corpus.rs`, `corpus/docx/manifest.tsv`, `cargo xtask corpus`); collecting
+   the files is the remaining work.
+3. **Tracked layout changes** (gap #5 remainder, 4 h): table, row, cell and section property
+   changes made in WordCraft are now recorded, listed and reversible; style-definition changes
+   are not revisions the format carries, so they are not.
 3. **Preserve what we can't render** (gap #2, 6–11 h): remaining native ink forms and unsupported
    graphics survive a round trip. Every ink form Word writes now keeps its InkML and optional picture
    fallback — drawing-level, Word 2010's run-level content part, and members of groups and drawing
