@@ -31,6 +31,28 @@ fn records(id: &str) -> bool {
 /// Tables nested deeper than this aren't compared (hostile documents).
 const MAX_DEPTH: usize = 16;
 
+/// A table's properties without its tracked change: what `w:tblPrChange` compares.
+fn table_formatting(t: &TableProps) -> TableProps {
+    TableProps { fmt_change: None, ..t.clone() }
+}
+
+/// A row's properties without its tracked change.
+fn row_formatting(r: &RowProps) -> RowProps {
+    RowProps { fmt_change: None, ..r.clone() }
+}
+
+/// A cell's properties without its tracked change. Merges are the table's structure, not
+/// formatting, so they are kept out of the comparison (as `resolve_cell` keeps them).
+fn cell_formatting(c: &CellProps) -> CellProps {
+    CellProps { fmt_change: None, span: c.span, vmerge: c.vmerge, ..c.clone() }
+}
+
+/// A section's properties without its tracked change, headers and footers: `w:sectPrChange`
+/// carries the page setup, not the story parts.
+fn section_formatting(s: &SectionProps) -> SectionProps {
+    SectionProps { fmt_change: None, headers: Default::default(), footers: Default::default(), ..s.clone() }
+}
+
 struct Recorder<'a> {
     author: String,
     date: String,
@@ -118,7 +140,13 @@ impl Recorder<'_> {
         }
         let mark = self.change(&b.mark, &a.mark, CharProps::formatting, |c| &c.fmt_change);
         let props = self.change(&b.props, &a.props, ParaProps::formatting, |p| &p.fmt_change);
-        if runs.is_empty() && mark.is_none() && props.is_none() {
+        // A section's page setup lives on its last paragraph (`w:sectPr`), or on the document for
+        // the last section, so it is compared with the paragraph that carries it.
+        let section = match (b.section.as_deref(), a.section.as_deref()) {
+            (Some(sb), Some(sa)) => self.change(sb, sa, section_formatting, |s| &s.fmt_change),
+            _ => None,
+        };
+        if runs.is_empty() && mark.is_none() && props.is_none() && section.is_none() {
             return;
         }
         for (from, to, want) in runs {
@@ -129,6 +157,11 @@ impl Recorder<'_> {
         }
         if let Some(p) = props {
             a.props.fmt_change = p;
+        }
+        if let Some(want) = section
+            && let Some(s) = a.section.as_mut()
+        {
+            s.fmt_change = want;
         }
         a.normalize();
         a.touch();
@@ -150,11 +183,20 @@ impl Recorder<'_> {
                 }
                 (Block::Table(tb), Block::Table(ta)) if tb.rows.len() == ta.rows.len() => {
                     let Block::Table(ta) = Arc::make_mut(a) else { continue };
+                    if let Some(want) = self.change(&tb.props, &ta.props, table_formatting, |t| &t.fmt_change) {
+                        ta.props.fmt_change = want;
+                    }
                     for (rb, ra) in tb.rows.iter().zip(ta.rows.iter_mut()) {
                         if rb.cells.len() != ra.cells.len() {
                             continue;
                         }
+                        if let Some(want) = self.change(&rb.props, &ra.props, row_formatting, |r| &r.fmt_change) {
+                            ra.props.fmt_change = want;
+                        }
                         for (cb, ca) in rb.cells.iter().zip(ra.cells.iter_mut()) {
+                            if let Some(want) = self.change(&cb.props, &ca.props, cell_formatting, |c| &c.fmt_change) {
+                                ca.props.fmt_change = want;
+                            }
                             self.blocks(&cb.blocks, &mut ca.blocks, depth + 1);
                         }
                     }
@@ -174,6 +216,9 @@ pub(crate) fn record(s: &mut Session, id: &str, before: &Document) {
     let author = s.author.clone();
     let doc = &mut s.doc;
     let mut r = Recorder { author, date: super::now_iso(), before: &before.revisions, revisions: &mut doc.revisions, rid: None };
+    if let Some(want) = r.change(&before.last_section, &doc.last_section, section_formatting, |s| &s.fmt_change) {
+        doc.last_section.fmt_change = want;
+    }
     r.blocks(&before.body, &mut doc.body, 0);
     for (k, pb) in &before.parts {
         if let Some(pa) = doc.parts.get_mut(k) {

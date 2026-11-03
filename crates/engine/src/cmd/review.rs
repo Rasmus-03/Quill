@@ -1282,6 +1282,60 @@ mod tests {
         assert!(body_para(&s).props_of_char(6).fmt_change.is_some(), "explicit Not Bold and 11 pt differ from inherited");
     }
 
+    /// #41: table, row, cell and section properties changed here are tracked too, and rejecting
+    /// puts them back.
+    #[test]
+    fn table_and_section_changes_made_here_are_tracked() {
+        fn first_table(s: &Session) -> &wordcraft_doc::Table {
+            s.doc
+                .body
+                .iter()
+                .find_map(|b| match &**b {
+                    wordcraft_doc::Block::Table(t) => Some(t),
+                    _ => None,
+                })
+                .expect("a table")
+        }
+
+        let mut s = Session::new(Document::new());
+        s.view.proofing = false;
+        s.author = "Ana".into();
+        s.run("insert.table", &json!({"rows": 2, "cols": 2})).unwrap();
+        s.run("review.trackChanges", &json!({"value": true})).unwrap();
+        let borders_before = first_table(&s).props.borders;
+        let section_before = s.doc.last_section.clone();
+
+        s.run("table.borders", &json!({"kind": "outside", "width": 1.5})).unwrap();
+        let ch = first_table(&s).props.fmt_change.as_deref().expect("a tracked table change").clone();
+        assert_eq!(s.doc.revisions.get(ch.rev as usize).map(|r| r.kind), Some(wordcraft_doc::RevisionKind::Format));
+        assert_eq!(ch.old.borders, borders_before, "the table's borders before the change");
+
+        s.run("table.rowHeight", &json!({"height": 40})).unwrap();
+        assert!(first_table(&s).rows[0].props.fmt_change.is_some(), "a tracked row change");
+
+        s.run("table.shading", &json!({"color": "FF0000"})).unwrap();
+        assert!(first_table(&s).rows[0].cells[0].props.fmt_change.is_some(), "a tracked cell change");
+
+        // A page setup change belongs to the section, not to a paragraph.
+        s.run("layout.size", &json!({"width": 700, "height": 900})).unwrap();
+        assert!(s.doc.last_section.fmt_change.is_some(), "the last section's change");
+
+        // It is listed, and rejecting restores every one of them.
+        let changes = s.run("review.changes", &json!({})).unwrap();
+        let described: Vec<String> = changes.as_array().into_iter().flatten().filter_map(|c| c["description"].as_str().map(str::to_owned)).collect();
+        assert!(described.iter().any(|d| d.contains("Borders")), "{described:?}");
+        assert!(described.iter().any(|d| d.contains("Width") || d.contains("Height")), "{described:?}");
+
+        s.run("review.rejectAll", &json!({})).unwrap();
+        let table = first_table(&s);
+        assert_eq!(table.props.borders, borders_before, "the table's borders are back");
+        assert!(table.props.fmt_change.is_none());
+        assert!(table.rows[0].props.fmt_change.is_none(), "the row's change is gone");
+        assert!(table.rows[0].cells[0].props.fmt_change.is_none(), "the cell's change is gone");
+        assert!(s.doc.last_section.fmt_change.is_none());
+        assert_eq!(s.doc.last_section, section_before, "the section is what it was");
+    }
+
     /// #41: rejecting restores the formatting before the change; accepting keeps the new
     /// formatting and drops the record. Both find formatting changes at the caret too.
     #[test]
