@@ -351,6 +351,9 @@ pub struct Session {
     pub math_history: Vec<String>,
     /// Decimal results (WordMat Num) vs exact (WordMat Exact, default).
     pub math_decimal: bool,
+    /// Trigonometric angle unit: WordMat defaults to degrees (`sin(30) = 0.5`).
+    /// `false` is radians; the setting lives for the session and in `Prefs`.
+    pub math_degrees: bool,
     pub find: FindState,
     /// Page x the caret tries to keep on Up/Down.
     pub goal_x: Option<f32>,
@@ -528,6 +531,9 @@ pub struct Prefs {
     /// Decimal results (WordMat Tal) vs exact (WordMat Eksakt, default).
     #[serde(default)]
     pub math_decimal: bool,
+    /// Trigonometric angle unit: degrees (WordMat's default) or radians.
+    #[serde(default = "default_math_degrees")]
+    pub math_degrees: bool,
     /// The folder last opened as an Obsidian vault.
     #[serde(default)]
     pub vault_root: Option<std::path::PathBuf>,
@@ -538,6 +544,10 @@ pub struct Prefs {
 
 fn default_vault_attachments() -> String {
     "attachments".to_string()
+}
+
+fn default_math_degrees() -> bool {
+    true
 }
 
 impl Default for Prefs {
@@ -561,6 +571,7 @@ impl Default for Prefs {
             saved_equations: Vec::new(),
             math_defs: Vec::new(),
             math_decimal: false,
+            math_degrees: true,
             vault_root: None,
             vault_attachments: default_vault_attachments(),
         }
@@ -630,6 +641,7 @@ impl Session {
             math_last: None,
             math_history: Vec::new(),
             math_decimal: false,
+            math_degrees: true,
             find: FindState::default(),
             goal_x: None,
             page_hint: 0,
@@ -1070,6 +1082,7 @@ impl Session {
             math_last: _,
             math_history: _,
             math_decimal: _,
+            math_degrees: _,
             find: _,
             goal_x: _,
             page_hint: _,

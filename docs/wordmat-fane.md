@@ -43,7 +43,15 @@ the formula as a new equation.
 - **Determinant, Inverse, Eigenvalues, Solve system** (write `matrix([1,2],[3,4])`)
 - **Limit** (`expression, var, point`), **Taylor series** (`expression, var, point, order`)
 - **Mean, Standard deviation** (`[1, 2, 3, 4]` — dotted decimals inside lists)
-- **More:** Maxima command (raw Maxima), Previous result, Exact, Decimal
+- **More:** Maxima command (raw Maxima), Previous result, Exact, Decimal,
+  Degrees, Radians
+
+## Angle unit
+
+Trigonometry is in **degrees**, as in WordMat: `sin(30)` is `1/2` and
+`asin(0.5)` is `30`. Pick **Radians** under More for the other convention.
+An argument that names `π` is always radians, so `sin(π/6)` means the same
+in both settings, and a typed `90°` is converted whatever the setting is.
 
 ## Graphs
 

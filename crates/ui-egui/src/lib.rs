@@ -657,6 +657,7 @@ impl WordApp {
         ui.editing = self.session.prefs.clone();
         ui.editing.math_defs = self.session.math_defs.clone();
         ui.editing.math_decimal = self.session.math_decimal;
+        ui.editing.math_degrees = self.session.math_degrees;
         ui.read_aloud_rate = self.session.read_aloud.rate();
         ui.read_aloud_skip_citations = self.session.read_aloud.skip_citations;
         ui.dark_page = self.session.view.dark_mode;
@@ -689,6 +690,7 @@ impl WordApp {
         self.session.prefs = std::mem::take(&mut self.ui.editing);
         self.session.math_defs = self.session.prefs.math_defs.clone();
         self.session.math_decimal = self.session.prefs.math_decimal;
+        self.session.math_degrees = self.session.prefs.math_degrees;
         self.session.read_aloud.set_rate(self.ui.read_aloud_rate);
         self.session.read_aloud.skip_citations = self.ui.read_aloud_skip_citations;
         self.session.view.dark_mode = self.ui.dark_page;

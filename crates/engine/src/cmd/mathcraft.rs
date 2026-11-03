@@ -1694,6 +1694,94 @@ pub(crate) fn dots_ctx(expr: &str, protected: &[String]) -> String {
     insert_mult(&out, protected)
 }
 
+/// Trigonometry takes an angle; these are the names whose argument is one.
+const TRIG_ANGLE_ARG: &[&str] = &["sin", "cos", "tan", "cot", "sec", "csc"];
+/// Inverse trigonometry hands an angle back, so its result carries the unit.
+const TRIG_ANGLE_RESULT: &[&str] = &["asin", "acos", "atan", "acot"];
+
+/// The angle setting applied to the expression Maxima sees — never to the text
+/// in the document. Degrees is WordMat's default, so `sin(30)` becomes
+/// `sin((30)*%pi/180)` and is answered `1/2`, while the equation still reads
+/// `sin(30)`; `asin(0.5)` becomes `(asin(0.5)*180/%pi)` and is answered `30`.
+/// An argument that already names `%pi` was written in radians (or was typed
+/// `90°`, which [`normalize_unicode`] turns into `*%pi/180`), so it is left
+/// alone and `sin(%pi/6)` means the same in either setting. With radians the
+/// expression is returned untouched.
+fn angle_units(s: &Session, expr: &str) -> String {
+    if !s.math_degrees {
+        return expr.to_string();
+    }
+    let c: Vec<char> = expr.chars().collect();
+    let mut out = String::with_capacity(expr.len() + 16);
+    let mut i = 0;
+    while i < c.len() {
+        if !c[i].is_ascii_alphabetic() {
+            out.push(c[i]);
+            i += 1;
+            continue;
+        }
+        // A whole identifier, so `asin(` is not read as `sin(`.
+        let start = i;
+        while i < c.len() && (c[i].is_ascii_alphanumeric() || c[i] == '_') {
+            i += 1;
+        }
+        let name: String = c[start..i].iter().collect();
+        if c.get(i) != Some(&'(') {
+            out.push_str(&name);
+            continue;
+        }
+        let Some(close) = matching_paren(&c, i) else {
+            out.push_str(&name);
+            continue;
+        };
+        let inner: String = c[i + 1..close].iter().collect();
+        let forward = TRIG_ANGLE_ARG.contains(&name.as_str());
+        let inverse = TRIG_ANGLE_RESULT.contains(&name.as_str());
+        if !(forward || inverse) || inner.contains("%pi") {
+            out.push_str(&name);
+            out.extend(&c[i..=close]);
+            i = close + 1;
+            continue;
+        }
+        // Nested calls convert at every level: sin(cos(30)) names two angles.
+        let inner = angle_units(s, &inner);
+        if forward {
+            out.push_str(&format!("{name}(({inner})*%pi/180)"));
+        } else if wants_float(&inner) {
+            // A decimal angle gets a decimal answer; `ratsimp` first so a round
+            // angle is `30` and not `30.000000000000004`.
+            out.push_str(&format!("float({name}(ratsimp({inner}))*180/%pi)"));
+        } else {
+            out.push_str(&format!("({name}({inner})*180/%pi)"));
+        }
+        i = close + 1;
+    }
+    out
+}
+
+/// Does this argument ask for a decimal answer (a float literal in it)?
+fn wants_float(expr: &str) -> bool {
+    expr.chars().any(|c| c == '.') || expr.contains("e-") || expr.contains("e+")
+}
+
+/// Index of the `)` that closes the `(` at `open`, if the string balances.
+fn matching_paren(c: &[char], open: usize) -> Option<usize> {
+    let mut depth = 0usize;
+    for (i, ch) in c.iter().enumerate().skip(open) {
+        match ch {
+            '(' => depth += 1,
+            ')' => {
+                depth -= 1;
+                if depth == 0 {
+                    return Some(i);
+                }
+            }
+            _ => {}
+        }
+    }
+    None
+}
+
 /// Translate Unicode math to Maxima ASCII. `√(...)` keeps its parens,
 /// `√x` wraps one char, superscripts become `^n`.
 fn normalize_unicode(expr: &str) -> String {
@@ -1964,7 +2052,7 @@ fn insert_mult(expr: &str, protected: &[String]) -> String {
 
 fn unary(s: &mut Session, maxima_fn: &str, what: &str) -> CmdResult {
     let (input, target) = math_input(s)?;
-    let expr = dots(input.trim());
+    let expr = angle_units(s, &dots(input.trim()));
     check_maxima_safe_with(&expr, &def_names(s))?;
     match batch(&base_prelude(), &defs(s), &format!("{maxima_fn}({expr})")) {
         Ok(r) => apply_result(s, target, input.trim(), &r),
@@ -1976,7 +2064,7 @@ fn unary(s: &mut Session, maxima_fn: &str, what: &str) -> CmdResult {
 /// data lists) — Danish decimals there need a dot.
 fn unary_shallow(s: &mut Session, maxima_fn: &str, what: &str) -> CmdResult {
     let (input, target) = math_input(s)?;
-    let expr = dots_shallow(input.trim());
+    let expr = angle_units(s, &dots_shallow(input.trim()));
     check_maxima_safe_with(&expr, &def_names(s))?;
     match batch(&base_prelude(), &defs(s), &format!("{maxima_fn}({expr})")) {
         Ok(r) => apply_result(s, target, input.trim(), &r),
@@ -1987,7 +2075,7 @@ fn unary_shallow(s: &mut Session, maxima_fn: &str, what: &str) -> CmdResult {
 /// WordMat-style simplify: run several methods, keep the shortest answer.
 fn simplify_best(s: &mut Session, _: &Value) -> CmdResult {
     let (input, target) = math_input(s)?;
-    let expr = dots(input.trim());
+    let expr = angle_units(s, &dots(input.trim()));
     check_maxima_safe_with(&expr, &def_names(s))?;
     let pre = base_prelude();
     let d = defs(s);
@@ -2008,7 +2096,7 @@ fn simplify_best(s: &mut Session, _: &Value) -> CmdResult {
 fn diff_int(s: &mut Session, v: &Value, maxima_fn: &str, what: &str) -> CmdResult {
     let (input, target) = math_input(s)?;
     let var = check_var_name(v.get("var").and_then(Value::as_str).unwrap_or("x"))?;
-    let expr = dots(input.trim());
+    let expr = angle_units(s, &dots(input.trim()));
     check_maxima_safe_with(&expr, &def_names(s))?;
     match batch(&base_prelude(), &defs(s), &format!("{maxima_fn}({expr},{var})")) {
         Ok(r) => apply_result(s, target, input.trim(), &r),
@@ -2025,6 +2113,7 @@ fn beregn(s: &mut Session, v: &Value) -> CmdResult {
     let allowed = def_names(s);
     check_maxima_safe_with(input.trim(), &allowed)?;
     let expr = split_idents(&dots_ctx(input.trim(), &allowed), &allowed);
+    let expr = angle_units(s, &expr);
     // Exact (default, WordMat Eksakt) evaluates as-is; decimal mode
     // (WordMat Tal) wraps everything in float().
     let exact = !s.math_decimal;
@@ -2174,7 +2263,7 @@ fn trin(s: &mut Session, v: &Value) -> CmdResult {
     if matches!(target, Target::Math) {
         return Err(err("Show steps works on the equation in the document; leave the equation editor first".to_string()));
     }
-    let expr = dots_ctx(raw, &allowed);
+    let expr = angle_units(s, &dots_ctx(raw, &allowed));
     check_maxima_safe_with(&expr, &allowed)?;
     // Pure numbers: school-math steps entirely in Rust, no Maxima involved
     // (exact rationals, BODMAS order, common-denominator steps).
@@ -2479,6 +2568,20 @@ fn decimal(s: &mut Session, _: &Value) -> CmdResult {
     sel_result(s)
 }
 
+/// Degrees (WordMat's angle unit): `sin(30)` is 1/2.
+fn grader(s: &mut Session, _: &Value) -> CmdResult {
+    s.math_degrees = true;
+    s.status = "Angle unit: degrees".to_string();
+    sel_result(s)
+}
+
+/// Radians: trigonometry reads its angles in radians.
+fn radianer(s: &mut Session, _: &Value) -> CmdResult {
+    s.math_degrees = false;
+    s.status = "Angle unit: radians".to_string();
+    sel_result(s)
+}
+
 /// Isolate a variable: `2*x+3=7` → `[x = 2]`.
 /// Uses SolveReal over the reals when installed, else Maxima solve().
 /// Explicit {"var"} wins; a lone detected variable is used directly;
@@ -2489,6 +2592,7 @@ fn isoler(s: &mut Session, v: &Value) -> CmdResult {
     let allowed = def_names(s);
     check_maxima_safe_with(input.trim(), &allowed)?;
     let expr = split_idents(&dots_ctx(input.trim(), &allowed), &allowed);
+    let expr = angle_units(s, &expr);
     let mut cmds = Vec::new();
     let mut varname = String::new();
     for e in expand_pm(&expr) {
@@ -2542,6 +2646,7 @@ fn solve_plain(s: &mut Session, v: &Value) -> CmdResult {
     let allowed = def_names(s);
     check_maxima_safe_with(input.trim(), &allowed)?;
     let expr = split_idents(&dots_ctx(input.trim(), &allowed), &allowed);
+    let expr = angle_units(s, &expr);
     let mut cmds = Vec::new();
     for e in expand_pm(&expr) {
         check_maxima_safe_with(&e, &allowed)?;
@@ -2583,6 +2688,7 @@ fn solvenum(s: &mut Session, v: &Value) -> CmdResult {
     let allowed = def_names(s);
     check_maxima_safe_with(input.trim(), &allowed)?;
     let expr = split_idents(&dots_ctx(input.trim(), &allowed), &allowed);
+    let expr = angle_units(s, &expr);
     let mut cmds = Vec::new();
     for e in expand_pm(&expr) {
         check_maxima_safe_with(&e, &allowed)?;
@@ -2636,7 +2742,7 @@ fn ligningssystem(s: &mut Session, _: &Value) -> CmdResult {
     let eqs: Vec<String> = split_top(raw)
         .into_iter()
         .map(|e| {
-            let e = dots(&e);
+            let e = angle_units(s, &dots(&e));
             if e.contains('=') || is_inequality(&e) { e } else { format!("{e}=0") }
         })
         .collect();
@@ -2675,7 +2781,7 @@ fn graense(s: &mut Session, _: &Value) -> CmdResult {
     let (input, target) = math_input(s)?;
     let raw = input.trim();
     let allowed = def_names(s);
-    let p: Vec<String> = split_top(raw).into_iter().map(|x| dots(&x)).collect();
+    let p: Vec<String> = split_top(raw).into_iter().map(|x| angle_units(s, &dots(&x))).collect();
     let e = p.first().cloned().unwrap_or_default();
     check_maxima_safe_with(&e, &allowed)?;
     if e.is_empty() {
@@ -2698,7 +2804,7 @@ fn taylor(s: &mut Session, _: &Value) -> CmdResult {
     let (input, target) = math_input(s)?;
     let raw = input.trim();
     let allowed = def_names(s);
-    let p: Vec<String> = split_top(raw).into_iter().map(|x| dots(&x)).collect();
+    let p: Vec<String> = split_top(raw).into_iter().map(|x| angle_units(s, &dots(&x))).collect();
     let e = p.first().cloned().unwrap_or_default();
     check_maxima_safe_with(&e, &allowed)?;
     if e.is_empty() {
@@ -2726,7 +2832,7 @@ fn taylor(s: &mut Session, _: &Value) -> CmdResult {
 /// Middel/spredning via descriptive-pakken.
 fn stats_op(s: &mut Session, maxima_fn: &str, what: &str) -> CmdResult {
     let (input, target) = math_input(s)?;
-    let expr = dots_shallow(input.trim());
+    let expr = angle_units(s, &dots_shallow(input.trim()));
     check_maxima_safe_with(&expr, &def_names(s))?;
     if expr.is_empty() {
         return Err(err("Select e.g. \"[1, 2, 3, 4]\" first".to_string()));
@@ -2740,7 +2846,7 @@ fn stats_op(s: &mut Session, maxima_fn: &str, what: &str) -> CmdResult {
 /// Solve ODE via ode2: `diff(y,x)=y` → solution.
 fn solvede(s: &mut Session, v: &Value) -> CmdResult {
     let (input, target) = math_input(s)?;
-    let expr = dots(input.trim());
+    let expr = angle_units(s, &dots(input.trim()));
     check_maxima_safe_with(&expr, &def_names(s))?;
     if !expr.contains("diff(") {
         return Err(err("Not a differential equation; markér f.eks. diff(y,x)=y".to_string()));
@@ -2845,7 +2951,7 @@ const LAYOUT_WORDMAT: &[(&str, &[&str])] = &[
     ("Calculus", &["math.diff", "math.integrate", "math.graense", "math.taylor"]),
     ("Formulas", &["math.formler", "math.gem"]),
     ("Graph", &["math.graf"]),
-    ("More", &["math.maxima", "math.forrige", "math.exakt", "math.decimal", "equation.number"]),
+    ("More", &["math.maxima", "math.forrige", "math.exakt", "math.decimal", "math.grader", "math.radianer", "equation.number"]),
 ];
 
 /// First-run setup: create the Math tab with all math groups when
@@ -2857,7 +2963,7 @@ const LAYOUT_WORDMAT: &[(&str, &[&str])] = &[
 /// layout that lags gets missing math commands appended **once** — picking
 /// up new features on old prefs — and then the "deliberately removed never
 /// returns" rule holds again until we bump the version for a layout change.
-const MATH_LAYOUT_VERSION: u32 = 2;
+const MATH_LAYOUT_VERSION: u32 = 3;
 
 pub fn ensure_wordmat_tab(session: &mut Session) {
     if session.ribbon.tabs.iter().any(|t| t.name == "WordMat") {
@@ -2949,12 +3055,14 @@ pub fn specs() -> Vec<CommandSpec> {
         CommandSpec::new("math.gem", "Save equation", "Math › Formulas", gem).params(r#"{"name"?: label}"#),
         CommandSpec::new("math.exakt", "Exact", "Math › More", exakt).params("{}"),
         CommandSpec::new("math.decimal", "Decimal", "Math › More", decimal).params("{}"),
+        CommandSpec::new("math.grader", "Degrees", "Math › More", grader).params("{}"),
+        CommandSpec::new("math.radianer", "Radians", "Math › More", radianer).params("{}"),
     ]
 }
 
 fn unary_tex(s: &mut Session, _: &Value) -> CmdResult {
     let (input, target) = math_input(s)?;
-    let expr = dots(input.trim());
+    let expr = angle_units(s, &dots(input.trim()));
     check_maxima_safe_with(&expr, &def_names(s))?;
     // tex() prints $$..$$ directly instead of returning it.
     let mut b = String::from("linel:10000;display2d:false;");
@@ -3437,6 +3545,24 @@ mod tests {
 
     #[test]
     #[ignore]
+    fn degrees_answer_trig_the_wordmat_way() {
+        let mut s = s();
+        select_all(&mut s, "sin(30)");
+        run(&mut s, "math.beregn", json!({}));
+        assert_eq!(text(&s), "sin(30) = 1/2");
+        // An inverse function hands back an angle, so it is in degrees too.
+        select_all(&mut s, "asin(0.5)");
+        run(&mut s, "math.beregn", json!({}));
+        assert_eq!(text(&s), "asin(0.5) = 30");
+        // Radians: the same input is no longer read as a degree answer.
+        run(&mut s, "math.radianer", json!({}));
+        select_all(&mut s, "sin(30)");
+        run(&mut s, "math.beregn", json!({}));
+        assert!(!text(&s).contains("1/2"), "{}", text(&s));
+    }
+
+    #[test]
+    #[ignore]
     fn roots_and_degrees_compute() {
         let mut s = s();
         select_all(&mut s, "√9");
@@ -3461,6 +3587,32 @@ mod tests {
         assert!(s.math_decimal);
         run(&mut s, "math.exakt", json!({}));
         assert!(!s.math_decimal);
+    }
+
+    #[test]
+    fn angle_unit_defaults_to_degrees_and_rewrites_trig() {
+        let s = s();
+        // WordMat's default: sin(30) is 1/2, not sin(30 radians).
+        assert_eq!(angle_units(&s, "sin(30)"), "sin((30)*%pi/180)");
+        // A `%pi` argument was written in radians (or came from `90°`).
+        assert_eq!(angle_units(&s, "sin(%pi/6)"), "sin(%pi/6)");
+        // An inverse function's answer is an angle, so it comes back in degrees.
+        assert_eq!(angle_units(&s, "asin(0.5)"), "float(asin(ratsimp(0.5))*180/%pi)");
+        assert_eq!(angle_units(&s, "asin(1/2)"), "(asin(1/2)*180/%pi)");
+        // Nested calls convert at every level; other names are left whole.
+        assert_eq!(angle_units(&s, "sin(cos(30))"), "sin((cos((30)*%pi/180))*%pi/180)");
+        assert_eq!(angle_units(&s, "atan2(1,1)"), "atan2(1,1)");
+    }
+
+    #[test]
+    fn radians_toggle_leaves_trig_alone() {
+        let mut s = s();
+        run(&mut s, "math.radianer", json!({}));
+        assert!(!s.math_degrees);
+        assert_eq!(angle_units(&s, "sin(30)"), "sin(30)");
+        run(&mut s, "math.grader", json!({}));
+        assert!(s.math_degrees);
+        assert_eq!(angle_units(&s, "sin(30)"), "sin((30)*%pi/180)");
     }
 
     #[test]
