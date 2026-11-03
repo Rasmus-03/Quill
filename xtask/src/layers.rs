@@ -177,7 +177,12 @@ pub fn check(crates: &[Crate]) -> Vec<Violation> {
                     None | Some(Class::Testkit) => {}
                     Some(dc) => {
                         let to = dc.layer().unwrap_or(u8::MAX);
-                        if to >= layer && !(to == layer && intra_layer_allowed(&c.name, &d.name)) {
+                        // A test target may use a sibling crate in the same layer: the corpus
+                        // harness reads a .docx with `docx` and paginates it with `layout`. Nothing
+                        // a dev-dependency builds ever reaches the shipped library, so the rule
+                        // that keeps production code pointed downward still holds.
+                        let same_layer_dev = to == layer && d.kind == DepKind::Dev;
+                        if to >= layer && !same_layer_dev && !(to == layer && intra_layer_allowed(&c.name, &d.name)) {
                             out.push(Violation::Upward {
                                 krate: c.name.clone(),
                                 dep: d.name.clone(),
@@ -263,6 +268,12 @@ mod tests {
     fn sideways_dependency_flagged() {
         let v = check(&[c("wordcraft-layout", &[("wordcraft-docx", Normal, true)])]);
         assert!(matches!(v[..], [Violation::Upward { from: 2, to: 2, .. }]));
+    }
+
+    #[test]
+    fn sideways_dev_dependency_allowed() {
+        // The corpus harness is a test target: `docx` reads the file, `layout` counts its pages.
+        assert!(check(&[c("wordcraft-docx", &[("wordcraft-layout", Dev, true)])]).is_empty());
     }
 
     #[test]
