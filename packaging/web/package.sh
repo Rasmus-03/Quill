@@ -13,6 +13,7 @@ HERE="$ROOT/packaging/web"
 
 if [ "${1:-}" != "--skip-build" ]; then
   command -v trunk >/dev/null || { echo "error: trunk not found (cargo install trunk --locked)" >&2; exit 1; }
+  need_rust_target wasm32-unknown-unknown
   (cd "$ROOT/apps/wordcraft-web" && trunk build --release)
 fi
 

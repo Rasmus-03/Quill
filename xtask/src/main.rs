@@ -200,7 +200,75 @@ fn wasm_set() -> Result<Vec<String>, String> {
         .collect())
 }
 
+/// Run `rustc` and return its trimmed stdout.
+fn rustc_print(rustc: &str, args: &[&str]) -> Result<String, String> {
+    let out = Command::new(rustc).args(args).output().map_err(|e| format!("{rustc}: {e}"))?;
+    if !out.status.success() {
+        let err = String::from_utf8_lossy(&out.stderr).trim().to_string();
+        return Err(format!("{rustc} {}: {err}", args.join(" ")));
+    }
+    Ok(String::from_utf8_lossy(&out.stdout).trim().to_string())
+}
+
+/// Whether `libdir` holds a precompiled `core` (the tell-tale of an installed target).
+fn has_std(libdir: &Path) -> bool {
+    std::fs::read_dir(libdir)
+        .map(|entries| {
+            entries.flatten().any(|e| {
+                let name = e.file_name();
+                let name = name.to_string_lossy();
+                name.starts_with("libcore-") && name.ends_with(".rlib")
+            })
+        })
+        .unwrap_or(false)
+}
+
+/// Whether `sysroot` is one rustup owns, i.e. `rustup target add` would actually reach it.
+fn rustup_owns(sysroot: &str, rustup_home: Option<&Path>) -> bool {
+    rustup_home.is_some_and(|home| Path::new(sysroot).starts_with(home.join("toolchains")))
+}
+
+/// Why the rustc on PATH cannot build for wasm32, when it cannot.
+///
+/// A rustc that rustup does not manage has no per-target std, so `cargo check --target
+/// wasm32-unknown-unknown` fails with `error[E0463]: can't find crate for core` once per crate:
+/// seventeen crates look broken and the toolchain does not. A Homebrew `rustc` ahead of rustup's
+/// proxies in `~/.cargo/bin` is the usual cause on macOS (the same one that breaks a universal
+/// macOS build), and `/usr/bin/rustc` on Debian. `rustup target add` cannot repair either, because
+/// it installs std into rustup's toolchains directory and not into the rustc actually running.
+fn wasm_toolchain_problem() -> Option<String> {
+    const TRIPLE: &str = "wasm32-unknown-unknown";
+    let rustc = std::env::var("RUSTC").unwrap_or_else(|_| "rustc".to_string());
+    // An unreadable answer means an unusual rustc, not a broken build: leave it to cargo to report.
+    let libdir = rustc_print(&rustc, &["--print", "target-libdir", "--target", TRIPLE]).ok()?;
+    if has_std(Path::new(&libdir)) {
+        return None;
+    }
+    let sysroot = rustc_print(&rustc, &["--print", "sysroot"]).unwrap_or_else(|_| "unknown".into());
+    // RUSTUP_HOME, when set, is the directory itself; otherwise it is ~/.rustup.
+    let rustup_home = match std::env::var("RUSTUP_HOME") {
+        Ok(home) => Some(PathBuf::from(home)),
+        Err(_) => ["HOME", "USERPROFILE"].iter().filter_map(|v| std::env::var(v).ok()).map(|h| PathBuf::from(h).join(".rustup")).find(|p| p.is_dir()),
+    };
+    let cargo_bin = std::env::var("CARGO_HOME").map(|h| format!("{h}/bin")).unwrap_or_else(|_| "$HOME/.cargo/bin".to_string());
+    let mut msg = format!("the rustc on PATH has no std for {TRIPLE}\n  rustc:   {rustc}\n  sysroot: {sysroot}\n");
+    if rustup_owns(&sysroot, rustup_home.as_deref()) {
+        msg.push_str(&format!("rustup manages this toolchain, so add the target and retry:\n  rustup target add {TRIPLE}\n"));
+    } else {
+        msg.push_str(&format!("this rustc is not the one rustup installs std into, so `rustup target add {TRIPLE}` would not help.\n"));
+        msg.push_str("A rustc shadowing rustup's proxies is the usual cause: Homebrew's `brew install rust` on macOS,\n");
+        msg.push_str("/usr/bin/rustc on Debian. Put rustup's own rustc first, then add the target:\n");
+        msg.push_str(&format!("  export PATH=\"{cargo_bin}:$PATH\"\n  rustup target add {TRIPLE}\n"));
+    }
+    Some(msg)
+}
+
 fn cmd_wasm() -> Result<(), String> {
+    // Fail once, with the reason, instead of letting every crate report the same missing `core`.
+    if let Some(problem) = wasm_toolchain_problem() {
+        println!("\nwasm32-unknown-unknown check: not run (toolchain cannot compile for wasm32)");
+        return Err(problem);
+    }
     let set = wasm_set()?;
     let mut results = Vec::new();
     for pkg in &set {

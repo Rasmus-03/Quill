@@ -56,6 +56,7 @@ echo "==> Quill $VERSION for macOS ($ARCH), identity: $IDENTITY, notarize: $NOTA
 
 # ---- build -------------------------------------------------------------------------------------
 if [ "$SKIP_BUILD" = 0 ]; then
+  need_rust_target "${TARGETS[@]}"
   args=()
   for t in "${TARGETS[@]}"; do args+=(--target "$t"); done
   (cd "$ROOT" && cargo build --release --locked -p quill -p quill-cli "${args[@]}")
