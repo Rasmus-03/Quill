@@ -3565,7 +3565,9 @@ mod tests {
         h.step();
         {
             use egui_kittest::kittest::Queryable;
-            assert!(h.query_by_label_contains("Word Count").is_some(), "an empty box suggests commands, as Word's does");
+            // Word Count sits on both Insert and Review on purpose (the Insert copy reuses the
+            // command id), so the empty box offers it once per tab: ask for any, not for one.
+            assert!(h.query_all_by_label_contains("Word Count").count() >= 1, "an empty box suggests commands, as Word's does");
         }
         h.event(egui::Event::Text("bold".into()));
         h.step();
