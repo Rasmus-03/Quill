@@ -518,6 +518,13 @@ impl Reader<'_> {
                     self.read_inline_children(sc, pb, c, rels, ctx, depth + 1);
                 }
             }
+            // Word 2010's run-level ink: a content part in the run, no `w:drawing`.
+            "w14:contentPart" => {
+                let props = self.run_props_none(ctx);
+                if let Some(o) = self.ink_content_part(k, k, None, rels) {
+                    self.emit_obj(sc, pb, o, &props);
+                }
+            }
             // Some generators write a break directly under the paragraph instead of inside a run.
             "w:br" | "w:cr" => {
                 let props = self.run_props_none(ctx);
@@ -697,6 +704,12 @@ impl Reader<'_> {
                 self.emit_obj(sc, pb, InlineObject::Field { instr: "PAGE".into(), result: String::new(), locked: false, code: false }, props)
             }
             "w:ruby" => self.read_ruby(sc, pb, k, props),
+            // Word 2010's run-level ink: a content part in the run, no `w:drawing`.
+            "w14:contentPart" => {
+                if let Some(o) = self.ink_content_part(k, k, None, rels) {
+                    self.emit_obj(sc, pb, o, props);
+                }
+            }
             "mc:AlternateContent" => {
                 if let Some(o) = self.read_ink_alternate(sc, k, rels) {
                     self.emit_obj(sc, pb, o, props);
@@ -997,12 +1010,20 @@ impl Reader<'_> {
     /// the fallback flattens the ink; reading only the choice loses its preview on the next save.
     fn read_ink_alternate(&mut self, sc: &mut StoryCtx, ac: &El, rels: &Rels) -> Option<InlineObject> {
         let choice = children_of_choice(ac).filter(|e| e.name == "mc:Choice")?;
+        let fallback = ac.child("mc:Fallback");
+        let preview = fallback.and_then(|f| f.child("w:pict")).and_then(|p| self.read_vml(sc, p, rels));
+        // Word 2010 wrote ink's content part straight into the run, with no `w:drawing` around it.
+        if let Some(content) = choice.child("w14:contentPart") {
+            let kept = match fallback {
+                Some(f) => El { name: "mc:AlternateContent".into(), attrs: Vec::new(), kids: vec![Node::El(choice.clone()), Node::El(f.clone())] },
+                None => choice.clone(),
+            };
+            return self.ink_content_part(content, &kept, preview, rels);
+        }
         let drawing = choice.child("w:drawing")?;
         if drawing.find("a:graphicData")?.attr("uri") != Some(INK_URI) {
             return None;
         }
-        let fallback = ac.child("mc:Fallback");
-        let preview = fallback.and_then(|f| f.child("w:pict")).and_then(|p| self.read_vml(sc, p, rels));
         let Some(mut object) = self.read_drawing(sc, drawing, rels) else { return preview };
         if let InlineObject::Graphic { w, h, graphic, .. } = &mut object {
             let graphic = Arc::make_mut(graphic);
@@ -1019,6 +1040,38 @@ impl Reader<'_> {
             }
         }
         Some(object)
+    }
+
+    /// A native ink content part (`w14:contentPart`): kept opaque with the InkML part it names,
+    /// and shown as `preview` when its own frame or a fallback picture gives a size. `kept` is the
+    /// markup written back: the part itself, or the `mc:AlternateContent` holding it and its
+    /// fallback. The InkML is never converted to WordCraft freeforms.
+    fn ink_content_part(&mut self, content: &El, kept: &El, preview: Option<InlineObject>, rels: &Rels) -> Option<InlineObject> {
+        let part = super::part_of(rels, content.attr("r:id")?, INK_REL)?;
+        let pkg = self.pkg;
+        if self.content_types.get_or_insert_with(|| ContentTypes::read(pkg)).of(&part) != Some("application/inkml+xml") {
+            return None;
+        }
+        let preview = preview.filter(|o| o.frame().is_some());
+        let frame = ink_xfrm(content).1;
+        let (w, h) = if frame.0 > 0.0 || frame.1 > 0.0 {
+            frame
+        } else {
+            preview.as_ref().and_then(|p| p.frame().map(|(w, h, _)| (w, h))).unwrap_or((0.0, 0.0))
+        };
+        let source = self.keep_embedded(kept, rels, &[])?;
+        let mut float = Float::default();
+        float.set_spin(xfrm_spin(content.child("w14:xfrm")));
+        let (px, py) = float.spin_pad(w, h);
+        float.effect = [px, py, px, py];
+        let media = match preview {
+            Some(InlineObject::Image { media, .. }) => media,
+            _ => String::new(),
+        };
+        // The renderer's missing-picture box marks ink without a usable preview.
+        let items = vec![GraphicItem::Image { rect: [0.0, 0.0, w, h], media }];
+        let graphic = Arc::new(Graphic { kind: GraphicKind::Ink, items, w, h, source: Some(source), ..Default::default() });
+        Some(InlineObject::Graphic { w, h, alt: String::new(), float, graphic })
     }
 
     /// The chart or SmartArt diagram in an `a:graphicData`, as items in points from its top-left
@@ -1171,6 +1224,18 @@ impl Reader<'_> {
                 },
                 _ => e,
             };
+            // Ink inside a group or canvas is a content part placed by its own `w14:xfrm`; it is
+            // kept whole, so it isn't lost with the members around it.
+            if e.name == "w14:contentPart" {
+                let max = crate::units::MAX_LEN_PT;
+                let fit = |v: f32, lo: f32| wordcraft_geom::finite(v).clamp(lo, max);
+                let (off, ext) = ink_xfrm(e);
+                if let Some(mut obj) = self.ink_content_part(e, e, None, rels) {
+                    obj.set_size(fit(ext.0 * sx, 0.0), fit(ext.1 * sy, 0.0));
+                    out.push(wordcraft_doc::para::GroupChild { x: fit(x0 + off.0 * sx, -max), y: fit(y0 + off.1 * sy, -max), obj });
+                }
+                continue;
+            }
             let sppr = match e.name.as_str() {
                 "wps:wsp" => e.child("wps:spPr"),
                 "pic:pic" => e.child("pic:spPr"),
@@ -1777,6 +1842,20 @@ fn xfrm_spin(sppr: Option<&El>) -> wordcraft_geom::Spin {
     };
     let rot = x.attr("rot").and_then(int).map(|v| v.rem_euclid(21_600_000) as f32 / 60_000.0).unwrap_or(0.0);
     wordcraft_geom::Spin::new(rot, on_off_attr(x, "flipH"), on_off_attr(x, "flipV"))
+}
+
+/// Where an ink content part places itself: its `w14:xfrm` offset and extent (points, zeros when
+/// missing).
+fn ink_xfrm(content: &El) -> ((f32, f32), (f32, f32)) {
+    let x = content.child("w14:xfrm");
+    let pair = |name: &str, a: &str, b: &str, lo: f32| {
+        let e = x.and_then(|x| x.child(name))?;
+        let lim = crate::units::MAX_LEN_PT;
+        let v = |n: &str| e.attr(n).and_then(|v| measure(v, 12_700.0)).map(|v| v.clamp(lo, lim)).unwrap_or(0.0);
+        Some((v(a), v(b)))
+    };
+    let max = crate::units::MAX_LEN_PT;
+    (pair("a:off", "x", "y", -max).unwrap_or((0.0, 0.0)), pair("a:ext", "cx", "cy", 0.0).unwrap_or((0.0, 0.0)))
 }
 
 /// The `a:xfrm` in shape properties `sppr` (zeros when missing).

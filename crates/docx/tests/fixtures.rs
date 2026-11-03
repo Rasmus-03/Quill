@@ -1676,6 +1676,112 @@ fn check_ink(files: &std::collections::BTreeMap<String, Vec<u8>>) -> String {
     part
 }
 
+// ---- native Word ink: Word 2010's run-level content part, and ink inside groups and canvases ----
+
+fn ink_content_part_xml() -> &'static str {
+    r#"<w14:contentPart xmlns:w14="http://schemas.microsoft.com/office/word/2010/wordml" r:id="rInk"><w14:xfrm><a:off x="127000" y="254000"/><a:ext cx="1828800" cy="914400"/></w14:xfrm></w14:contentPart>"#
+}
+
+fn ink_run_level_docx(fallback: bool) -> Vec<u8> {
+    let content = ink_content_part_xml();
+    let markup = if fallback {
+        format!(
+            r##"<mc:AlternateContent><mc:Choice xmlns:wpi="{INK_NS}" Requires="wpi">{content}</mc:Choice><mc:Fallback><w:pict><v:shape id="preview" style="width:144pt;height:72pt"><v:imagedata r:id="rPreview"/></v:shape></w:pict></mc:Fallback></mc:AlternateContent>"##
+        )
+    } else {
+        content.to_string()
+    };
+    let body = format!("<w:p><w:r><w:t>Original</w:t></w:r></w:p><w:p><w:r>{markup}</w:r></w:p>");
+    let mut relationships = vec![("rInk", "customXml", "ink/ink1.xml")];
+    let mut extra = vec![("[Content_Types].xml", INK_TYPES), ("word/ink/ink1.xml", INK_XML)];
+    if fallback {
+        relationships.push(("rPreview", "image", "media/preview.png"));
+        extra.push(("word/media/preview.png", "original preview bytes"));
+    }
+    docx(&body, &relationships, &extra)
+}
+
+fn ink_nested_docx(canvas: bool) -> Vec<u8> {
+    let content = ink_content_part_xml();
+    let (uri, frame) = if canvas {
+        (
+            "http://schemas.microsoft.com/office/word/2010/wordprocessingCanvas",
+            format!(r#"<wpc:wpc xmlns:wpc="http://schemas.microsoft.com/office/word/2010/wordprocessingCanvas">{content}</wpc:wpc>"#),
+        )
+    } else {
+        (
+            "http://schemas.microsoft.com/office/word/2010/wordprocessingGroup",
+            format!(
+                r#"<wpg:wgp><wpg:cNvGrpSpPr/><wpg:grpSpPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="3657600" cy="1828800"/><a:chOff x="0" y="0"/><a:chExt cx="3657600" cy="1828800"/></a:xfrm></wpg:grpSpPr>{content}</wpg:wgp>"#
+            ),
+        )
+    };
+    let body = format!(
+        r#"<w:p><w:r><w:drawing><wp:inline><wp:extent cx="3657600" cy="1828800"/><wp:docPr id="3" name="Shapes"/><a:graphic><a:graphicData uri="{uri}">{frame}</a:graphicData></a:graphic></wp:inline></w:drawing></w:r></w:p>"#
+    );
+    docx(&body, &[("rInk", "customXml", "ink/ink1.xml")], &[("[Content_Types].xml", INK_TYPES), ("word/ink/ink1.xml", INK_XML)])
+}
+
+#[test]
+fn native_ink_run_level_content_part_survives_two_saves() {
+    for fallback in [false, true] {
+        let mut d = wordcraft_docx::read(&ink_run_level_docx(fallback)).unwrap();
+        let [object] = graphics(&d).try_into().unwrap_or_else(|_| panic!("run-level ink stays one object (fallback {fallback})"));
+        let InlineObject::Graphic { w, h, graphic, .. } = &object else { panic!("{object:?}") };
+        assert_eq!(graphic.kind.noun(), "ink");
+        assert_eq!((*w, *h), (144.0, 72.0), "the content part's own frame");
+        let preview =
+            graphic.items.iter().any(|i| matches!(i, wordcraft_doc::graphic::GraphicItem::Image { media, .. } if d.media.contains_key(media)));
+        assert_eq!(preview, fallback, "the fallback picture is shown exactly when it is there");
+        for _ in 0..2 {
+            let out = wordcraft_docx::write(&d).unwrap();
+            let files = unzip(&out);
+            check_ink(&files);
+            let body = text(&files, "word/document.xml");
+            assert!(!body.contains("<w:drawing>"), "run-level ink must not gain a drawing: {body}");
+            assert!(body.contains(r#"<a:ext cx="1828800" cy="914400"/>"#), "the ink's own frame is kept: {body}");
+            if fallback {
+                assert!(body.contains("<mc:Fallback>"), "the preview branch is kept: {body}");
+                let [id] = attr_values(&body, "v:imagedata", "r:id").try_into().unwrap_or_else(|_| panic!("preview reference lost: {body}"));
+                let (kind, target) = rel(&text(&files, "word/_rels/document.xml.rels"), &id);
+                assert!(kind.ends_with("/image"));
+                assert_eq!(text(&files, &part_at("word", &target)), "original preview bytes");
+            }
+            d = wordcraft_docx::read(&out).unwrap();
+            assert_eq!(graphics(&d).len(), 1);
+        }
+    }
+}
+
+#[test]
+fn native_ink_nested_in_group_and_canvas_survives_two_saves() {
+    let check = |d: &Document, canvas: bool| {
+        let p = paras(d);
+        let Some(InlineObject::Group { children, canvas: style, .. }) = p.first().and_then(|p| p.objects.first()) else {
+            panic!("the group is kept: {}", p.first().map(|p| p.objects.clone()).unwrap_or_default().len());
+        };
+        assert_eq!(style.is_some(), canvas);
+        let [child] = children.as_slice() else { panic!("one ink member, got {children:?}") };
+        assert_eq!((child.x, child.y), (10.0, 20.0), "the ink keeps its place among the members");
+        let InlineObject::Graphic { graphic, w, h, .. } = &child.obj else { panic!("{child:?}") };
+        assert_eq!(graphic.kind.noun(), "ink");
+        assert_eq!((*w, *h), (144.0, 72.0));
+    };
+    for canvas in [false, true] {
+        let mut d = wordcraft_docx::read(&ink_nested_docx(canvas)).unwrap();
+        check(&d, canvas);
+        for _ in 0..2 {
+            let out = wordcraft_docx::write(&d).unwrap();
+            let files = unzip(&out);
+            check_ink(&files);
+            let body = text(&files, "word/document.xml");
+            assert!(body.contains(r#"<a:off x="127000" y="254000"/>"#), "nested ink keeps its offset: {body}");
+            d = wordcraft_docx::read(&out).unwrap();
+            check(&d, canvas);
+        }
+    }
+}
+
 #[test]
 fn native_ink_survives_unrelated_edit_and_two_saves() {
     let mut d = wordcraft_docx::read(&ink_docx(false, false)).unwrap();

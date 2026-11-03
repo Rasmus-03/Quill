@@ -1,6 +1,6 @@
 # WordCraft roadmap: milestones and what's next
 
-> **Last reviewed:** 2026-10-10 · **Last updated:** 2026-10-21 · **Change:** minor (release 1.1.0: Nextcloud, deeper Obsidian vaults, Focus mode and the cleanup ritual; previously minor: Portuguese proofing; previously minor: Polish interface and Polish proofing; previously trivial: M7: formatting revisions landed, #41; previously trivial: M5: Draw Table and Eraser landed, #303; previously minor: beta distance restated: ~15 points, ~150–230 h; previously: alpha gate checked: six core workflows pass; previously major: milestones moved here from ROADMAP.md; Current focus set from the re-measured gaps) · **Target:** Microsoft Word (Microsoft 365) for Mac 16.113.4
+> **Last reviewed:** 2026-10-10 · **Last updated:** 2026-11-03 · **Change:** trivial (gap #2: every native ink form round-trips, including Word 2010's run-level content part and ink inside groups and canvases; previously minor: release 1.1.0: Nextcloud, deeper Obsidian vaults, Focus mode and the cleanup ritual; previously minor: Portuguese proofing; previously minor: Polish interface and Polish proofing; previously trivial: M7: formatting revisions landed, #41; previously trivial: M5: Draw Table and Eraser landed, #303; previously minor: beta distance restated: ~15 points, ~150–230 h; previously: alpha gate checked: six core workflows pass; previously major: milestones moved here from ROADMAP.md; Current focus set from the re-measured gaps) · **Target:** Microsoft Word (Microsoft 365) for Mac 16.113.4
 
 Forward-looking plan. The summary is [`ROADMAP.md`](../ROADMAP.md); the ranked work list is
 [`gaps.md`](gaps.md); the numbers are in [`target-app-parity.md`](target-app-parity.md). Hours are
@@ -14,9 +14,10 @@ Opus 5.5 agent wall-clock.
 2. **DOCX real-world corpus** (gap #1, 30–50 h): collect openly licensed real-world .docx files,
    open/render/round-trip them, compare with Word locally, fix what breaks. Omitted/empty
    paragraph defaults now have synthetic save/reopen coverage; the corpus gate remains open.
-3. **Preserve what we can't render** (gap #2, 10–15 h): remaining native ink forms and unsupported
-   graphics survive a round trip. Drawing-level native ink now keeps its InkML and optional picture
-   fallback alongside chart, SmartArt, OLE and drawing-canvas support.
+3. **Preserve what we can't render** (gap #2, 6–11 h): remaining native ink forms and unsupported
+   graphics survive a round trip. Every ink form Word writes now keeps its InkML and optional picture
+   fallback — drawing-level, Word 2010's run-level content part, and members of groups and drawing
+   canvases — alongside chart, SmartArt and OLE support.
 4. **Stability sweep** (gap #3, 20–30 h): the open crash, hang and write-failure issues, plus an
    autosave/recovery soak test.
 5. **Pagination fidelity** (gap #4, 30–50 h): column balancing, footnote continuation, compat
@@ -73,6 +74,7 @@ languages, screen-reader access, ecosystem decisions (VBA, add-ins, cloud), an i
 
 | Date | Change | Summary |
 |---|---|---|
+| 2026-11-03 | trivial | Gap #2: native ink now survives open and save in every form Word writes — drawing-level ink, Word 2010's run-level `w14:contentPart` (with or without its `mc:AlternateContent` VML preview) and ink members of groups and drawing canvases; what remains of the gap is rendering and editing the strokes |
 | 2026-10-21 | minor | Release 1.1.0: Nextcloud (a new `wordcraft-cloud` crate; the Navigation pane's Nextcloud tab connects, browses, opens, saves, shares and searches a server; a file that changed there is not overwritten), Obsidian with a backlinks view, a tags view and Insert › Link, Focus mode that really hides the interface, and the cleanup ritual (`cargo xtask test` removes what the run left behind). The roadmap's focus is unchanged: the beta list (gaps #1–#7) comes first |
 | 2026-10-12 | minor | M15: Portuguese proofing (pt-BR spelling from the installed VERO dictionary, suggestions, grammar, hyphenation; Review › Language gains Português (Brasil)) |
 | 2026-10-11 | trivial | M15: Polish interface and Polish proofing landed |

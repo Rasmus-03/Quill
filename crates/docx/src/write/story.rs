@@ -538,6 +538,22 @@ impl Writer<'_> {
                 if ink {
                     Self::ink_transform(&mut root, (graphic.w, graphic.h), (*gw, *gh), float, 0);
                 }
+                // Word 2010's run-level ink: the content part lives straight in the run, and
+                // wrapping it in a `w:drawing` would move it to a form it did not come from.
+                let run_level = match root.name.as_str() {
+                    "w14:contentPart" => true,
+                    "mc:AlternateContent" => root.child("mc:Choice").is_some_and(|c| c.find("a:graphic").is_none()),
+                    _ => false,
+                };
+                if ink && run_level {
+                    self.rev_open(w, props);
+                    w.open("w:r", &[]);
+                    self.rpr(w, props);
+                    w.raw(&root.to_xml());
+                    w.close("w:r");
+                    self.rev_close(w, props);
+                    return;
+                }
                 let alternate = (ink && root.name == "mc:AlternateContent").then_some(&root);
                 let fallback = alternate.and_then(|e| e.child("mc:Fallback"));
                 let native = alternate.and_then(|e| e.child("mc:Choice")).and_then(|e| e.find("a:graphic"));
@@ -692,6 +708,16 @@ impl Writer<'_> {
                         InlineObject::Shape { extra, .. } => {
                             let id = self.shape_docpr(extra.id);
                             self.wsp(w, &c.obj, Some(&id), at, rels, depth);
+                        }
+                        // Native ink inside the group: written back as its own content part.
+                        InlineObject::Graphic { graphic, .. } if graphic.kind == wordcraft_doc::graphic::GraphicKind::Ink => {
+                            let size = c.obj.frame().map(|(w, h, _)| (w, h)).unwrap_or((0.0, 0.0));
+                            if let Some(src) = graphic.source.as_deref()
+                                && let Some(mut root) = self.embedded_tree(src, rels, None)
+                            {
+                                place_ink_member(&mut root, at, size.0, size.1, 0);
+                                w.raw(&root.to_xml());
+                            }
                         }
                         _ => {}
                     }
@@ -1366,6 +1392,43 @@ fn ink_name(tool: wordcraft_doc::freeform::InkTool) -> &'static str {
         wordcraft_doc::freeform::InkTool::Pen => "Pen",
         wordcraft_doc::freeform::InkTool::Pencil => "Pencil",
         wordcraft_doc::freeform::InkTool::Highlighter => "Highlighter",
+    }
+}
+
+/// Place a native ink content part kept from a file at `(x, y)` in its group's space, `w` × `h`
+/// points: its own `w14:xfrm` holds that offset and size.
+fn place_ink_member(e: &mut crate::xml::El, (x, y): (f32, f32), w: f32, h: f32, depth: usize) {
+    if depth > crate::xml::MAX_DEPTH {
+        return;
+    }
+    if e.name == "w14:xfrm" {
+        for c in e.kids.iter_mut().filter_map(|k| match k {
+            crate::xml::Node::El(c) => Some(c),
+            _ => None,
+        }) {
+            let set = |k: &str, v: String, c: &mut crate::xml::El| match c.attrs.iter_mut().find(|(n, _)| n == k) {
+                Some((_, old)) => *old = v,
+                None => c.attrs.push((k.to_string(), v)),
+            };
+            match c.name.as_str() {
+                "a:off" => {
+                    set("x", emu(x), c);
+                    set("y", emu(y), c);
+                }
+                "a:ext" => {
+                    let (w, h) = (w.max(0.0), h.max(0.0));
+                    set("cx", emu(w), c);
+                    set("cy", emu(h), c);
+                }
+                _ => {}
+            }
+        }
+        return;
+    }
+    for c in e.kids.iter_mut() {
+        if let crate::xml::Node::El(c) = c {
+            place_ink_member(c, (x, y), w, h, depth + 1);
+        }
     }
 }
 

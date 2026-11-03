@@ -2,7 +2,7 @@
 
 **Stage: alpha** · next: beta, ~15 points (60% → 75% ready for real work) and ~150–230 h away
 
-> **Last reviewed:** 2026-10-10 · **Last updated:** 2026-10-21 · **Change:** minor (progress log: release 1.1.0 — Nextcloud, deeper Obsidian vaults, Focus mode and the cleanup ritual; previously trivial: symbol fonts, #776; previously trivial: the save prompt answers from the keyboard, #861; previously trivial: table column and row markers on the rulers, #700; previously trivial: table borders and the resize handle drag on the page, #217; previously trivial: formatting revisions landed, #41; previously trivial: Draw tab ink, #307, and Draw Table and Eraser, #303, landed: catalog 402/434; previously minor: readiness table with hours per audience; full number back to the additive weighted sum, 60%; mainstream and essentials numbers added; alpha gate checked; previously major: full re-measure against Word for Mac 16.113.4; restructured to the craftrules progress-docs standard) · **Target:** Microsoft Word (Microsoft 365) for Mac 16.113.4
+> **Last reviewed:** 2026-10-10 · **Last updated:** 2026-11-03 · **Change:** trivial (progress log: every native Word ink form now round-trips — run-level content parts, ink inside groups and canvases; previously minor: progress log: release 1.1.0 — Nextcloud, deeper Obsidian vaults, Focus mode and the cleanup ritual; previously trivial: symbol fonts, #776; previously trivial: the save prompt answers from the keyboard, #861; previously trivial: table column and row markers on the rulers, #700; previously trivial: table borders and the resize handle drag on the page, #217; previously trivial: formatting revisions landed, #41; previously trivial: Draw tab ink, #307, and Draw Table and Eraser, #303, landed: catalog 402/434; previously minor: readiness table with hours per audience; full number back to the additive weighted sum, 60%; mainstream and essentials numbers added; alpha gate checked; previously major: full re-measure against Word for Mac 16.113.4; restructured to the craftrules progress-docs standard) · **Target:** Microsoft Word (Microsoft 365) for Mac 16.113.4
 
 > **Printing update:** 2026-10-12 · direct desktop printing through craft-print; details below.
 
@@ -135,6 +135,7 @@ Ranked, to beta (detail and remaining milestones in [docs/roadmap.md](docs/roadm
 
 | Date | What landed |
 |---|---|
+| 2026-11-03 | Native Word ink now survives open and save in every form Word writes: drawing-level ink, Word 2010's run-level `w14:contentPart` in the run itself (with or without its `mc:AlternateContent` VML preview) and ink members of groups and drawing canvases, each at its own offset; parts, relationships, content types and previews survive repeated saves, still opaque (no stroke rendering or editing) |
 | 2026-10-21 | Nextcloud (1.1.0): a new `wordcraft-cloud` crate speaks WebDAV and the OCS API to a Nextcloud server — list, download, upload, new folder, delete, public share link, the server's own search and file versions, with the server's tag for the version that was read, so a file that changed there is not overwritten. The Navigation pane's Nextcloud tab connects (address, account, app password), browses the folders, opens and saves documents on the server and searches it; everything runs on a worker thread, so the editor never waits. The app password is kept in a file only the user can read, and the next launch reconnects on its own. A `.md` file on the server is an Obsidian note: frontmatter, wikilinks and embeds survive, and its images are written beside it |
 | 2026-10-21 | Obsidian, deeper (1.1.0): the vault pane has three views — the notes, the notes that link to the open one, and the tags the notes carry (frontmatter `tags:` lists and `#tags` in the text). Insert › Link writes a link to a note at the caret. The index is built once and kept until the vault is read again |
 | 2026-10-21 | Focus mode (View › Immersive › Focus) now does what it says: the ribbon, the panes and the status bar step aside, the page fills the window, and Escape brings the interface back |
@@ -279,6 +280,7 @@ Ranked, to beta (detail and remaining milestones in [docs/roadmap.md](docs/roadm
 
 | Date | Change | Summary |
 |---|---|---|
+| 2026-11-03 | trivial | Progress log: native ink preserved in every form Word writes (run-level `w14:contentPart`, group and canvas members) |
 | 2026-10-20 | minor | Progress log: Obsidian vault workspace (Navigation pane, search, note open/save/export, lossless Markdown round-trip) |
 | 2026-10-20 | trivial | Progress log: the Paste Options button after a paste |
 | 2026-10-12 | trivial | Progress log: Accept All and Reject All keep the right paragraph marks (#864) |
