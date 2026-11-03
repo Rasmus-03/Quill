@@ -7,11 +7,11 @@
   <key>CFBundleDevelopmentRegion</key>
   <string>en</string>
   <key>CFBundleDisplayName</key>
-  <string>WordCraft</string>
+  <string>Quill</string>
   <key>CFBundleName</key>
-  <string>WordCraft</string>
+  <string>Quill</string>
   <key>CFBundleExecutable</key>
-  <string>WordCraft</string>
+  <string>Quill</string>
   <key>CFBundleIdentifier</key>
   <string>io.github.rasmus03.quill</string>
   <key>CFBundleInfoDictionaryVersion</key>
@@ -29,7 +29,7 @@
   <key>WordCraftBuildCommit</key>
   <string>@BUILD_SHA@</string>
   <key>CFBundleIconFile</key>
-  <string>WordCraft</string>
+  <string>Quill</string>
   <key>LSApplicationCategoryType</key>
   <string>public.app-category.productivity</string>
   <!-- Must match MACOSX_DEPLOYMENT_TARGET in package.sh. Big Sur is the first release on

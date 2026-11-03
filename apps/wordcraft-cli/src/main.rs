@@ -309,9 +309,9 @@ fn run(args: &[String]) -> Result<(), Failure> {
                     return Err("mcp: --author applies to the headless server; with --connect, run file.setAuthor".into());
                 }
                 Some(addr) => {
-                    let remote = wordcraft_mcp::Remote::connect(&addr).map_err(|e| format!("can't reach the WordCraft app at {addr}: {e}"))?;
+                    let remote = wordcraft_mcp::Remote::connect(&addr).map_err(|e| format!("can't reach the Quill app at {addr}: {e}"))?;
                     if let Some(w) = remote.key_warning() {
-                        eprintln!("wordcraft-cli: {w}");
+                        eprintln!("quill-cli: {w}");
                     }
                     Box::new(remote)
                 }
@@ -321,7 +321,7 @@ fn run(args: &[String]) -> Result<(), Failure> {
                         // Every thread of this process, not only the server's: nothing reaches past the roots.
                         wordcraft_engine::file_access::confine_process(roots.clone());
                         let show = |root: Option<&std::path::Path>| root.map_or_else(|| "none".to_string(), |r| r.display().to_string());
-                        eprintln!("wordcraft-cli: files confined: read root {}, write root {}", show(roots.read_root()), show(roots.write_root()));
+                        eprintln!("quill-cli: files confined: read root {}, write root {}", show(roots.read_root()), show(roots.write_root()));
                         headless = headless.with_automation_roots(Some(roots));
                     }
                     if let Some(name) = author {
@@ -374,7 +374,7 @@ fn run(args: &[String]) -> Result<(), Failure> {
             }
             Ok(())
         }
-        "--version" | "-V" => write_stdout(|o| writeln!(o, "wordcraft-cli {}", env!("CARGO_PKG_VERSION"))),
+        "--version" | "-V" => write_stdout(|o| writeln!(o, "quill-cli {}", env!("CARGO_PKG_VERSION"))),
         "" | "help" | "--help" | "-h" => write_stdout(|o| write!(o, "{USAGE}")),
         other => Err(format!("unknown command `{other}`\n\n{USAGE}").into()),
     }
@@ -419,7 +419,7 @@ fn main() -> ExitCode {
     match run(&args) {
         Ok(()) | Err(Failure::StdoutClosed) => ExitCode::SUCCESS,
         Err(Failure::Error(e)) => {
-            eprintln!("wordcraft-cli: {e}");
+            eprintln!("quill-cli: {e}");
             ExitCode::FAILURE
         }
     }
