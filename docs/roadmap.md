@@ -1,6 +1,6 @@
 # WordCraft roadmap: milestones and what's next
 
-> **Last reviewed:** 2026-10-10 · **Last updated:** 2026-11-03 · **Change:** trivial (gap #2: every native ink form round-trips, including Word 2010's run-level content part and ink inside groups and canvases; previously minor: release 1.1.0: Nextcloud, deeper Obsidian vaults, Focus mode and the cleanup ritual; previously minor: Portuguese proofing; previously minor: Polish interface and Polish proofing; previously trivial: M7: formatting revisions landed, #41; previously trivial: M5: Draw Table and Eraser landed, #303; previously minor: beta distance restated: ~15 points, ~150–230 h; previously: alpha gate checked: six core workflows pass; previously major: milestones moved here from ROADMAP.md; Current focus set from the re-measured gaps) · **Target:** Microsoft Word (Microsoft 365) for Mac 16.113.4
+> **Last reviewed:** 2026-10-10 · **Last updated:** 2026-11-03 · **Change:** trivial (gap #1: the DOCX corpus gate landed — `corpus/docx/` with a provenance manifest, checked by `cargo test -p wordcraft-docx --test corpus`, skipping while empty; previously trivial: gap #2: every native ink form round-trips, including Word 2010's run-level content part and ink inside groups and canvases; previously minor: release 1.1.0: Nextcloud, deeper Obsidian vaults, Focus mode and the cleanup ritual; previously minor: Portuguese proofing; previously minor: Polish interface and Polish proofing; previously trivial: M7: formatting revisions landed, #41; previously trivial: M5: Draw Table and Eraser landed, #303; previously minor: beta distance restated: ~15 points, ~150–230 h; previously: alpha gate checked: six core workflows pass; previously major: milestones moved here from ROADMAP.md; Current focus set from the re-measured gaps) · **Target:** Microsoft Word (Microsoft 365) for Mac 16.113.4
 
 Forward-looking plan. The summary is [`ROADMAP.md`](../ROADMAP.md); the ranked work list is
 [`gaps.md`](gaps.md); the numbers are in [`target-app-parity.md`](target-app-parity.md). Hours are
@@ -13,7 +13,9 @@ Opus 5.5 agent wall-clock.
    fixes #155–#164) or add languages (nb, nn, he). Owner review needed.
 2. **DOCX real-world corpus** (gap #1, 30–50 h): collect openly licensed real-world .docx files,
    open/render/round-trip them, compare with Word locally, fix what breaks. Omitted/empty
-   paragraph defaults now have synthetic save/reopen coverage; the corpus gate remains open.
+   Omitted/empty paragraph defaults now have synthetic save/reopen coverage. The gate is in place
+   (`crates/docx/tests/corpus.rs`, `corpus/docx/manifest.tsv`, `cargo xtask corpus`); collecting the
+   files is the remaining work.
 3. **Preserve what we can't render** (gap #2, 6–11 h): remaining native ink forms and unsupported
    graphics survive a round trip. Every ink form Word writes now keeps its InkML and optional picture
    fallback — drawing-level, Word 2010's run-level content part, and members of groups and drawing

@@ -1,6 +1,6 @@
 # File-format parity with Microsoft Word
 
-> **Last reviewed:** 2026-10-11 · **Last updated:** 2026-11-03 · **Change:** minor (native Word ink: Word 2010's run-level `w14:contentPart` and ink members of groups and canvases now round-trip too, so every form Word writes is preserved; previously minor: Obsidian vault import/export with frontmatter, wikilinks, embeds and byte-safe raw fallback; previously trivial: symbol-font text exported as Unicode, #776; previously trivial: text-box margins, Resize shape to fit text and freeforms in groups, #743; previously trivial: formatted paste from the system clipboard's HTML and RTF, #687; previously trivial: independent complex-script formatting inheritance and round-trip regression tests; previously trivial: import/export fixes for TXT, RTF, ODT, HTML and LaTeX, #433–#440; previously major: first version; every format Word reads or writes, measured from the readers and writers on origin/main) · **Target:** Microsoft Word (Microsoft 365) for Mac 16.113.4, plus Word for Windows' extra formats
+> **Last reviewed:** 2026-10-11 · **Last updated:** 2026-11-03 · **Change:** minor (the DOCX corpus gate: every real file in the git-ignored `corpus/docx/` is opened, saved, reopened and saved again, its provenance must be in `manifest.tsv`, and the gate skips while the corpus is empty; previously minor: native Word ink: Word 2010's run-level `w14:contentPart` and ink members of groups and canvases now round-trip too, so every form Word writes is preserved; previously minor: Obsidian vault import/export with frontmatter, wikilinks, embeds and byte-safe raw fallback; previously trivial: symbol-font text exported as Unicode, #776; previously trivial: text-box margins, Resize shape to fit text and freeforms in groups, #743; previously trivial: formatted paste from the system clipboard's HTML and RTF, #687; previously trivial: independent complex-script formatting inheritance and round-trip regression tests; previously trivial: import/export fixes for TXT, RTF, ODT, HTML and LaTeX, #433–#440; previously major: first version; every format Word reads or writes, measured from the readers and writers on origin/main) · **Target:** Microsoft Word (Microsoft 365) for Mac 16.113.4, plus Word for Windows' extra formats
 
 Every format Word opens or saves, what WordCraft does with it, and how it's tested. Fidelity is the
 share of a typical real-world file's content and formatting that survives (read: shows correctly;
@@ -19,7 +19,7 @@ Weights are the share of a Word user's file traffic (estimate). Read/write: ✅ 
 
 | Format | Weight | Word | WordCraft read | WordCraft write | Fidelity | Hours | How it's tested | Notes |
 |---|---|---|---|---|---|---|---|---|
-| `.docx` Word Document (ECMA-376 Transitional) | 70% | R/W | ✅ | ✅ | ~65% | 70–110 | `crates/docx/tests` (roundtrip 34, fixtures 29, malformed 8, bidi 5, citations 5); synthetic fixtures only | Word opens our files. Untested on a real-world corpus. Details below |
+| `.docx` Word Document (ECMA-376 Transitional) | 70% | R/W | ✅ | ✅ | ~65% | 70–110 | `crates/docx/tests` (roundtrip 34, fixtures 29, malformed 8, bidi 5, citations 5) plus the corpus gate (`corpus.rs`, skips while `corpus/docx/` is empty); synthetic fixtures only | Word opens our files. The corpus gate exists; no real-world files collected yet. Details below |
 | `.docx` Strict Open XML | 1% | R/W | ✅ (namespace mapping in `xml.rs`) | ❌ | ~60% | 2–4 | one fixture | Writing Strict is rare |
 | `.docm` / `.dotx` / `.dotm` | 3% | R/W | ✅ | ✅ | ~65% | incl. above | `macro_packages.rs` | Macros and signatures kept on save (#172); macros never run |
 | `.doc` Word 97-2003 (and `.dot`) | 8% | R/W | 🟡 | ❌ | ~60% | 25–40 | `crates/docbin/src/tests.rs`, `tests/drawing.rs` (56) | Spec-based reader ([MS-DOC]): text, formatting, styles, sections, headers/footers, tables, lists, notes, fields, bookmarks; inline and floating pictures (PNG, JPEG, DIB, TIFF, EMF, WMF; Macintosh PICT as a sized placeholder) with crop, alt text, position and wrap; basic shapes, lines, groups and text boxes ([MS-ODRAW]). Freeform shapes, z-order and Word 6/95 or encrypted files are dropped or refused. No writer |
@@ -133,7 +133,12 @@ Windows/Linux runtime behavior, ACLs and extended metadata, real disk-full condi
 ## What decides beta for formats
 
 1. A **real-world DOCX corpus** opened, rendered and round-tripped, compared page by page with
-   Word (local only: Word output can't be committed; keep a manifest and our own renders).
+   Word (local only: Word output can't be committed; keep a manifest and our own renders). The
+   gate is `crates/docx/tests/corpus.rs`: files live in the git-ignored `corpus/docx/`, each with a
+   producer/licence/source row in `corpus/docx/manifest.tsv`; every one is opened, saved, reopened
+   and saved again and must come back unchanged, and a file without provenance is refused. It
+   skips while the directory is empty, so collecting the files and the page-by-page comparison
+   with Word is the remaining work.
 2. **Preserve what we can't render**: remaining ink forms and unsupported graphics survive a round trip
    (keep the parts and the run). Charts, SmartArt and OLE objects do (#292, #319); native ink keeps its InkML and optional picture fallback in every form Word writes it, including run-level content parts and members of groups and canvases.
 3. Move tracking (`w:moveFrom`/`w:moveTo`) read and written (formatting revisions: #41; content controls: #381).
@@ -164,6 +169,7 @@ raise readiness estimates. No Word-derived files are fixtures.
 
 | Date | Change | Summary |
 |---|---|---|
+| 2026-11-03 | trivial | DOCX corpus gate: real files live in the git-ignored `corpus/docx/` with a producer/licence/source row each in `manifest.tsv`; every file is opened, saved, reopened and saved again, and the model and second save must match. Skips while the corpus is empty; no real-world file collected yet, readiness unchanged |
 | 2026-10-20 | minor | PDF Reflow, desktop v1: a PDF opens as an editable document — glyphs reflowed into lines and paragraphs (pitch, hyphen joins), headings from a size step up, bullets/numbers as list items, centred paragraphs, the MediaBox page with measured margins, picture XObjects decoded in place (JPEG kept byte-for-byte, the rest re-encoded PNG); hazard-tested against truncated and hostile PDFs |
 | 2026-10-12 | trivial | ODT page size, orientation and margins read back from `styles.xml` on open, so they survive a save and reopen (#810) |
 | 2026-10-12 | minor | RTF reads 8-bit text in the document's or the font's code page (`\ansicpg`, `\fcharset`, `\cpg`) instead of always Windows-1252; a `.doc`/`.docx`/`.rtf` whose content is another of these formats opens by signature. Found on a private corpus of real Russian documents: 38 of 44 `.doc` files were RTF, all now open with their Cyrillic text |

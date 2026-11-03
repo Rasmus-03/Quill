@@ -296,6 +296,10 @@ fn cmd_corpus(download: bool) -> Result<(), String> {
         "Test corpora live under {} (git-ignored, never committed).
 Tests that use a corpus skip cleanly when it is absent.
 
+  corpus/docx/       Real-world .docx/.docm files as people receive them (Word, Google Docs,
+                     LibreOffice, Pages), with corpus/docx/manifest.tsv — one row per file:
+                     <path>\t<producer>\t<licence>\t<source>. Gate: cargo test -p wordcraft-docx
+                     --test corpus (skips while the directory is empty)
   corpus/pngsuite/   PngSuite (public domain) — wordcraft-codecs compares every file
                      against the `image` crate. Fetch: cargo xtask corpus --download
   corpus/psd/        PSD samples from MIT/BSD projects (ag-psd, psd-tools test data).
@@ -306,6 +310,13 @@ Tests that use a corpus skip cleanly when it is absent.
 ",
         corpus.display()
     );
+    let docx = corpus.join("docx");
+    let files = docx_files(&docx);
+    let rows = manifest_rows(&manifest_path(&docx));
+    println!("\ncorpus/docx: {} file(s), {rows} manifest row(s); gate: cargo test -p wordcraft-docx --test corpus", files.len());
+    if !files.is_empty() && rows == 0 {
+        println!("corpus/docx: no manifest.tsv — the gate refuses every file until each has <path>\\t<producer>\\t<licence>\\t<source>");
+    }
     if !download {
         return Ok(());
     }
@@ -322,4 +333,44 @@ Tests that use a corpus skip cleanly when it is absent.
     let n = std::fs::read_dir(&dest).map(|d| d.flatten().filter(|e| e.path().extension().is_some_and(|x| x == "png")).count()).unwrap_or(0);
     println!("PngSuite: {n} PNG files in {}", dest.display());
     if n == 0 { Err("no PNG files extracted".into()) } else { Ok(()) }
+}
+
+/// `corpus/docx/manifest.tsv`.
+fn manifest_path(dir: &Path) -> PathBuf {
+    dir.join("manifest.tsv")
+}
+
+/// Every `.docx`/`.docm` under `dir`, recursively and sorted; empty when the directory is absent.
+fn docx_files(dir: &Path) -> Vec<PathBuf> {
+    fn walk(dir: &Path, out: &mut Vec<PathBuf>) {
+        let Ok(entries) = std::fs::read_dir(dir) else { return };
+        let mut paths: Vec<PathBuf> = entries.flatten().map(|e| e.path()).collect();
+        paths.sort();
+        for path in paths {
+            if path.is_dir() {
+                walk(&path, out);
+            } else if path.extension().is_some_and(|x| x == "docx" || x == "docm")
+                && !path.file_name().is_some_and(|n| n.to_string_lossy().starts_with("~$"))
+            {
+                out.push(path);
+            }
+        }
+    }
+    let mut out = Vec::new();
+    walk(dir, &mut out);
+    out
+}
+
+/// The provenance rows in `manifest.tsv` (comments and blank lines skipped).
+fn manifest_rows(path: &Path) -> usize {
+    std::fs::read_to_string(path)
+        .map(|text| {
+            text.lines()
+                .filter(|line| {
+                    let line = line.trim();
+                    !line.is_empty() && !line.starts_with('#')
+                })
+                .count()
+        })
+        .unwrap_or(0)
 }
