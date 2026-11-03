@@ -53,6 +53,7 @@
 	Apply Style	Zastosuj styl
 	Arrange	Rozmieszczanie
 	Arrange\nAll	Rozmieść\nwszystkie
+	Arrange All	Rozmieść wszystko
 	Arrow	Strzałka
 	Artistic Effects	Efekty artystyczne
 	Author	Autor
@@ -80,6 +81,7 @@
 	Blank Page	Pusta strona
 	Blank document	Pusty dokument
 	Block\nAuthors	Blokuj\nautorów
+	Block Authors	Blokuj autorów
 	Bold	Pogrubienie
 	Bookmark	Zakładka
 	Bookmark name:	Nazwa zakładki:
@@ -245,7 +247,7 @@
 	Envelopes	Koperty
 	Eraser	Gumka
 	Even Page	Strona parzysta
-	Every command is available to scripts and AI agents: run `wordcraft-cli mcp` for an MCP server, or start the app with `--control <port>` for the JSON control channel.	Każde polecenie jest dostępne dla skryptów i agentów AI: uruchom `wordcraft-cli mcp`, aby włączyć serwer MCP, albo uruchom aplikację z opcją `--control <port>`, aby korzystać z kanału sterowania JSON.
+	Every command is available to scripts and AI agents: run `quill-cli mcp` for an MCP server, or start the app with `--control <port>` for the JSON control channel.	Każde polecenie jest dostępne dla skryptów i agentów AI: uruchom `quill-cli mcp`, aby włączyć serwer MCP, albo uruchom aplikację z opcją `--control <port>`, aby korzystać z kanału sterowania JSON.
 	Export	Eksportuj
 	Export PDF	Eksportuj do PDF
 	Export Page as PNG	Eksportuj stronę jako PNG
@@ -329,7 +331,9 @@
 	Indents	Wcięcia
 	Index	Indeks
 	Info	Informacje
+	Ink Equation	Równanie odręczne
 	Ink to\nMath	Pismo odręczne\nna równanie
+	Ink to Math	Pismo odręczne do matematyki
 	Ink to\nShape	Pismo odręczne\nna kształt
 	Ink\nReplay	Odtwarzanie\npisma odręcznego
 	Insert	Wstaw
@@ -670,6 +674,7 @@
 	Show\nComments	Pokaż\nkomentarze
 	Shrink Font 1 Point	Pomniejsz czcionkę o 1 punkt
 	Side to Side	Obok siebie
+	Side\nby Side	Obok\nsiebie
 	Side\nto Side	Obok\nsiebie
 	Signature Line	Wiersz podpisu
 	Single	Pojedyncze
@@ -680,7 +685,6 @@
 	Small caps	Kapitaliki
 	SmartArt	SmartArt
 	Sort	Sortuj
-	Source code: github.com/storytold/wordcraft	Kod źródłowy: github.com/storytold/wordcraft
 	Space before/after:	Odstęp przed/po:
 	Spacing	Odstępy
 	Spacing (pt):	Odstępy (pt):
@@ -710,9 +714,13 @@
 	Subscript	Indeks dolny
 	Superscript	Indeks górny
 	Switch Modes	Przełącz tryb
+	Switch Windows	Przełącz okna
 	Switch\nModes	Przełącz\ntryb
+	Switch\nWindows	Przełącz\nokna
 	Symbol	Symbol
 	Symbols	Symbole
+	Synchronous Scrolling	Przewijanie synchroniczne
+	Synchronous\nScrolling	Przewijanie\nsynchroniczne
 	Synonyms	Synonimy
 	Tab	Tab
 	Table	Tabela
@@ -788,6 +796,7 @@
 	Vertical Alignment	Wyrównanie w pionie
 	View	Widok
 	View Gridlines	Pokaż linie siatki
+	View Side by Side	Wyświetl obok siebie
 	View State	Stan widoku
 	Views	Widoki
 	Voice	Głos
@@ -2523,3 +2532,4 @@ preview	Title	Tytuł
 
 	Paste as Equation	Wklej jako równanie
 	Open Obsidian Vault…	Otwórz magazyn Obsidian…
+	Source code: github.com/Rasmus-03/Quill	Kod źródłowy: github.com/Rasmus-03/Quill

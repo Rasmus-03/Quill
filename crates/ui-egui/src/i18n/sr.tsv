@@ -1,7 +1,7 @@
 # Serbian, Cyrillic script (sr) interface catalog. Transliterated from sr-latn.tsv (see that file
 # for the clean-room translation itself); change both files together so they don't drift apart.
 # Product names, key names, shortcuts, code, URLs, schemes and file extensions stay in Latin
-# letters here too (`wordcraft-cli mcp`, Backspace, ⌘V, .docx, http, Markdown).
+# letters here too (`quill-cli mcp`, Backspace, ⌘V, .docx, http, Markdown).
 #
 # Columns, separated by a TAB:
 #   context <TAB> English source <TAB> translation
@@ -66,6 +66,7 @@
 	Apply Styles	Изабери и примени стилове
 	Arrange	Ређање
 	Arrange\nAll	Распореди\nсве
+	Arrange All	Уреди све
 	Arrow	Стрелица
 	Artistic Effects	Уметнички ефекти
 	As Recommended	Као што је препоручено
@@ -130,6 +131,7 @@
 	Include level number from:	Укључи број нивоа:
 	Initials:	Иницијали:
 	Ink	Мастило
+	Ink Equation	Једначина руком
 	Insertions and Deletions	Уметања и брисања
 	Insertions:	Уметања:
 	Interface	Интерфејс
@@ -238,6 +240,7 @@
 	Blank document	Празан документ
 	Blank Page	Празна страна
 	Block\nAuthors	Блокирај\nауторе
+	Block Authors	Блокирај ауторе
 	Bold	Подебљано
 	Bookmark	Обележивач
 	Bookmark name:	Назив обележивача:
@@ -245,9 +248,14 @@
 	Border\nPainter	Копирање\nивица
 	Borders	Ивице
 	Show the mini toolbar when text is selected	Прикажи мини траку са алаткама при избору текста
+	Side\nby Side	Једно поред\nдругог
 	Spaces	Размаци
 	Spelling	Правопис
 	Spelling and grammar are checked in English (United States).	Правопис и граматика се проверавају на енглеском (Сједињене Државе).
+	Switch Windows	Промени прозор
+	Switch\nWindows	Промени\nпрозор
+	Synchronous Scrolling	Синхроно померање
+	Synchronous\nScrolling	Синхроно\nпомерање
 	Tab characters	Знакови табулатора
 	Tab stop position:	Положај табулатора:
 	Default tab stops:	Подразумевани табулатори:
@@ -264,6 +272,7 @@
 	Typing replaces selected text	Откуцано замењује изабрани текст
 	Update fields before printing	Ажурирај поља пре штампања
 	Use the Insert key to switch overtype on and off	Тастер Insert укључује и искључује преписивање
+	View Side by Side	Приказ једно поред другог
 	Whole document	Цео документ
 	This section	Овај одељак
 	Fill	Испуна
@@ -434,7 +443,7 @@
 	Equation	Једначина
 	Eraser	Гумица
 	Even Page	Парна страна
-	Every command is available to scripts and AI agents: run `wordcraft-cli mcp` for an MCP server, or start the app with `--control <port>` for the JSON control channel.	Свака наредба је доступна скриптама и AI агентима: покрените `wordcraft-cli mcp` за MCP сервер, или покрените апликацију са `--control <port>` за JSON контролни канал.
+	Every command is available to scripts and AI agents: run `quill-cli mcp` for an MCP server, or start the app with `--control <port>` for the JSON control channel.	Свака наредба је доступна скриптама и AI агентима: покрените `quill-cli mcp` за MCP сервер, или покрените апликацију са `--control <port>` за JSON контролни канал.
 	Export	Извоз
 	Export a copy to share (PDF, Word document)	Извези копију за дељење (PDF, Word документ)
 	Export Page as PNG	Извези страну као PNG
@@ -517,6 +526,7 @@
 	Index	Индекс
 	Info	Информације
 	Ink to\nMath	Рукопис у\nформулу
+	Ink to Math	Рукопис у математику
 	Ink to\nShape	Рукопис у\nоблик
 	Ink\nReplay	Рукопис\nреприза
 	Insert	Уметање
@@ -871,7 +881,6 @@
 	Soft Edges	Меке ивице
 	Sort	Сортирај
 	Sort order:	Редослед сортирања:
-	Source code: github.com/storytold/wordcraft	Изворни код: github.com/storytold/wordcraft
 	Space	Размак
 	Space after: {pt} pt	Размак после: {pt} пт
 	Space before/after:	Размак пре/после:
@@ -2133,3 +2142,4 @@
 
 	Paste as Equation	Уметање као формула
 	Open Obsidian Vault…	Отварање складишта Obsidian…
+	Source code: github.com/Rasmus-03/Quill	Изворни код: github.com/Rasmus-03/Quill

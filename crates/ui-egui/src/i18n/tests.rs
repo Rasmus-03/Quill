@@ -138,9 +138,13 @@ fn every_tab_and_command_is_translated() {
     let mut missing = Vec::new();
     for l in Lang::all().filter(|l| *l != Lang::EN) {
         let tabs = crate::ribbon::TABS.iter().chain(&["Table Design", "Table Layout"]).copied();
-        // The Math tab is an English-language feature for now (school math;
-        // tracked: needs per-language math labels). Its registry strings are
-        // intentionally English-only.
+        // The Math tab is the Danish school-maths feature (C3/C4): its command
+        // labels, locations and messages are written in Danish in the source, so
+        // there is no English string for a catalog to translate and a Danish
+        // interface is right while every other one shows Danish here. Tracked as
+        // an open item for the other languages. The exclusion is honest only
+        // while that stays true, so drop it the day the tab gains an English
+        // source string.
         let commands = session
             .registry
             .all()
@@ -156,6 +160,39 @@ fn every_tab_and_command_is_translated() {
     missing.sort();
     missing.dedup();
     assert!(missing.is_empty(), "untranslated: {missing:#?}");
+}
+
+/// A catalog key that has drifted from the source string stops being looked up, and nothing fails:
+/// the interface falls back to English and the catalog keeps a translation nobody sees. That is how
+/// nineteen catalogs came to tell their reader to run `wordcraft-cli mcp` — a binary this workspace
+/// has not built since the fork — while the source said `quill-cli`. Pin the one help line that
+/// quotes a binary name to the source string and to the name, so a rename in either place fails.
+#[test]
+fn every_catalog_names_the_real_cli_binary() {
+    let source = include_str!("../options.rs");
+    // English is the source language: it has no catalog, so its help line lives in `options.rs`
+    // itself and is pinned there.
+    assert!(
+        source.contains("Every command is available to scripts and AI agents: run `quill-cli mcp`"),
+        "the English help line should name the binary the workspace builds"
+    );
+    let mut names = Vec::new();
+    for l in LANGUAGES.iter().filter(|l| l.code != "en") {
+        let (entries, errors) = parse_entries(l.source);
+        assert!(errors.is_empty(), "{}: {errors:?}", l.code);
+        for e in &entries {
+            if e.source.contains("wordcraft-cli") || e.translation.contains("wordcraft-cli") {
+                names.push(format!("{}: {:?}", l.code, e.source));
+            }
+        }
+        let help = entries
+            .iter()
+            .find(|e| e.source.starts_with("Every command is available to scripts"))
+            .unwrap_or_else(|| panic!("{} has no entry for the settings help line", l.code));
+        assert!(source.contains(&help.source), "{}: the key no longer matches options.rs: {:?}", l.code, help.source);
+        assert!(help.translation.contains("`quill-cli mcp`"), "{}: {:?}", l.code, help.translation);
+    }
+    assert!(names.is_empty(), "these catalogs name a binary the workspace does not build: {names:#?}");
 }
 
 #[test]
@@ -1051,6 +1088,25 @@ fn german_covers_the_interface_catalog_and_keeps_count_labels_neutral() {
         let words = count.to_string();
         assert_eq!(fmt(tr(de, "{words} words"), &[("words", &words)]), format!("Wörter: {count}"));
         assert_eq!(fmt(tr(de, "{selected} of {words} words"), &[("selected", "1"), ("words", &words)]), format!("Wörter: {count}; ausgewählt: 1"));
+    }
+}
+
+#[test]
+fn danish_covers_the_interface_catalog_and_keeps_count_labels_neutral() {
+    use std::collections::HashSet;
+    let keys = |source| parse_entries(source).0.into_iter().map(|e| e.source).collect::<HashSet<_>>();
+    let da = lang("da");
+    // Danish covers every string the complete catalogs carry, including the equation gallery.
+    assert_eq!(keys(da.0.source), keys(lang("ru").0.source));
+    assert_eq!(tr(da, "Save"), "Gem");
+    assert_eq!(tr(da, "Spelling & Grammar"), "Stavning og grammatik");
+    assert_eq!(tr(da, "unknown future label"), "unknown future label");
+    assert_eq!(fmt(tr(da, "Exported {path}"), &[("path", "udkast-{words}.docx")]), "Eksporterede udkast-{words}.docx");
+    // `ord` is both singular and plural, so one wording is grammatical for every count.
+    for count in [0, 1, 2, 11, 21, 101] {
+        let words = count.to_string();
+        assert_eq!(fmt(tr(da, "{words} words"), &[("words", &words)]), format!("{count} ord"));
+        assert_eq!(fmt(tr(da, "{selected} of {words} words"), &[("selected", "1"), ("words", &words)]), format!("1 af {count} ord"));
     }
 }
 

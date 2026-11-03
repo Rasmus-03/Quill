@@ -1,12 +1,12 @@
-//! File › Options › General › Make WordCraft the default for Word documents (#295).
+//! File › Options › General › Make Quill the default for Word documents (#295).
 //!
-//! The installers register WordCraft for Word, RTF and ODT files without taking over the
-//! defaults (`packaging/windows/wordcraft.wxs`, the `.desktop` file's `MimeType=`, `Info.plist`).
+//! The installers register Quill for Word, RTF and ODT files without taking over the
+//! defaults (`packaging/windows/quill.wxs`, the `.desktop` file's `MimeType=`, `Info.plist`).
 //! This is the button that makes it the default when the user asks:
-//! - **Windows** doesn't let apps set defaults: it opens Settings › Default apps on WordCraft's
-//!   page (`ms-settings:defaultapps?registeredAppMachine=WordCraft`; Windows 10 ignores the query
-//!   and shows the Default apps list), where the user picks WordCraft per type.
-//! - **Linux and BSD**: `xdg-mime default ai.storyteller.wordcraft.desktop <types>` for
+//! - **Windows** doesn't let apps set defaults: it opens Settings › Default apps on Quill's
+//!   page (`ms-settings:defaultapps?registeredAppMachine=Quill`; Windows 10 ignores the query
+//!   and shows the Default apps list), where the user picks Quill per type.
+//! - **Linux and BSD**: `xdg-mime default io.github.rasmus03.quill.desktop <types>` for
 //!   [`WORD_MIME_TYPES`], which writes the user's `mimeapps.list`. Only when the desktop entry is
 //!   installed (deb, rpm, Flatpak; a bare AppImage has none), and not from inside the Flatpak
 //!   sandbox, which can't change the host's defaults.
@@ -15,6 +15,16 @@
 //! [`WORD_MIME_TYPES`]: self::WORD_MIME_TYPES
 
 use wordcraft_ui_egui::DefaultApp;
+
+/// The name the MSI registers the app under (`HKLM\Software\RegisteredApplications`). The
+/// Settings › Default apps link below only works when both are the same, so the test module
+/// checks them against the installer.
+#[cfg(any(target_os = "windows", test))]
+const REGISTERED_APP_NAME: &str = "Quill";
+
+/// Settings › Default apps, on the page of the app the MSI registered.
+#[cfg(any(target_os = "windows", test))]
+const WINDOWS_DEFAULT_APPS_URI: &str = "ms-settings:defaultapps?registeredAppMachine=Quill";
 
 /// The `Services::make_default_app` hook.
 pub type Hook = Box<dyn Fn() -> Result<DefaultApp, String>>;
@@ -34,9 +44,9 @@ pub fn hook() -> Option<Hook> {
 #[cfg(any(all(unix, not(target_os = "macos")), test))]
 const DESKTOP_ID: &str = "io.github.rasmus03.quill.desktop";
 
-/// The types the button makes WordCraft the default for on Linux and BSD: Word documents and
+/// The types the button makes Quill the default for on Linux and BSD: Word documents and
 /// templates (also macro-enabled and legacy), RTF and ODT. The same set the Windows installer
-/// lists under WordCraft's Capabilities; Markdown and plain text are only offered under Open With.
+/// lists under Quill's Capabilities; Markdown and plain text are only offered under Open With.
 /// Every one is in the `.desktop` file's `MimeType=` (a test checks).
 #[cfg(any(all(unix, not(target_os = "macos")), test))]
 const WORD_MIME_TYPES: &[&str] = &[
@@ -82,9 +92,9 @@ fn application_dirs(data_home: Option<&str>, data_dirs: Option<&str>, home: Opti
 mod windows {
     use wordcraft_ui_egui::DefaultApp;
 
-    /// Settings › Default apps, on the page of the app registered as `WordCraft` under
+    /// Settings › Default apps, on the page of the app registered as `Quill` under
     /// `HKLM\Software\RegisteredApplications` (the MSI writes it).
-    const SETTINGS_URI: &str = "ms-settings:defaultapps?registeredAppMachine=WordCraft";
+    const SETTINGS_URI: &str = WINDOWS_DEFAULT_APPS_URI;
 
     pub(super) fn open_default_apps() -> Result<DefaultApp, String> {
         open::that_detached(SETTINGS_URI).map_err(|e| format!("couldn't open Settings: {e}"))?;
@@ -105,9 +115,7 @@ mod xdg {
 
     pub(super) fn make_default() -> Result<DefaultApp, String> {
         if std::env::var_os("FLATPAK_ID").is_some() || std::path::Path::new("/.flatpak-info").exists() {
-            return Err(
-                "the Flatpak sandbox can't change default apps; choose WordCraft under Open With in your file manager or system settings".into()
-            );
+            return Err("the Flatpak sandbox can't change default apps; choose Quill under Open With in your file manager or system settings".into());
         }
         let var = |k: &str| std::env::var(k).ok();
         let dirs = application_dirs(var("XDG_DATA_HOME").as_deref(), var("XDG_DATA_DIRS").as_deref(), var("HOME").as_deref());
@@ -134,6 +142,25 @@ mod tests {
     use std::path::PathBuf;
 
     use super::*;
+
+    /// The name the MSI registers the app under (`HKLM\Software\RegisteredApplications`): the
+    /// Settings › Default apps link below only works when both are the same. A rename that
+    /// touches one and not the other leaves the button pointing at nothing.
+    #[test]
+    fn the_windows_default_apps_link_matches_the_installer() {
+        // The MSI is a text file (WiX XML), so the name it registers is checked here instead of
+        // in a build that needs the Windows SDK.
+        let msi = include_str!("../../../packaging/windows/quill.wxs");
+        assert!(
+            msi.contains(&format!("Name=\"{REGISTERED_APP_NAME}\" Value=\"Software\\{REGISTERED_APP_NAME}\\Capabilities\"")),
+            "the MSI must register the app as {REGISTERED_APP_NAME}"
+        );
+        assert!(msi.contains(&format!("<Package\n      Name=\"{REGISTERED_APP_NAME}\"")), "the MSI's product name must be {REGISTERED_APP_NAME}");
+        assert!(
+            WINDOWS_DEFAULT_APPS_URI.ends_with(&format!("registeredAppMachine={REGISTERED_APP_NAME}")),
+            "the Settings link must point at the name the MSI registers"
+        );
+    }
 
     #[test]
     fn xdg_mime_sets_every_word_type_in_one_call() {

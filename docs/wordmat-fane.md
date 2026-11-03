@@ -55,8 +55,14 @@ The graph replaces the selection as a picture (PNG).
 
 ## Requirements
 
-- **Maxima** in PATH (`sudo pacman -S maxima` on Arch/CachyOS).
-  Without it the buttons report a clean error instead of crashing.
+- **Maxima**, the calculation engine. Quill looks for it on `PATH` first, then — on macOS —
+  in the Homebrew prefixes (`/opt/homebrew/bin`, `/usr/local/bin`) and MacPorts
+  (`/opt/local/bin`), because an app started from Finder never has those in its environment.
+  `sudo pacman -S maxima` on Arch/CachyOS, `brew install maxima` on macOS.
+  Without it the buttons report a clean error that says how to install it, instead of crashing.
+- On Linux and the BSDs a Maxima call is capped at 2 GiB of address space, so `2^2^40` fails
+  cleanly; macOS has no such limit, and the 30-second timeout bounds it there. The `ulimit -v`
+  wrapper is Linux/BSD only, so a Mac run does not print a warning into every call's stderr.
 - Real answers are the default (solved over the reals with stock Maxima).
   Experts may still point `MATHCRAFT_SOLVEREAL` at a `solvereal.mac` file
   for its solver; it is GPL-licensed and never ships with the app.

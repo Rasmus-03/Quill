@@ -1,6 +1,6 @@
 # Localization parity with Microsoft Word
 
-> **Last reviewed:** 2026-10-10 · **Last updated:** 2026-10-11 · **Change:** trivial (Turkish interface catalog completed, 2,325 entries, #774; previously minor: Turkish interface catalog completed, 2,325 entries, #774; previously minor: Hungarian interface added; previously trivial: sorting and table numbers follow the text's language, #836, #837; previously minor: Polish interface; Polish proofing — spelling, grammar, hyphenation — and a proofing language per run; previously minor: Turkish interface added; previously major: first version; catalogs measured from `crates/ui-egui/src/i18n`, Word's languages from its bundle listing) · **Target:** Microsoft Word (Microsoft 365) for Mac 16.113.4
+> **Last reviewed:** 2026-10-23 · **Last updated:** 2026-10-23 · **Change:** minor (a Danish pass over all 2,495 entries: three entries that read wrong fixed — Highlighter, Vault Tags, Default Paragraph Font — and four left open for a native speaker; previously minor: Danish interface catalog 2,495 entries and Danish proofing; 20 interface languages; previously trivial: Turkish interface catalog completed, 2,325 entries, #774; previously minor: Turkish interface catalog completed, 2,325 entries, #774; previously minor: Hungarian interface added; previously trivial: sorting and table numbers follow the text's language, #836, #837; previously minor: Polish interface; Polish proofing — spelling, grammar, hyphenation — and a proofing language per run; previously minor: Turkish interface added; previously major: first version; catalogs measured from `crates/ui-egui/src/i18n`, Word's languages from its bundle listing) · **Target:** Microsoft Word (Microsoft 365) for Mac 16.113.4
 
 Interface languages, script support and proofing per language. How translation works (catalog
 format, adding a language, clean-room rule): `crates/ui-egui/src/i18n/mod.rs`.
@@ -19,8 +19,8 @@ native-speaker review (human).
 
 ## What WordCraft ships (measured)
 
-- **19 interface languages**: English plus `zh-hans`, `zh-hant`, `ja`, `uk`, `es`, `pt-br`,
-  Serbian `sr`/`sr-latn` (#250), Estonian `et`, Turkish `tr`, Russian `ru`, Italian `it` (#594), German `de` (#574), Polish `pl`, Czech `cs`, Hungarian `hu`, French `fr` and Bulgarian `bg`. Catalogs have 2,057–2,454 entries
+- **20 interface languages**: English plus `zh-hans`, `zh-hant`, `ja`, `uk`, `es`, `pt-br`,
+  Serbian `sr`/`sr-latn` (#250), Estonian `et`, Turkish `tr`, Russian `ru`, Italian `it` (#594), German `de` (#574), Polish `pl`, Czech `cs`, Hungarian `hu`, French `fr`, Bulgarian `bg` and **Danish `da`** (2,495 entries, every key the interface uses). Catalogs have 2,057–2,495 entries
   each; Polish has every key of every other catalog, including the built-in style names and the equation gallery, except the citation style names only Hungarian and Bulgarian translate so far (a test checks it). A test (`every_tab_and_command_is_translated`) enforces that every ribbon tab, command
   label and ribbon location is translated in every language.
   `pl`, `pl-PL` and `pl_PL.UTF-8` system locales pick Polish automatically.
@@ -29,8 +29,8 @@ native-speaker review (human).
   Read Aloud, Backstage greetings) aren't wrapped in `tl!` yet, so they show in English in every
   language: the true share of visible strings is **~93–95%** (estimated).
 - Pending PRs: Norwegian Bokmål (#208) and Nynorsk (#210), Hebrew with RTL (#20).
-- **Proofing: English, Polish and Portuguese**, chosen per run from its language (`w:lang`, resolved through
-  the styles; Review › Language and the status bar set it). Languages without proofing tools get
+- **Proofing: English, Polish, Portuguese and Danish**, chosen per document from its language (`w:lang`, resolved through
+  the styles; Review › Language and the status bar set it); Danish spelling uses an installed Hunspell Danish dictionary, with our own conservative grammar rules and hyph-utf8 hyphenation. Languages without proofing tools get
   no spelling or grammar marks (as in Word without the language's tools) instead of being flagged
   as English. Detail in [Proofing per language](#proofing-per-language).
 - Document scripts: shaping via HarfRust (HarfBuzz port) for every script; bidi (UAX #9) and Arabic
@@ -57,8 +57,8 @@ shared items below.
 | Korean | ko | 0 | ❌ | Hangul ✅; macOS Korean IME fixes pending (#163, #164) | no | none | 3–5 |
 | Vietnamese | vi | 0 | ❌ | Latin with stacked diacritics, untested | no | none | 3–4 |
 
-Other shipped languages: **13** — Traditional Chinese (`zh-hant`), Ukrainian (`uk`), Serbian
-Cyrillic and Latin (`sr`, `sr-latn`, #250), Estonian (`et`), Turkish (`tr`), Russian (`ru`), Italian (`it`, #594), Polish (`pl`), Czech (`cs`), Hungarian (`hu`), French (`fr`) and Bulgarian (`bg`), all partial.
+Other shipped languages: **14** — Traditional Chinese (`zh-hant`), Ukrainian (`uk`), Serbian
+Cyrillic and Latin (`sr`, `sr-latn`, #250), Estonian (`et`), Turkish (`tr`), Russian (`ru`), Italian (`it`, #594), Polish (`pl`), Czech (`cs`), Hungarian (`hu`), French (`fr`), Bulgarian (`bg`) and Danish (`da`, full: interface and proofing), all partial unless noted.
 Estonian uses the existing fonts, follows `et-EE` system locales, and is available in Options or
 through `ui.language` with `{"value":"et"}`. Its 1,307 entries cover the existing interface catalog.
 Estonian spelling, grammar, dates and document templates are not added by the interface catalog.
@@ -76,6 +76,40 @@ the Russian catalog, built-in style names shown translated, plus the citation st
 
 Polish is the only one besides English with proofing tools, and a Polish interface writes new
 documents in Polish (`pl-PL`).
+
+**Danish read through once (2026-10-23).** An agent pass over all 2,495 entries, reading the
+ribbon tabs and groups, the Home, Insert, References and Review labels, the dialogs and the error
+sentences as a Dane would. It is not the native-speaker review this table's last-but-two column
+asks for; it is what can be done before one.
+
+What it found: no English left inside a Danish sentence (checked word by word), no calque
+sentences, and the everyday vocabulary is right — `Brevfletning`, `Punktopstilling`, `Ordoptælling`,
+`Spor ændringer`, `Sidehoved`/`Sidefod`, `Figurer`, `Billedtekst`, `Linjeafstand 1,5`,
+`Margener`/`Retning`. Three entries read wrong and were fixed:
+
+| English | Was | Now | Why |
+|---|---|---|---|
+| `Highlighter` | Overstregningstusch | Tekstmarker | Reads as a pen for striking text over, next to `Overstregning` (Overbar) and `Gennemstregning` (Strikethrough) in the same menu; every other catalog uses the marker word (Textmarker, Surligneur, Zakreślacz) |
+| `Vault Tags` | Bokstags | Boks-tags | The one word in the vault group without the hyphen its sibling `Boks-tilbagelinks` uses; `bokstags` is not a Danish word |
+| `Default Paragraph Font` | Standardafsnitstypografi | Standardafsnitsskrift | `-typografi` is a *style* in this catalog's own vocabulary (Styles = Typografier); the entry names a font |
+
+Four are left open for a native speaker, because the call is a matter of taste rather than of
+right and wrong: `Match Fields` → “Match felter” (a borrowed verb where “Tilknyt felter” says what
+happens), `Cloud` → “Cloud” (a core pane; “Skylagring” is the ordinary Danish word), `Collapse
+Selection` → “Skjul markering” (reads as “hide the selection”), `Editor` → “Editor” (kept — the
+feature is known by that name in Danish use too).
+
+Judged and kept: `Ceiling` → “Loft” and `Floor` → “Gulv” are the standard Danish mathematical
+terms, as are `Differential` and `Differential θ`; so are `Hyperlink`, `Matrix`, `Sum`, `Zoom`.
+
+**The Math tab.** It is Danish at every point a student meets it: the command labels and
+locations in the registry, the tab's own controls, the four outcomes of a solve, the error
+messages (`Kunne ikke isolere x: …`, `Taylor-rækkens orden må højst være 1000`), the formula
+gallery's groups and its answers (`ingen reel løsning`, `2 < x eller x < -2`). Written in Danish
+in the source rather than put through the catalogs, so the other 19 interfaces show Danish here
+— the tab is the 1.2 Danish-school feature, and `every_tab_and_command_is_translated` skips it
+for that reason (`crates/ui-egui/src/i18n/tests.rs`). That is the open item, not English prose:
+a German or Turkish user reaching the tab gets Danish.
 
 ## Proofing per language
 
@@ -158,6 +192,7 @@ WordCraft keeps 2,54 cm).
 
 | Date | Change | Summary |
 |---|---|---|
+| 2026-10-23 | trivial | A Danish read-through of all 2,495 entries (an agent pass, not the native-speaker review the table asks for): no English left inside a Danish sentence and no calque sentences, three entries fixed — `Highlighter` “Overstregningstusch” → “Tekstmarker”, `Vault Tags` “Bokstags” → “Boks-tags”, `Default Paragraph Font` “Standardafsnitstypografi” → “Standardafsnitsskrift” — and four left open for a native speaker (`Match Fields`, `Cloud`, `Collapse Selection`, `Editor`). `Ceiling`/`Floor` → “Loft”/“Gulv” and the `Differential` entries are the standard Danish mathematical terms and stay |
 | 2026-10-11 | minor | Turkish interface catalog completed (2,325 entries, the same keys as Russian): equation gallery, built-in style names, watermarks, paper sizes and preview tiles; the interface audit checks Turkish too (#774) |
 | 2026-10-12 | trivial | Region conventions: File › Options › Advanced › Region (saved) and an Automatic units entry; Unix `LC_PAPER`/`LC_MEASUREMENT`/`LC_NUMERIC` each decide their own convention; the web reads the browser's locale; `WORDCRAFT_NO_PREFS` runs stay en-US; where the decimal separator comes from (#838 review) |
 | 2026-10-12 | minor | New blank documents follow the system region: A4 outside the Letter territories, centimetres outside the US, the region's decimal separator in length fields; explicit Measurement units choice wins (#838) |

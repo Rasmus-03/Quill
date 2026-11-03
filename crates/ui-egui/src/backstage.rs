@@ -175,8 +175,17 @@ fn template_tile(ui: &mut Ui, app: &mut WordApp, label: &str, template: &str) {
 }
 
 /// The built-in templates in gallery order: display label and the `file.new` template id.
-const TEMPLATES: [(&str, &str); 5] =
-    [("Blank document", "blank"), ("Studio handbook (sample)", "sample"), ("Letter", "letter"), ("Résumé", "resume"), ("Report", "report")];
+const TEMPLATES: [(&str, &str); 8] = [
+    ("Blank document", "blank"),
+    ("Studio handbook (sample)", "sample"),
+    ("Letter", "letter"),
+    ("Résumé", "resume"),
+    ("Report", "report"),
+    // The Danish school templates (our own text).
+    ("Opgaveark", "opgaveark"),
+    ("Rapportforside", "rapportforside"),
+    ("Håndout", "haandout"),
+];
 
 /// How many templates Home shows before "More templates" (the rest are on New).
 const HOME_TEMPLATES: usize = 4;
@@ -411,10 +420,14 @@ mod tests {
     #[test]
     fn template_search_matches_labels_case_insensitively() {
         let ids = |q: &str| matching_templates(q).into_iter().map(|(_, id)| id).collect::<Vec<_>>();
-        assert_eq!(ids(""), ["blank", "sample", "letter", "resume", "report"]);
+        assert_eq!(ids(""), ["blank", "sample", "letter", "resume", "report", "opgaveark", "rapportforside", "haandout"]);
         assert_eq!(ids("  LETTER "), ["letter"]);
         assert_eq!(ids("re"), ["resume", "report"]);
+        assert_eq!(ids("rapport"), ["rapportforside"]);
         assert_eq!(ids("résumé"), ["resume"]);
+        // The Danish school templates are found by their names.
+        assert_eq!(ids("opgave"), ["opgaveark"]);
+        assert_eq!(ids("hånd"), ["haandout"]);
         assert!(ids("no such template").is_empty());
     }
 

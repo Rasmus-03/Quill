@@ -4,7 +4,7 @@ version.workspace = true
 edition.workspace = true
 license.workspace = true
 publish = false
-description = "WordCraft cloud files: a Nextcloud/WebDAV client (list, open, save, share, search) that never blocks the editor"
+description = "Quill cloud files: a Nextcloud/WebDAV client (list, open, save, share, search) that never blocks the editor"
 
 [lints]
 workspace = true

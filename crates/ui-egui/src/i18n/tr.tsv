@@ -52,6 +52,7 @@
 	Apply Style	Stil Uygula
 	Arrange	Yerleştir
 	Arrange\nAll	Tümünü\nYerleştir
+	Arrange All	Tümünü Yerleştir
 	Arrow	Ok
 	Artistic Effects	Sanatsal Efektler
 	Author	Yazar
@@ -79,6 +80,7 @@
 	Blank document	Boş belge
 	Blank Page	Boş Sayfa
 	Block\nAuthors	Yazarları\nEngelle
+	Block Authors	Yazarları Engelle
 	Body text in a short paragraph to show spacing.	Aralığı göstermek için kısa bir paragrafta gövde metni.
 	Bold	Kalın
 	Book Title	Kitap Başlığı
@@ -246,7 +248,7 @@
 	Equation	Denklem
 	Eraser	Silgi
 	Even Page	Çift Sayfa
-	Every command is available to scripts and AI agents: run `wordcraft-cli mcp` for an MCP server, or start the app with `--control <port>` for the JSON control channel.	Her komut betiklere ve AI ajanlarına açıktır: MCP sunucusu için `wordcraft-cli mcp` çalıştırın veya JSON denetim kanalı için uygulamayı `--control <port>` ile başlatın.
+	Every command is available to scripts and AI agents: run `quill-cli mcp` for an MCP server, or start the app with `--control <port>` for the JSON control channel.	Her komut betiklere ve AI ajanlarına açıktır: MCP sunucusu için `quill-cli mcp` çalıştırın veya JSON denetim kanalı için uygulamayı `--control <port>` ile başlatın.
 	Export	Dışa Aktar
 	Export a copy to share (PDF, Word document)	Paylaşmak için bir kopya dışa aktarın (PDF, Word belgesi)
 	Export Page as PNG	Sayfayı PNG Olarak Dışa Aktar
@@ -334,7 +336,9 @@
 	Index Heading	Dizin Başlığı
 	Index {n}	Dizin {n}
 	Info	Bilgi
+	Ink Equation	Mürekkep Denklemi
 	Ink to\nMath	Mürekkebi\nMatematiğe Dönüştür
+	Ink to Math	Mürekkebi Matematiğe Dönüştür
 	Ink to\nShape	Mürekkebi\nŞekle Dönüştür
 	Ink\nReplay	Mürekkebi\nYeniden Oynat
 	Insert	Ekle
@@ -676,6 +680,7 @@
 	Show\nComments	Yorumları\nGöster
 	Shrink Font 1 Point	Yazı Tipini 1 Punto Küçült
 	Side to Side	Yan Yana
+	Side\nby Side	Yan Yana\nGörüntüle
 	Side\nto Side	Yan\nYana
 	Signature Line	İmza Satırı
 	Single	Tek
@@ -686,7 +691,6 @@
 	Small caps	Küçük büyük harf
 	SmartArt	SmartArt
 	Sort	Sırala
-	Source code: github.com/storytold/wordcraft	Kaynak kod: github.com/storytold/wordcraft
 	Space before/after:	Önce/sonra boşluk:
 	Spacing	Aralık
 	Spacing (pt):	Aralık (pt):
@@ -721,9 +725,13 @@
 	Subtle Reference	Hafif Başvuru
 	Superscript	Üst Simge
 	Switch Modes	Mod Değiştir
+	Switch Windows	Pencereleri Değiştir
 	Switch\nModes	Mod\nDeğiştir
+	Switch\nWindows	Pencereleri\nDeğiştir
 	Symbol	Sembol
 	Symbols	Semboller
+	Synchronous Scrolling	Eşzamanlı Kaydırma
+	Synchronous\nScrolling	Eşzamanlı\nKaydırma
 	Synonyms	Eş Anlamlılar
 	Tab	Sekme
 	Table	Tablo
@@ -810,6 +818,7 @@ preview	Title	Örnek
 	Vertical Alignment	Dikey Hizalama
 	View	Görünüm
 	View Gridlines	Kılavuz Çizgilerini Göster
+	View Side by Side	Yan Yana Görüntüle
 	View State	Görünüm Durumu
 	Views	Görünümler
 	Voice	Ses
@@ -2528,3 +2537,4 @@ preview	Title	Örnek
 
 	Paste as Equation	Denklem olarak yapıştır
 	Open Obsidian Vault…	Obsidian kasasını aç…
+	Source code: github.com/Rasmus-03/Quill	Kaynak kod: github.com/Rasmus-03/Quill

@@ -46,6 +46,7 @@
 	Apply Styles	スタイルを選んで適用
 	Arrange	配置
 	Arrange\nAll	整列
+	Arrange All	すべて並べて表示
 	Arrow	矢印
 	Artistic Effects	アート効果
 	As you type	入力中
@@ -99,6 +100,7 @@
 	Include level number from:	含めるレベルの番号:
 	Initials:	イニシャル:
 	Ink	インク
+	Ink Equation	インク数式
 	Insertions and Deletions	挿入と削除
 	Insertions:	挿入された箇所:
 	Interface	インターフェイス
@@ -177,6 +179,7 @@
 	Blank document	白紙の文書
 	Blank Page	空白のページ
 	Block\nAuthors	作成者のブロック
+	Block Authors	作成者をブロック
 	Bold	太字
 	Bookmark	ブックマーク
 	Bookmark name:	ブックマーク名:
@@ -184,9 +187,14 @@
 	Border\nPainter	罫線の書式設定
 	Borders	罫線
 	Show the mini toolbar when text is selected	テキストを選択したときにミニ ツール バーを表示する
+	Side\nby Side	並べて\n表示
 	Spaces	スペース
 	Spelling	スペル チェック
 	Spelling and grammar are checked in English (United States).	スペルと文法は英語 (米国) でチェックされます。
+	Switch Windows	ウィンドウの切り替え
+	Switch\nWindows	ウィンドウの\n切り替え
+	Synchronous Scrolling	同期スクロール
+	Synchronous\nScrolling	同期\nスクロール
 	Tab characters	タブ
 	Tab stop position:	タブ位置:
 	Default tab stops:	既定のタブ間隔:
@@ -203,6 +211,7 @@
 	Typing replaces selected text	入力時に選択文字列を置き換える
 	Update fields before printing	印刷前にフィールドを更新する
 	Use the Insert key to switch overtype on and off	Insert キーで上書きのオンとオフを切り替える
+	View Side by Side	並べて表示
 	Whole document	文書全体
 	This section	このセクション
 	Fill	塗りつぶし
@@ -382,7 +391,7 @@
 	Equation	数式
 	Eraser	消しゴム
 	Even Page	偶数ページから開始
-	Every command is available to scripts and AI agents: run `wordcraft-cli mcp` for an MCP server, or start the app with `--control <port>` for the JSON control channel.	すべてのコマンドはスクリプトと AI エージェントから利用できます。`wordcraft-cli mcp` で MCP サーバーを起動するか、`--control <port>` を付けてアプリを起動すると JSON 制御チャネルが使えます。
+	Every command is available to scripts and AI agents: run `quill-cli mcp` for an MCP server, or start the app with `--control <port>` for the JSON control channel.	すべてのコマンドはスクリプトと AI エージェントから利用できます。`quill-cli mcp` で MCP サーバーを起動するか、`--control <port>` を付けてアプリを起動すると JSON 制御チャネルが使えます。
 	Export	エクスポート
 	Export a copy to share (PDF, Word document)	共有用にコピーをエクスポート（PDF、Word 文書）
 	Export Page as PNG	ページを PNG としてエクスポート
@@ -465,6 +474,7 @@
 	Index	索引
 	Info	情報
 	Ink to\nMath	インクを数式に変換
+	Ink to Math	インクを数式に変換
 	Ink to\nShape	インクを図形に変換
 	Ink\nReplay	インクの再生
 	Insert	挿入
@@ -815,7 +825,6 @@
 	Small caps	小型英大文字
 	SmartArt	SmartArt
 	Sort	並べ替え
-	Source code: github.com/storytold/wordcraft	ソース コード: github.com/storytold/wordcraft
 	Space	スペース
 	Space before/after:	段落前/後の間隔:
 	Spacing	間隔
@@ -2119,3 +2128,4 @@
 
 	Paste as Equation	数式として貼り付け
 	Open Obsidian Vault…	Obsidian の保管フォルダーを開く…
+	Source code: github.com/Rasmus-03/Quill	ソース コード: github.com/Rasmus-03/Quill

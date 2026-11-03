@@ -7,6 +7,28 @@ use wordcraft_doc::{Comment, Paragraph, PartKind, Pos, StoryRef, para_block};
 use super::{fmt_revisions, now_iso, pos_json, sel_result};
 use crate::{CmdError, CmdResult, CommandSpec, Selection, Session, p};
 
+/// The neutral revision colour Block Authors uses instead of the authors' colours.
+pub const BLOCKED_COLOR: wordcraft_doc::props::Rgb = wordcraft_doc::props::Rgb(0x7F, 0x7F, 0x7F);
+
+/// Turn Review › Block Authors on or off: while on, revisions use one neutral colour and every
+/// author the engine reports reads "Author". The authors stay in the document; the colours that
+/// were in effect are put back when it is turned off.
+fn block_authors(s: &mut Session, on: bool) {
+    if on == s.view.block_authors {
+        return;
+    }
+    if on {
+        s.view.blocked_colors = Some((s.prefs.markup.insert_color, s.prefs.markup.delete_color));
+        s.prefs.markup.insert_color = Some(BLOCKED_COLOR);
+        s.prefs.markup.delete_color = Some(BLOCKED_COLOR);
+    } else {
+        let (insert, delete) = s.view.blocked_colors.take().unwrap_or((None, None));
+        s.prefs.markup.insert_color = insert;
+        s.prefs.markup.delete_color = delete;
+    }
+    s.view.block_authors = on;
+}
+
 pub fn specs() -> Vec<CommandSpec> {
     vec![
         CommandSpec::new("review.newComment", "New Comment", "Review › Comments", new_comment).key("Mod+Alt+M").params(r#"{"text": string}"#),
@@ -40,6 +62,15 @@ pub fn specs() -> Vec<CommandSpec> {
             s.relayout();
             Ok(json!({"showMarkup": s.view.show_markup}))
         })
+        .pure(),
+        // Hide who made each change and comment: one neutral revision colour and the name
+        // "Author" everywhere the engine reports them. The document keeps its authors.
+        CommandSpec::new("review.blockAuthors", "Block Authors", "Review › Protect", |s, v| {
+            let on = p::bool(v, "value").unwrap_or(!s.view.block_authors);
+            block_authors(s, on);
+            Ok(json!({"value": s.view.block_authors}))
+        })
+        .params(r#"{"value"?: bool (omit to toggle)}"#)
         .pure(),
         CommandSpec::new("review.trackingOptions", "Track Changes Options", "Review › Tracking", tracking_options)
             .params(
@@ -255,7 +286,7 @@ fn list_comments(s: &mut Session, _: &Value) -> CmdResult {
             .filter_map(|(id, pos)| {
                 let c = s.doc.comments.get(id)?;
                 Some(json!({
-                    "id": id, "author": c.author, "date": c.date, "resolved": c.resolved, "parent": c.parent,
+                    "id": id, "author": s.author_label(&c.author), "date": c.date, "resolved": c.resolved, "parent": c.parent,
                     "text": s.doc.plain_text(StoryRef::Part(c.part)),
                     "anchor": pos.as_ref().map(pos_json),
                 }))
@@ -415,7 +446,7 @@ pub fn move_changes(s: &Session) -> Vec<(Pos, String, bool)> {
         let name = rev.and_then(|r| r.move_name.clone()).unwrap_or_default();
         // One balloon per end (an end runs on across paragraphs).
         if seen.insert((name, from)) {
-            out.push((c.a, rev.map(|r| r.author.clone()).unwrap_or_default(), from));
+            out.push((c.a, rev.map(|r| s.author_label(&r.author).to_string()).unwrap_or_default(), from));
         }
     }
     out
@@ -593,7 +624,7 @@ pub fn format_changes(s: &Session) -> Vec<(Pos, String, Vec<Value>)> {
         .into_iter()
         .filter(|c| c.kind == "format")
         .map(|c| {
-            let author = c.rev.and_then(|r| s.doc.revisions.get(r as usize)).map(|r| r.author.clone()).unwrap_or_default();
+            let author = c.rev.and_then(|r| s.doc.revisions.get(r as usize)).map(|r| s.author_label(&r.author).to_string()).unwrap_or_default();
             (c.a, author, c.props)
         })
         .collect()
@@ -638,7 +669,7 @@ const MAX_DELETION_BALLOONS: usize = 500;
 /// move is left out: it has its "Moved from" balloon ([`move_changes`]).
 pub fn deletion_balloons(s: &Session) -> Vec<DeletionBalloon> {
     let doc = &s.doc;
-    let author = |rev: u32| doc.revisions.get(rev as usize).map(|r| r.author.clone()).unwrap_or_default();
+    let author = |rev: u32| doc.revisions.get(rev as usize).map(|r| s.author_label(&r.author).to_string()).unwrap_or_default();
     let mk = |path: &wordcraft_doc::Path, off| Pos { story: StoryRef::Body, path: path.clone(), off };
     let mut out = Vec::new();
     for path in doc.para_paths(StoryRef::Body) {
@@ -725,7 +756,7 @@ fn list_changes(s: &mut Session, _: &Value) -> CmdResult {
                 let mut v = json!({
                     "kind": c.kind, "start": pos_json(&c.a), "end": pos_json(&c.b),
                     "text": s.doc.copy_range(&c.a, &c.b).plain_text(),
-                    "author": rev.map(|r| r.author.clone()), "date": rev.map(|r| r.date.clone()),
+                    "author": rev.map(|r| s.author_label(&r.author)), "date": rev.map(|r| r.date.clone()),
                 });
                 if c.kind == "format" {
                     v["description"] = json!(fmt_revisions::describe(&c.props));
@@ -1305,5 +1336,53 @@ mod tests {
         let p = body_para(&s);
         assert_eq!((p.props.align, p.props.fmt_change.is_none()), (Some(wordcraft_doc::props::Align::Center), true));
         assert!(s.run("review.changes", &json!({})).unwrap().as_array().unwrap().is_empty());
+    }
+
+    /// E3: Block Authors hides who made each change and comment and paints revisions in one
+    /// neutral colour; turning it off puts the by-author colours back. The document keeps its
+    /// authors either way.
+    #[test]
+    fn block_authors_hides_names_and_colours_and_puts_them_back() {
+        let mut s = Session::new(Document::new());
+        s.view.proofing = false;
+        s.run("document.setText", &json!({"text": "keep gone"})).unwrap();
+        s.run("review.trackChanges", &json!({"value": true})).unwrap();
+        s.run("caret.docStart", &json!({})).unwrap();
+        s.run("text.insert", &json!({"text": "new "})).unwrap();
+        s.run("select.range", &json!({"anchor": {"block": 0, "off": 9}, "focus": {"block": 0, "off": 13}})).unwrap();
+        s.run("text.delete", &json!({})).unwrap();
+        s.run("select.range", &json!({"anchor": {"block": 0, "off": 4}, "focus": {"block": 0, "off": 8}})).unwrap();
+        s.run("review.newComment", &json!({"text": "note"})).unwrap();
+        assert_eq!(s.run("review.comments", &json!({})).unwrap()[0]["author"], "Quill User");
+        let (d, _) = draws(&mut s);
+        assert!(glyph_colors(&d).iter().any(|(c, _)| *c != wordcraft_doc::Rgb::BLACK), "revisions in the author's colour");
+
+        assert_eq!(s.run("review.blockAuthors", &json!({})).unwrap()["value"], true);
+        assert!(s.view.block_authors);
+        assert_eq!(s.prefs.markup.insert_color, Some(super::BLOCKED_COLOR));
+        assert_eq!(s.prefs.markup.delete_color, Some(super::BLOCKED_COLOR));
+        let (d, _) = draws(&mut s);
+        assert!(
+            glyph_colors(&d).iter().filter(|(c, _)| *c != wordcraft_doc::Rgb::BLACK).all(|(c, _)| *c == super::BLOCKED_COLOR),
+            "no author colours: {:?}",
+            glyph_colors(&d)
+        );
+        assert_eq!(s.run("review.comments", &json!({})).unwrap()[0]["author"], "Author");
+        let changes = s.run("review.changes", &json!({})).unwrap();
+        let changes = changes.as_array().unwrap();
+        assert!(changes.iter().any(|c| c["author"] == "Author"));
+        assert!(!changes.iter().any(|c| c["author"] == "Quill User"));
+
+        // Turning it off restores the colours that were in effect.
+        s.run("review.blockAuthors", &json!({"value": false})).unwrap();
+        assert!(!s.view.block_authors && s.view.blocked_colors.is_none());
+        assert_eq!((s.prefs.markup.insert_color, s.prefs.markup.delete_color), (None, None));
+        let (d, _) = draws(&mut s);
+        assert!(glyph_colors(&d).iter().any(|(c, _)| *c != wordcraft_doc::Rgb::BLACK && *c != super::BLOCKED_COLOR));
+
+        s.run("review.trackingOptions", &json!({"insertColor": "00AA00"})).unwrap();
+        s.run("review.blockAuthors", &json!({})).unwrap();
+        s.run("review.blockAuthors", &json!({"value": false})).unwrap();
+        assert_eq!(s.prefs.markup.insert_color, Some(wordcraft_doc::Rgb(0, 0xAA, 0)));
     }
 }

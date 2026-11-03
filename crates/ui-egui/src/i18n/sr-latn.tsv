@@ -62,6 +62,7 @@
 	Apply Styles	Izaberi i primeni stilove
 	Arrange	Ređanje
 	Arrange\nAll	Rasporedi\nsve
+	Arrange All	Uredi sve
 	Arrow	Strelica
 	Artistic Effects	Umetnički efekti
 	As Recommended	Kao što je preporučeno
@@ -126,6 +127,7 @@
 	Include level number from:	Uključi broj nivoa:
 	Initials:	Inicijali:
 	Ink	Mastilo
+	Ink Equation	Jednačina rukom
 	Insertions and Deletions	Umetanja i brisanja
 	Insertions:	Umetanja:
 	Interface	Interfejs
@@ -234,6 +236,7 @@
 	Blank document	Prazan dokument
 	Blank Page	Prazna strana
 	Block\nAuthors	Blokiraj\nautore
+	Block Authors	Blokiraj autore
 	Bold	Podebljano
 	Bookmark	Obeleživač
 	Bookmark name:	Naziv obeleživača:
@@ -241,9 +244,14 @@
 	Border\nPainter	Kopiranje\nivica
 	Borders	Ivice
 	Show the mini toolbar when text is selected	Prikaži mini traku sa alatkama pri izboru teksta
+	Side\nby Side	Jedno pored\ndrugog
 	Spaces	Razmaci
 	Spelling	Pravopis
 	Spelling and grammar are checked in English (United States).	Pravopis i gramatika se proveravaju na engleskom (Sjedinjene Države).
+	Switch Windows	Promeni prozor
+	Switch\nWindows	Promeni\nprozor
+	Synchronous Scrolling	Sinhrono pomeranje
+	Synchronous\nScrolling	Sinhrono\npomeranje
 	Tab characters	Znakovi tabulatora
 	Tab stop position:	Položaj tabulatora:
 	Default tab stops:	Podrazumevani tabulatori:
@@ -260,6 +268,7 @@
 	Typing replaces selected text	Otkucano zamenjuje izabrani tekst
 	Update fields before printing	Ažuriraj polja pre štampanja
 	Use the Insert key to switch overtype on and off	Taster Insert uključuje i isključuje prepisivanje
+	View Side by Side	Prikaz jedno pored drugog
 	Whole document	Ceo dokument
 	This section	Ovaj odeljak
 	Fill	Ispuna
@@ -430,7 +439,7 @@
 	Equation	Jednačina
 	Eraser	Gumica
 	Even Page	Parna strana
-	Every command is available to scripts and AI agents: run `wordcraft-cli mcp` for an MCP server, or start the app with `--control <port>` for the JSON control channel.	Svaka naredba je dostupna skriptama i AI agentima: pokrenite `wordcraft-cli mcp` za MCP server, ili pokrenite aplikaciju sa `--control <port>` za JSON kontrolni kanal.
+	Every command is available to scripts and AI agents: run `quill-cli mcp` for an MCP server, or start the app with `--control <port>` for the JSON control channel.	Svaka naredba je dostupna skriptama i AI agentima: pokrenite `quill-cli mcp` za MCP server, ili pokrenite aplikaciju sa `--control <port>` za JSON kontrolni kanal.
 	Export	Izvoz
 	Export a copy to share (PDF, Word document)	Izvezi kopiju za deljenje (PDF, Word dokument)
 	Export Page as PNG	Izvezi stranu kao PNG
@@ -513,6 +522,7 @@
 	Index	Indeks
 	Info	Informacije
 	Ink to\nMath	Rukopis u\nformulu
+	Ink to Math	Rukopis u matematiku
 	Ink to\nShape	Rukopis u\noblik
 	Ink\nReplay	Rukopis\nrepriza
 	Insert	Umetanje
@@ -867,7 +877,6 @@
 	Soft Edges	Meke ivice
 	Sort	Sortiraj
 	Sort order:	Redosled sortiranja:
-	Source code: github.com/storytold/wordcraft	Izvorni kod: github.com/storytold/wordcraft
 	Space	Razmak
 	Space after: {pt} pt	Razmak posle: {pt} pt
 	Space before/after:	Razmak pre/posle:
@@ -2129,3 +2138,4 @@
 
 	Paste as Equation	Umetanje kao formula
 	Open Obsidian Vault…	Otvaranje skladišta Obsidian…
+	Source code: github.com/Rasmus-03/Quill	Izvorni kod: github.com/Rasmus-03/Quill

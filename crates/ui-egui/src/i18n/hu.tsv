@@ -55,6 +55,7 @@
 	Apply Style	Stílus alkalmazása
 	Arrange	Elhelyezés
 	Arrange\nAll	Ablakok\nrendezése
+	Arrange All	Összes elrendezése
 	Arrow	Nyíl
 	Artistic Effects	Művészi effektusok
 	Author	Szerző
@@ -82,6 +83,7 @@
 	Blank document	Üres dokumentum
 	Blank Page	Üres oldal
 	Block\nAuthors	Szerzők\nletiltása
+	Block Authors	Szerzők letiltása
 	Body text in a short paragraph to show spacing.	Szövegtörzs egy rövid bekezdésben, hogy látszódjon a térköz.
 	Bold	Félkövér
 	Book Title	Könyvcím
@@ -248,7 +250,7 @@
 	Equation	Egyenlet
 	Eraser	Radír
 	Even Page	Páros oldal
-	Every command is available to scripts and AI agents: run `wordcraft-cli mcp` for an MCP server, or start the app with `--control <port>` for the JSON control channel.	Minden parancs elérhető szkriptekből és MI-ágensekből is: MCP-szerverhez futtasd a `wordcraft-cli mcp` parancsot, a JSON-vezérlőcsatornához pedig indítsd az alkalmazást a `--control <port>` kapcsolóval.
+	Every command is available to scripts and AI agents: run `quill-cli mcp` for an MCP server, or start the app with `--control <port>` for the JSON control channel.	Minden parancs elérhető szkriptekből és MI-ágensekből is: MCP-szerverhez futtasd a `quill-cli mcp` parancsot, a JSON-vezérlőcsatornához pedig indítsd az alkalmazást a `--control <port>` kapcsolóval.
 	Export	Exportálás
 	Export a copy to share (PDF, Word document)	Másolat exportálása megosztáshoz (PDF, Word-dokumentum)
 	Export Page as PNG	Oldal exportálása PNG-ként
@@ -336,7 +338,9 @@
 	Index Heading	Tárgymutató-címsor
 	Index {n}	Tárgymutató {n}
 	Info	Információ
+	Ink Equation	Kézzel írt egyenlet
 	Ink to\nMath	Tintából\nképlet
+	Ink to Math	Kézírás matematikába
 	Ink to\nShape	Tintából\nalakzat
 	Ink\nReplay	Tinta\nvisszajátszása
 	Insert	Beszúrás
@@ -670,6 +674,7 @@
 	Show\nComments	Megjegyzések\nmegjelenítése
 	Shrink Font 1 Point	Betűméret csökkentése 1 ponttal
 	Side to Side	Egymás mellett
+	Side\nby Side	Egymás\nmellett
 	Side\nto Side	Egymás\nmellett
 	Signature Line	Aláírássor
 	Single	Szimpla
@@ -680,7 +685,6 @@
 	Small caps	Kiskapitális
 	SmartArt	SmartArt
 	Sort	Rendezés
-	Source code: github.com/storytold/wordcraft	Forráskód: github.com/storytold/wordcraft
 	Space before/after:	Térköz előtte/utána:
 	Spacing	Térköz
 	Spacing (pt):	Térköz (pt):
@@ -716,9 +720,13 @@
 	Subtle Reference	Finom hivatkozás
 	Superscript	Felső index
 	Switch Modes	Módváltás
+	Switch Windows	Ablakváltás
 	Switch\nModes	Módváltás
+	Switch\nWindows	Ablak\nváltás
 	Symbol	Szimbólum
 	Symbols	Szimbólumok
+	Synchronous Scrolling	Szinkron görgetés
+	Synchronous\nScrolling	Szinkron\ngörgetés
 	Synonyms	Szinonimák
 	Tab	Tabulátor
 	Table	Táblázat
@@ -796,6 +804,7 @@
 	Vertical Alignment	Függőleges igazítás
 	View	Nézet
 	View Gridlines	Rácsvonalak megjelenítése
+	View Side by Side	Egymás mellett
 	View State	Nézet állapota
 	Views	Nézetek
 	Voice	Hang
@@ -2528,3 +2537,4 @@
 
 	Paste as Equation	Beillesztés egyenletként
 	Open Obsidian Vault…	Obsidian-tár megnyitása…
+	Source code: github.com/Rasmus-03/Quill	Forráskód: github.com/Rasmus-03/Quill

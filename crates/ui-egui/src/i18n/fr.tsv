@@ -56,6 +56,7 @@
 	Apply Style	Appliquer le style
 	Arrange	Organiser
 	Arrange\nAll	Organiser\ntout
+	Arrange All	Réorganiser tout
 	Arrow	Flèche
 	Artistic Effects	Effets artistiques
 	Asian Typography	Typographie asiatique
@@ -88,6 +89,7 @@
 	Formatting exceptions	Exceptions de mise en forme
 	Include level number from:	Inclure le numéro de niveau de :
 	Ink	Encre
+	Ink Equation	Équation manuscrite
 	Insertions and Deletions	Insertions et suppressions
 	Insertions:	Insertions :
 	Inside:	Intérieur :
@@ -121,12 +123,18 @@
 	Blank document	Document vierge
 	Blank Page	Page vierge
 	Block\nAuthors	Bloquer\nles auteurs
+	Block Authors	Bloquer les auteurs
 	Bold	Gras
 	Bookmark	Signet
 	Bookmark name:	Nom du signet :
 	Border Painter	Pinceau de bordure
 	Border\nPainter	Pinceau\nde bordure
 	Borders	Bordures
+	Side\nby Side	Côte à\ncôte
+	Switch Windows	Changer de fenêtre
+	Switch\nWindows	Changer de\nfenêtre
+	Synchronous Scrolling	Défilement synchrone
+	Synchronous\nScrolling	Défilement\nsynchrone
 	Tab stop position:	Position du taquet de tabulation :
 	Default tab stops:	Taquets de tabulation par défaut :
 	Tab stops to be cleared:	Taquets de tabulation à supprimer :
@@ -137,6 +145,7 @@
 	Set	Définir
 	Page Border	Bordure de page
 	Apply to:	Appliquer à :
+	View Side by Side	Afficher côte à côte
 	Whole document	Tout le document
 	This section	Cette section
 	Fill	Remplissage
@@ -338,7 +347,7 @@
 	Equation	Équation
 	Eraser	Gomme
 	Even Page	Page paire
-	Every command is available to scripts and AI agents: run `wordcraft-cli mcp` for an MCP server, or start the app with `--control <port>` for the JSON control channel.	Chaque commande est disponible pour les scripts et les agents IA : exécutez `wordcraft-cli mcp` pour un serveur MCP, ou démarrez l’application avec `--control <port>` pour le canal de contrôle JSON.
+	Every command is available to scripts and AI agents: run `quill-cli mcp` for an MCP server, or start the app with `--control <port>` for the JSON control channel.	Chaque commande est disponible pour les scripts et les agents IA : exécutez `quill-cli mcp` pour un serveur MCP, ou démarrez l’application avec `--control <port>` pour le canal de contrôle JSON.
 	Export	Exporter
 	Export a copy to share (PDF, Word document)	Exporter une copie à partager (PDF, document Word)
 	Export Page as PNG	Exporter la page en PNG
@@ -423,6 +432,7 @@
 	Index	Index
 	Info	Informations
 	Ink to\nMath	Entrée manuscrite\nen équation
+	Ink to Math	Encre vers mathématiques
 	Ink to\nShape	Entrée manuscrite\nen forme
 	Ink\nReplay	Relecture\nmanuscrite
 	Insert	Insertion
@@ -780,7 +790,6 @@
 	Small caps	Petites majuscules
 	SmartArt	SmartArt
 	Sort	Trier
-	Source code: github.com/storytold/wordcraft	Code source : github.com/storytold/wordcraft
 	Space	Espace
 	Space before/after:	Espacement avant/après :
 	Spacing	Espacement
@@ -2127,3 +2136,4 @@
 
 	Paste as Equation	Coller comme équation
 	Open Obsidian Vault…	Ouvrir un coffre Obsidian…
+	Source code: github.com/Rasmus-03/Quill	Code source : github.com/Rasmus-03/Quill

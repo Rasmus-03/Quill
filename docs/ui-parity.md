@@ -1,6 +1,6 @@
 # UI parity with Microsoft Word
 
-> **Last reviewed:** 2026-10-10 · **Last updated:** 2026-10-20 · **Change:** trivial (Paste Options button and the Navigation pane's Vault tab; previously trivial: selection bar in the left margin, #856; previously trivial: table column and row markers on the rulers, #700; previously trivial: table borders and the resize handle drag on the page, #217; previously major: first version; ribbon, dialogs, shortcuts and on-canvas interaction measured from `crates/ui-egui` and the command registry) · **Target:** Microsoft Word (Microsoft 365) for Mac 16.113.4
+> **Last reviewed:** 2026-10-23 · **Last updated:** 2026-10-23 · **Change:** trivial (Home gains a compact Insert group — Table, Pictures, Word Count — before Voice and Editor; a deliberate deviation from Word's Home, which keeps them on Insert and in the status bar, for a first document's first three actions; ribbon collapse at narrow widths stays open; previously trivial: Paste Options button and the Navigation pane's Vault tab; previously trivial: selection bar in the left margin, #856; previously trivial: table column and row markers on the rulers, #700; previously trivial: table borders and the resize handle drag on the page, #217; previously major: first version; ribbon, dialogs, shortcuts and on-canvas interaction measured from `crates/ui-egui` and the command registry) · **Target:** Microsoft Word (Microsoft 365) for Mac 16.113.4
 
 How WordCraft looks and feels next to Word: ribbon, dialogs, panes, keyboard, mouse and touch.
 Typing behaviour has its own checklist ([`typing-parity.md`](typing-parity.md)). All assets are our
@@ -10,7 +10,7 @@ own (`AGENTS.md`: no Microsoft iconography, ever).
 
 | Area | WordCraft | Word | Parity | Hours |
 |---|---|---|---|---|
-| Ribbon tabs and groups | All Word tabs including contextual Table Design/Layout, Picture Format, Shape Format, Header & Footer, Equation, Outlining (Outline view, #493); ribbon overflow (#43, #129). Draw tab: Select, Eraser, Pen, Pencil, Highlighter with colour and thickness (#307); Lasso (drag to move, Delete, recolour), Add Pen gallery (right-click to remove), Ink to Shape, Ink Replay with play/pause/rewind/forward bar (#395); missing: Ink to Math | Same plus Draw | 85% | (Draw in features) |
+| Ribbon tabs and groups | All Word tabs including contextual Table Design/Layout, Picture Format, Shape Format, Header & Footer, Equation, Outlining (Outline view, #493); ribbon overflow (#43, #129). Draw tab: Select, Eraser, Pen, Pencil, Highlighter with colour and thickness (#307); Lasso (drag to move, Delete, recolour), Add Pen gallery (right-click to remove), Ink to Shape, Ink Replay with play/pause/rewind/forward bar (#395); Ink to Math (the ink canvas supplies the reading) | Same plus Draw | 88% | (Draw in features) |
 | Keytips (Alt / F10) | Ribbon badges (#43) and numbered Quick Access Toolbar badges in the user's button order (#620); File › Options › Advanced › Display switch saved per user (`ui.keytips`); Alt leaves macOS Option typing alone | ✅ | 85% | 1–2 |
 | Mini-toolbar on selection | ✅ (#43, two rows #535) | ✅ | 80% | 1–2 |
 | Mini-toolbar on selection | ✅ (#43) | ✅ | 80% | 1–2 |
@@ -47,6 +47,7 @@ own (`AGENTS.md`: no Microsoft iconography, ever).
 
 | Date | Change | Summary |
 |---|---|---|
+| 2026-10-23 | trivial | Home ends with a compact **Insert** group (Table, Pictures, Word Count) before Voice and Editor. Word keeps those on the Insert tab and in the status bar; the first three things a new document needs are now one click from the first line. The ribbon already ran wider than a 1440 pt window (Editor was clipped), so Home scrolls with the edge chevrons until groups collapse the way Word's do — that part is still open. The commands are Insert's own ids, no second implementation |
 | 2026-10-20 | trivial | Navigation pane Vault tab: open a vault folder with the same non-blocking dialog as files, search note titles and text, open a note, and save into it; the vault and attachments folder are remembered |
 | 2026-10-20 | trivial | Paste Options button: after a paste, a small button beside the caret offers Keep Source Formatting, Merge Formatting, Keep Text Only and Paste Special…; choosing a form repeats the paste at the destination so formatting and one undo step behave as if it had been chosen first, and cancelling Paste Special restores the original paste. Hidden for pictures and equations |
 | 2026-10-11 | trivial | Tables on the page: Ctrl shares a column border's change among the columns right of it, the left edge moves a left-aligned table's indent (a centred or right-aligned one keeps its alignment), a border of cells selected across moves only in their rows, Alt shows the column widths on the ruler (#711); 80% → 90% |

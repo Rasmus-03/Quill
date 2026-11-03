@@ -28,7 +28,7 @@ new document is left as it is.
 From a terminal, against a file:
 
 ```
-wordcraft-cli zotero refresh paper.docx --save paper.docx [--trace]
+quill-cli zotero refresh paper.docx --save paper.docx [--trace]
 ```
 
 Two engine commands work with Zotero's fields without Zotero running:

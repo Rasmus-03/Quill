@@ -3,8 +3,47 @@
 ## Unreleased
 
 The first steps of 1.2 (the plan lives in [`docs/release-plan-1.2.md`](docs/release-plan-1.2.md)):
-the build is trustworthy again, and the app carries its own name everywhere a user sees it.
+the build is trustworthy again, the app carries its own name everywhere a user sees it, and it
+speaks Danish.
 
+- **The interface speaks Danish**. `Dansk` is in the language list, and its catalog covers all
+  2,495 entries the interface uses — every ribbon tab, command label, dialog, setting and status
+  line. It follows your system's language on a Danish machine and can be chosen in Settings ›
+  Language. Nothing is machine-translated and shipped unseen: the catalog is open for a native
+  review, and the i18n coverage test fails if a new string is added without every language
+  getting an entry. One read-through of all 2,495 entries (an agent's, not a Dane's) fixed three
+  terms that read wrong — the highlighter was called a strike-through pen, `Vault Tags` had a
+  compound that is not a word, and `Default Paragraph Font` named a style where it meant a font —
+  and left four for a native speaker to decide
+- **Table, picture and word count without leaving Home**: the first three things a new document
+  usually needs are a compact group on the Home tab, beside Editing, so a school report does not
+  start with a tour of the ribbon. They are Insert's and Review's own commands — nothing here is a
+  second implementation, and Word Count still opens from the status bar's word total
+- **Danish proofing**: spelling from an installed Hunspell Danish dictionary (Stavekontrolden and
+  friends; nothing is bundled), our own conservative grammar rules (doubled words, a missing
+  capital after a full stop, `og og`), and Danish hyphenation from the hyph-utf8 patterns. A
+  Danish document is proofed in Danish without being told, and an English one is not
+- **The shape tool is pinned by a test**: a shape inserted from the ribbon can be grabbed,
+  dragged and resized on the page — the old field report (#142) is closed, and a test keeps it
+  that way
+- **Danish school templates of our own**: File › New offers an *Opgaveark* (the subject, the
+  name, the class and the date, the task, room for the answer and for notes), a
+  *Rapportforside* (the title, the author, the subject, the class, the date and the supervisor)
+  and a two-column *Håndout* for a lesson. The text and the layout are ours
+- **The maths tab finds Maxima on a Mac**. An app started from Finder runs with
+  `/usr/bin:/bin:/usr/sbin:/sbin` and nothing else, so `brew install maxima` was invisible and the
+  tab claimed Maxima was missing. The engine now searches the Homebrew and MacPorts prefixes after
+  `PATH`, the status line and the error name the platform's own install command (`brew install
+  maxima` on macOS), and macOS no longer runs the `ulimit -v` wrapper — it has no `RLIMIT_AS`, so
+  the wrapper only printed a warning into every call. The 26 Maxima-backed tests run and pass on a
+  Mac; one of them still expected an English status and is fixed
+- **The maths tab says what happened, in Danish**. A solve that found nothing now says which
+  of the four cases it was: no solution ("Ligningen har ingen løsning"), every number is a
+  solution ("Løsningen er alle tal — skriv et uligheds- eller intervalkrav"), only complex roots
+  ("Kun komplekse løsninger — søg i C") or Maxima could not solve it symbolically ("Kan ikke
+  løses symbolsk — prøv numerisk løsning"). A division by zero and a pole in the solution are
+  told apart too. The tab's labels, groups, dialogs and messages are Danish throughout, and the
+  command ids (`math.beregn`, `math.enhed`, `math.isoler`) are unchanged
 - **The macOS and Windows packages build again**. Since the rename to Quill, the packaging
   scripts still asked cargo for the old `wordcraft` packages and copied an icon that no longer
   existed, so neither platform could be packaged at all. The bundle is `Quill.app`, the artifacts
@@ -18,6 +57,15 @@ the build is trustworthy again, and the app carries its own name everywhere a us
   hostile-input suites, the binaries' own tests and the integration tests. Running it here found
   a bug the old job hid — a paragraph whose text is only hashes was read back as an empty
   heading and lost its text
+- **The readers are fuzzed nightly**: four detached `cargo-fuzz` workspaces (the .docx reader,
+  the `.doc` piece table, the RTF/ODT readers and the font/TTC parser) run for a minute each on
+  every night's build, with seeds written for the repository, a cached corpus per crate and the
+  crashing input uploaded as an artifact. A finding is a crash fix with a regression test
+- **Arrange All, View Side by Side, Synchronous Scrolling, Switch Windows, Ink Equation, Ink to
+  Math and Block Authors** are real commands now, not catalog entries: the Word feature catalog
+  covers **497 of 504** items (98.6%), and each new command has its ribbon button, its parameters
+  and its tests. Block Authors shows one neutral revision colour and "Author" in place of every
+  name without changing the names in the file
 - **The repository's own gates run in CI**: every asset needs a row in ATTRIBUTION.md, the crate
   layering is enforced, and the browser build of every layer still compiles
 - **Quill says Quill**: the release workflow, the web page's title, the app's and the command
@@ -31,6 +79,14 @@ the build is trustworthy again, and the app carries its own name everywhere a us
 - **Files Quill writes say Quill**: the PDF, ODT, HTML, RTF and LaTeX exports, the .docx
   "Application" property and a new document's author carry the Quill name, and the MCP server
   introduces itself as Quill
+- **Work is reviewed before it is called done**: `cargo xtask review` is the hand-over between the
+  agent that built something and the agent that checks it. The author submits the work — the
+  commit range, the diff (uncommitted changes included), the gates it ran and its terminal — and
+  waits for a verdict; the reviewer takes the oldest request and either sends it on (to the
+  integration line, or to another agent's terminal) or sends it back with a message saying, file
+  by file, what has to change. The queue lives in the repository's git common directory, so every
+  worktree sees it and none of it is committed, and `docs/review-loop.md` is the protocol with the
+  reviewer's checklist
 
 ## 1.1.0 — Nextcloud, Obsidian depth and Focus mode
 

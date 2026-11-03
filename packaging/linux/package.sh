@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Build and package WordCraft for Linux (<arch> is x86_64 or aarch64, or riscv64 when cross-compiling):
+# Build and package Quill for Linux (<arch> is x86_64 or aarch64, or riscv64 when cross-compiling):
 #
 #   $DIST/quill-<version>-linux-<arch>.AppImage  any distro with glibc >= the build host's
 #   $DIST/quill-<version>-linux-<arch>.AppImage.zsync  delta updates (needs zsyncmake)
@@ -40,7 +40,7 @@ esac
 export QUILL_MAINTAINER="${QUILL_MAINTAINER:-Quill maintainers}"
 BASENAME="quill-$VERSION-linux-$ARCH"
 
-echo "==> WordCraft $VERSION for Linux $ARCH ($FORMATS)"
+echo "==> Quill $VERSION for Linux $ARCH ($FORMATS)"
 
 if [ "$SKIP_BUILD" = 0 ]; then
   if [ -n "${CROSS_TARGET:-}" ]; then
@@ -99,7 +99,7 @@ fi
 
 # ---- AppImage -----------------------------------------------------------------------------------
 if has appimage; then
-  APPDIR="$WORK/WordCraft.AppDir"
+  APPDIR="$WORK/Quill.AppDir"
   cp -R "$STAGE" "$APPDIR"
   mv "$APPDIR/usr/share/doc" "$WORK/doc-unused"
   ln -s usr/bin/quill "$APPDIR/AppRun"

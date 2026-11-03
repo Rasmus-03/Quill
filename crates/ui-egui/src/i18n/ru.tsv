@@ -53,6 +53,7 @@
 	Apply Style	Применить стиль
 	Arrange	Упорядочить
 	Arrange\nAll	Упорядочить\nвсе
+	Arrange All	Упорядочить все
 	Arrow	Стрелка
 	Artistic Effects	Художественные эффекты
 	Author	Автор
@@ -80,6 +81,7 @@
 	Blank document	Новый документ
 	Blank Page	Пустая страница
 	Block\nAuthors	Блокировать\nавторов
+	Block Authors	Блокировка авторов
 	Body text in a short paragraph to show spacing.	Основной текст в коротком абзаце, чтобы показать интервалы.
 	Bold	Полужирный
 	Book Title	Название книги
@@ -189,7 +191,13 @@
 	Delete Style	Удалить стиль
 	Delete Table	Удалить таблицу
 	Design	Дизайн
+	Ink Equation	Формула от руки
 	Search	Поиск
+	Side\nby Side	Рядом
+	Switch Windows	Переключение окон
+	Switch\nWindows	Переключение\nокон
+	Synchronous Scrolling	Синхронная прокрутка
+	Synchronous\nScrolling	Синхронная\nпрокрутка
 	Title Bar	Строка заголовка
 	development build	сборка для разработки
 	Diagonal	Диагональ
@@ -248,7 +256,7 @@
 	Equation	Уравнение
 	Eraser	Ластик
 	Even Page	Чётная страница
-	Every command is available to scripts and AI agents: run `wordcraft-cli mcp` for an MCP server, or start the app with `--control <port>` for the JSON control channel.	Любая команда доступна скриптам и ИИ-агентам: запустите `wordcraft-cli mcp`, чтобы получить MCP-сервер, или запустите приложение с `--control <port>`, чтобы открыть управляющий канал JSON.
+	Every command is available to scripts and AI agents: run `quill-cli mcp` for an MCP server, or start the app with `--control <port>` for the JSON control channel.	Любая команда доступна скриптам и ИИ-агентам: запустите `quill-cli mcp`, чтобы получить MCP-сервер, или запустите приложение с `--control <port>`, чтобы открыть управляющий канал JSON.
 	Export	Экспорт
 	Export a copy to share (PDF, Word document)	Экспортировать копию, чтобы поделиться (PDF, документ Word)
 	Export Page as PNG	Экспортировать страницу в PNG
@@ -337,6 +345,7 @@
 	Index {n}	Указатель {n}
 	Info	Сведения
 	Ink to\nMath	Рукопись\nв формулу
+	Ink to Math	Рукописный ввод в формулу
 	Ink to\nShape	Рукопись\nв фигуру
 	Ink\nReplay	Воспроизвести\nрукопись
 	Insert	Вставка
@@ -681,7 +690,6 @@
 	Small caps	Малые прописные
 	SmartArt	SmartArt
 	Sort	Сортировка
-	Source code: github.com/storytold/wordcraft	Исходный код: github.com/storytold/wordcraft
 	Space before/after:	Интервал перед/после:
 	Spacing	Интервал
 	Spacing (pt):	Интервал (пт):
@@ -803,6 +811,7 @@ preview	Title	Пример
 	Vertical Alignment	Вертикальное выравнивание
 	View	Вид
 	View Gridlines	Показать сетку
+	View Side by Side	Рядом
 	View State	Состояние вида
 	Views	Режимы просмотра
 	Voice	Голос
@@ -2529,3 +2538,4 @@ preview	Title	Пример
 
 	Paste as Equation	Вставить как формулу
 	Open Obsidian Vault…	Открыть хранилище Obsidian…
+	Source code: github.com/Rasmus-03/Quill	Исходный код: github.com/Rasmus-03/Quill

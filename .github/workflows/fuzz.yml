@@ -1,0 +1,79 @@
+# Nightly fuzzing of the readers that take hostile bytes.
+#
+# One job, one matrix row per crate: the DOCX package reader, the .doc piece table, the RTF and
+# ODT readers, and the font/TTC parser. Each target runs for 60 seconds; the corpus is cached so
+# tomorrow's run starts where today's stopped, and a crash is uploaded as an artifact.
+#
+# Running a target needs rustup, a nightly toolchain and cargo-fuzz (`cargo install cargo-fuzz`);
+# the workflow installs all three. The fuzz crates are separate workspaces, so the ordinary
+# `cargo build`/`cargo test` of the workspace does not touch them.
+name: Fuzz
+
+on:
+  schedule:
+    # Nightly at 03:43 UTC (off the hour, away from the other scheduled jobs).
+    - cron: '43 3 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: fuzz-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  fuzz:
+    name: fuzz (${{ matrix.crate }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - crate: docx
+            targets: read
+          - crate: docbin
+            targets: read
+          - crate: formats
+            targets: rtf odt
+          - crate: fonts
+            targets: font
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Install nightly Rust
+        uses: dtolnay/rust-toolchain@683b588c487a69d01f6c6ddf40f036ff682cc2c8 # v1
+        with:
+          toolchain: nightly
+
+      - name: Install clang and cargo-fuzz
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends clang
+          cargo install cargo-fuzz --locked
+
+      - name: Restore the corpus
+        uses: actions/cache@5a3ec84eff668545956fd18022155c47e93e2684 # v4.2.3
+        with:
+          path: crates/${{ matrix.crate }}/fuzz/corpus
+          key: fuzz-corpus-${{ matrix.crate }}-${{ github.run_id }}
+          restore-keys: |
+            fuzz-corpus-${{ matrix.crate }}-
+
+      - name: Fuzz each target for 60 seconds
+        working-directory: crates/${{ matrix.crate }}/fuzz
+        run: |
+          set -euo pipefail
+          for target in ${{ matrix.targets }}; do
+            cargo fuzz run "$target" -- -max_total_time=60
+          done
+
+      - name: Upload a crash
+        if: failure()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: fuzz-crash-${{ matrix.crate }}
+          path: crates/${{ matrix.crate }}/fuzz/artifacts
+          if-no-files-found: ignore
+          retention-days: 30

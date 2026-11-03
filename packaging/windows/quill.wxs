@@ -1,0 +1,158 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Quill MSI (WiX Toolset v5: `dotnet tool install -g wix`, plus its UI and Util extensions:
+  `wix extension add -g WixToolset.UI.wixext/5.0.2` and the same for WixToolset.Util.wixext).
+  Built by package.ps1:
+
+    wix build quill.wxs -arch x64 -ext WixToolset.UI.wixext -ext WixToolset.Util.wixext
+      -d Version=1.2.3 -d BinDir=... -d IconPath=... -d LicenseRtf=... -o out.msi
+
+  Per-machine install into Program Files with a Start Menu shortcut. The installer shows the
+  standard WiX dialogs: welcome + license, progress, and a finish page.
+
+  UpgradeCode and the component GUIDs below belong to Quill alone. Never copy them from (or
+  into) a sibling Craft app: Windows Installer treats every package sharing an UpgradeCode as one
+  product, so a shared code makes one app's installer refuse to install ("a newer version is
+  already installed") or silently uninstall the other. packaging-lint.yml checks this.
+-->
+<Wix xmlns="http://wixtoolset.org/schemas/v4/wxs" xmlns:ui="http://wixtoolset.org/schemas/v4/wxs/ui">
+  <Package
+      Name="Quill"
+      Manufacturer="Quill contributors"
+      Version="$(var.Version)"
+      UpgradeCode="075497F9-E861-45D0-9C7F-A74F8C34E6BA"
+      Scope="perMachine"
+      Compressed="yes"
+      Language="1033">
+    <SummaryInformation Description="Quill word processor" Manufacturer="Quill contributors" />
+    <!-- Same-version upgrades let successive pre-releases of one X.Y.Z replace each other
+         (MSI versions are numeric, so 1.2.3-rc.1 and 1.2.3-rc.2 are both 1.2.3). -->
+    <MajorUpgrade AllowSameVersionUpgrades="yes"
+        DowngradeErrorMessage="A newer version of Quill is already installed." />
+    <MediaTemplate EmbedCab="yes" CompressionLevel="high" />
+
+    <Icon Id="QuillIcon.ico" SourceFile="$(var.IconPath)" />
+    <Property Id="ARPPRODUCTICON" Value="QuillIcon.ico" />
+    <Property Id="ARPURLINFOABOUT" Value="https://github.com/Rasmus-03/Quill" />
+    <Property Id="ARPURLUPDATEINFO" Value="https://github.com/Rasmus-03/Quill" />
+    <Property Id="ARPHELPLINK" Value="https://github.com/Rasmus-03/Quill/issues" />
+
+    <!-- Installer UI (#198): WixUI_Minimal is welcome + license, progress, then a finish page so
+         people can see the install worked. Its dialogs and bitmaps are WiX's own
+         (WixToolset.UI.wixext); package.ps1 builds the license RTF from LICENSE-MIT and
+         LICENSE-APACHE. The finish page offers to launch Quill (ticked by default) through
+         WixShellExec (WixToolset.Util.wixext); silent installs (/qn) never show it. -->
+    <WixVariable Id="WixUILicenseRtf" Value="$(var.LicenseRtf)" />
+    <Property Id="WIXUI_EXITDIALOGOPTIONALCHECKBOXTEXT" Value="Launch Quill" />
+    <Property Id="WIXUI_EXITDIALOGOPTIONALCHECKBOX" Value="1" />
+    <Property Id="WixShellExecTarget" Value="[#QuillExe]" />
+    <CustomAction Id="LaunchQuill" BinaryRef="Wix4UtilCA_$(sys.BUILDARCHSHORT)" DllEntry="WixShellExec"
+        Impersonate="yes" Return="ignore" />
+    <UI>
+      <ui:WixUI Id="WixUI_Minimal" />
+      <Publish Dialog="ExitDialog" Control="Finish" Event="DoAction" Value="LaunchQuill"
+          Condition="WIXUI_EXITDIALOGOPTIONALCHECKBOX = 1 AND NOT Installed" />
+    </UI>
+
+    <StandardDirectory Id="ProgramFiles6432Folder">
+      <Directory Id="INSTALLFOLDER" Name="Quill" />
+    </StandardDirectory>
+    <StandardDirectory Id="ProgramMenuFolder" />
+
+    <Feature Id="Main" Title="Quill" Level="1">
+      <ComponentGroupRef Id="QuillFiles" />
+    </Feature>
+  </Package>
+
+  <Fragment>
+    <ComponentGroup Id="QuillFiles" Directory="INSTALLFOLDER">
+      <Component Id="QuillApp" Guid="855DCEC6-9285-444F-9382-9654B83B34F6">
+        <File Id="QuillExe" Source="$(var.BinDir)\quill.exe" KeyPath="yes">
+          <Shortcut Id="StartMenuShortcut" Directory="ProgramMenuFolder" Name="Quill"
+              Description="Quill word processor" WorkingDirectory="INSTALLFOLDER" Advertise="yes"
+              Icon="QuillIcon.ico" IconIndex="0" />
+        </File>
+
+        <RegistryValue Root="HKLM" Key="Software\Microsoft\Windows\CurrentVersion\App Paths\quill.exe" Value="[#QuillExe]" Type="string" />
+      </Component>
+
+      <!-- File associations (#295). Each document type gets a Quill ProgId (name, icon, open
+           command) and is listed under the extension's OpenWithProgids, so Quill shows in
+           Explorer's "Open with". The Word, RTF and ODT types are also Quill's Capabilities
+           (RegisteredApplications), so it appears in Settings › Default apps, where the user
+           makes it the default (File › Options › General opens that page). Nothing here sets an
+           extension's default: the installer never takes over .docx from another app. Markdown and
+           plain text are only "Open with" candidates. Removed again on uninstall. -->
+      <Component Id="QuillFileTypes" Guid="EFF89E6A-F9B8-49F9-B3AE-E243347484B4">
+        <RegistryValue Root="HKLM" Key="Software\RegisteredApplications" Name="Quill" Value="Software\Quill\Capabilities" Type="string" KeyPath="yes" />
+        <RegistryValue Root="HKLM" Key="Software\Quill\Capabilities" Name="ApplicationName" Value="Quill" Type="string" />
+        <RegistryValue Root="HKLM" Key="Software\Quill\Capabilities" Name="ApplicationDescription" Value="Write and design documents; open and save Word files." Type="string" />
+        <RegistryValue Root="HKLM" Key="Software\Quill\Capabilities" Name="ApplicationIcon" Value="&quot;[#QuillExe]&quot;,0" Type="string" />
+        <RegistryValue Root="HKLM" Key="Software\Classes\Applications\quill.exe" Name="FriendlyAppName" Value="Quill" Type="string" />
+        <RegistryValue Root="HKLM" Key="Software\Classes\Applications\quill.exe\shell\open\command" Value="&quot;[#QuillExe]&quot; &quot;%1&quot;" Type="string" />
+
+        <ProgId Id="Quill.Document" Description="Word Document" Icon="QuillExe" IconIndex="0" />
+        <RegistryValue Root="HKLM" Key="Software\Classes\Quill.Document\shell\open\command" Value="&quot;[#QuillExe]&quot; &quot;%1&quot;" Type="string" />
+        <RegistryValue Root="HKLM" Key="Software\Classes\.docx\OpenWithProgids" Name="Quill.Document" Value="" Type="string" />
+        <RegistryValue Root="HKLM" Key="Software\Classes\Applications\quill.exe\SupportedTypes" Name=".docx" Value="" Type="string" />
+        <RegistryValue Root="HKLM" Key="Software\Quill\Capabilities\FileAssociations" Name=".docx" Value="Quill.Document" Type="string" />
+
+        <ProgId Id="Quill.DocumentMacroEnabled" Description="Word Macro-Enabled Document" Icon="QuillExe" IconIndex="0" />
+        <RegistryValue Root="HKLM" Key="Software\Classes\Quill.DocumentMacroEnabled\shell\open\command" Value="&quot;[#QuillExe]&quot; &quot;%1&quot;" Type="string" />
+        <RegistryValue Root="HKLM" Key="Software\Classes\.docm\OpenWithProgids" Name="Quill.DocumentMacroEnabled" Value="" Type="string" />
+        <RegistryValue Root="HKLM" Key="Software\Classes\Applications\quill.exe\SupportedTypes" Name=".docm" Value="" Type="string" />
+        <RegistryValue Root="HKLM" Key="Software\Quill\Capabilities\FileAssociations" Name=".docm" Value="Quill.DocumentMacroEnabled" Type="string" />
+
+        <ProgId Id="Quill.Template" Description="Word Template" Icon="QuillExe" IconIndex="0" />
+        <RegistryValue Root="HKLM" Key="Software\Classes\Quill.Template\shell\open\command" Value="&quot;[#QuillExe]&quot; &quot;%1&quot;" Type="string" />
+        <RegistryValue Root="HKLM" Key="Software\Classes\.dotx\OpenWithProgids" Name="Quill.Template" Value="" Type="string" />
+        <RegistryValue Root="HKLM" Key="Software\Classes\Applications\quill.exe\SupportedTypes" Name=".dotx" Value="" Type="string" />
+        <RegistryValue Root="HKLM" Key="Software\Quill\Capabilities\FileAssociations" Name=".dotx" Value="Quill.Template" Type="string" />
+
+        <ProgId Id="Quill.TemplateMacroEnabled" Description="Word Macro-Enabled Template" Icon="QuillExe" IconIndex="0" />
+        <RegistryValue Root="HKLM" Key="Software\Classes\Quill.TemplateMacroEnabled\shell\open\command" Value="&quot;[#QuillExe]&quot; &quot;%1&quot;" Type="string" />
+        <RegistryValue Root="HKLM" Key="Software\Classes\.dotm\OpenWithProgids" Name="Quill.TemplateMacroEnabled" Value="" Type="string" />
+        <RegistryValue Root="HKLM" Key="Software\Classes\Applications\quill.exe\SupportedTypes" Name=".dotm" Value="" Type="string" />
+        <RegistryValue Root="HKLM" Key="Software\Quill\Capabilities\FileAssociations" Name=".dotm" Value="Quill.TemplateMacroEnabled" Type="string" />
+
+        <ProgId Id="Quill.LegacyDocument" Description="Legacy Word Document" Icon="QuillExe" IconIndex="0" />
+        <RegistryValue Root="HKLM" Key="Software\Classes\Quill.LegacyDocument\shell\open\command" Value="&quot;[#QuillExe]&quot; &quot;%1&quot;" Type="string" />
+        <RegistryValue Root="HKLM" Key="Software\Classes\.doc\OpenWithProgids" Name="Quill.LegacyDocument" Value="" Type="string" />
+        <RegistryValue Root="HKLM" Key="Software\Classes\Applications\quill.exe\SupportedTypes" Name=".doc" Value="" Type="string" />
+        <RegistryValue Root="HKLM" Key="Software\Quill\Capabilities\FileAssociations" Name=".doc" Value="Quill.LegacyDocument" Type="string" />
+
+        <ProgId Id="Quill.LegacyTemplate" Description="Legacy Word Template" Icon="QuillExe" IconIndex="0" />
+        <RegistryValue Root="HKLM" Key="Software\Classes\Quill.LegacyTemplate\shell\open\command" Value="&quot;[#QuillExe]&quot; &quot;%1&quot;" Type="string" />
+        <RegistryValue Root="HKLM" Key="Software\Classes\.dot\OpenWithProgids" Name="Quill.LegacyTemplate" Value="" Type="string" />
+        <RegistryValue Root="HKLM" Key="Software\Classes\Applications\quill.exe\SupportedTypes" Name=".dot" Value="" Type="string" />
+        <RegistryValue Root="HKLM" Key="Software\Quill\Capabilities\FileAssociations" Name=".dot" Value="Quill.LegacyTemplate" Type="string" />
+
+        <ProgId Id="Quill.RichText" Description="Rich Text Document" Icon="QuillExe" IconIndex="0" />
+        <RegistryValue Root="HKLM" Key="Software\Classes\Quill.RichText\shell\open\command" Value="&quot;[#QuillExe]&quot; &quot;%1&quot;" Type="string" />
+        <RegistryValue Root="HKLM" Key="Software\Classes\.rtf\OpenWithProgids" Name="Quill.RichText" Value="" Type="string" />
+        <RegistryValue Root="HKLM" Key="Software\Classes\Applications\quill.exe\SupportedTypes" Name=".rtf" Value="" Type="string" />
+        <RegistryValue Root="HKLM" Key="Software\Quill\Capabilities\FileAssociations" Name=".rtf" Value="Quill.RichText" Type="string" />
+
+        <ProgId Id="Quill.OpenDocumentText" Description="OpenDocument Text" Icon="QuillExe" IconIndex="0" />
+        <RegistryValue Root="HKLM" Key="Software\Classes\Quill.OpenDocumentText\shell\open\command" Value="&quot;[#QuillExe]&quot; &quot;%1&quot;" Type="string" />
+        <RegistryValue Root="HKLM" Key="Software\Classes\.odt\OpenWithProgids" Name="Quill.OpenDocumentText" Value="" Type="string" />
+        <RegistryValue Root="HKLM" Key="Software\Classes\Applications\quill.exe\SupportedTypes" Name=".odt" Value="" Type="string" />
+        <RegistryValue Root="HKLM" Key="Software\Quill\Capabilities\FileAssociations" Name=".odt" Value="Quill.OpenDocumentText" Type="string" />
+
+        <ProgId Id="Quill.Markdown" Description="Markdown Document" Icon="QuillExe" IconIndex="0" />
+        <RegistryValue Root="HKLM" Key="Software\Classes\Quill.Markdown\shell\open\command" Value="&quot;[#QuillExe]&quot; &quot;%1&quot;" Type="string" />
+        <RegistryValue Root="HKLM" Key="Software\Classes\.md\OpenWithProgids" Name="Quill.Markdown" Value="" Type="string" />
+        <RegistryValue Root="HKLM" Key="Software\Classes\Applications\quill.exe\SupportedTypes" Name=".md" Value="" Type="string" />
+
+        <ProgId Id="Quill.PlainText" Description="Text Document" Icon="QuillExe" IconIndex="0" />
+        <RegistryValue Root="HKLM" Key="Software\Classes\Quill.PlainText\shell\open\command" Value="&quot;[#QuillExe]&quot; &quot;%1&quot;" Type="string" />
+        <RegistryValue Root="HKLM" Key="Software\Classes\.txt\OpenWithProgids" Name="Quill.PlainText" Value="" Type="string" />
+        <RegistryValue Root="HKLM" Key="Software\Classes\Applications\quill.exe\SupportedTypes" Name=".txt" Value="" Type="string" />
+      </Component>
+
+      <Component Id="QuillCli">
+        <File Id="QuillCliExe" Source="$(var.BinDir)\quill-cli.exe" KeyPath="yes" />
+      </Component>
+    </ComponentGroup>
+  </Fragment>
+</Wix>

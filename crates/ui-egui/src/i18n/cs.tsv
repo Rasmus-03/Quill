@@ -89,6 +89,7 @@
 	Apply to:	Použít na:
 	Arrange	Uspořádat
 	Arrange\nAll	Uspořádat\nvše
+	Arrange All	Uspořádat vše
 	Arrow	Šipka
 	Artistic Effects	Umělecké efekty
 	As Recommended	Podle doporučení
@@ -128,6 +129,7 @@
 	Blank document	Prázdný dokument
 	Blank Page	Prázdná stránka
 	Block\nAuthors	Blokovat\nautory
+	Block Authors	Blokovat autory
 	Body Text	Základní text
 	Bold	Tučné
 	Bookmark	Záložka
@@ -391,7 +393,7 @@
 	Erase Ink	Smazat rukopis
 	Eraser	Guma
 	Even Page	Sudá stránka
-	Every command is available to scripts and AI agents: run `wordcraft-cli mcp` for an MCP server, or start the app with `--control <port>` for the JSON control channel.	Každý příkaz je dostupný skriptům a AI agentům: spusťte `wordcraft-cli mcp` pro server MCP, nebo spusťte aplikaci s parametrem `--control <port>` pro řídicí kanál JSON.
+	Every command is available to scripts and AI agents: run `quill-cli mcp` for an MCP server, or start the app with `--control <port>` for the JSON control channel.	Každý příkaz je dostupný skriptům a AI agentům: spusťte `quill-cli mcp` pro server MCP, nebo spusťte aplikaci s parametrem `--control <port>` pro řídicí kanál JSON.
 	Every field needs a name.	Každé pole musí mít název.
 	Exactly	Přesně
 	Exactly {n}	Přesně {n}
@@ -525,7 +527,9 @@
 	Index and Tables	Rejstřík a seznamy
 	Info	Informace
 	Ink	Rukopis
+	Ink Equation	Rovnice rukopisem
 	Ink to\nMath	Rukopis na\nrovnici
+	Ink to Math	Rukopis do matematiky
 	Ink to\nShape	Rukopis na\ntvar
 	Ink\nReplay	Přehrát\nrukopis
 	Inline	Vnořená
@@ -1029,6 +1033,7 @@
 	Show\nComments	Zobrazit\nkomentáře
 	Shrink Font 1 Point	Zmenšit písmo o 1 bod
 	Side to Side	Vedle sebe
+	Side\nby Side	Vedle\nsebe
 	Side\nto Side	Vedle\nsebe
 	Signature Line	Řádek podpisu
 	Single	Jednoduché
@@ -1047,7 +1052,6 @@
 	Soft Edges	Měkké okraje
 	Sort	Seřadit
 	Sort order:	Pořadí řazení:
-	Source code: github.com/storytold/wordcraft	Zdrojový kód: github.com/storytold/wordcraft
 	Space	Mezera
 	Space after	Mezera za
 	Space after: {pt} pt	Mezera za: {pt} b.
@@ -1096,9 +1100,13 @@
 	Superscript	Horní index
 	Suppress line numbers	Potlačit čísla řádků
 	Switch Modes	Přepnout režimy
+	Switch Windows	Přepnout okna
 	Switch\nModes	Přepnout\nrežimy
+	Switch\nWindows	Přepnout\nokna
 	Symbol	Symbol
 	Symbols	Symboly
+	Synchronous Scrolling	Synchronní posouvání
+	Synchronous\nScrolling	Synchronní\nposouvání
 	Synonyms	Synonyma
 	Tab	Tabulátor
 	Tab character	Znak tabulátoru
@@ -1214,6 +1222,7 @@
 	Vertical alignment:	Svislé zarovnání:
 	View	Zobrazení
 	View Gridlines	Zobrazit mřížku
+	View Side by Side	Zobrazení vedle sebe
 	View State	Stav zobrazení
 	Views	Zobrazení
 	Voice	Hlas
@@ -2124,3 +2133,4 @@
 
 	Paste as Equation	Vložit jako rovnici
 	Open Obsidian Vault…	Otevřít úložiště Obsidian…
+	Source code: github.com/Rasmus-03/Quill	Zdrojový kód: github.com/Rasmus-03/Quill

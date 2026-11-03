@@ -57,6 +57,7 @@
 	Apply Styles	Formatvorlagen anwenden
 	Arrange	Anordnen
 	Arrange\nAll	Alle\nanordnen
+	Arrange All	Alle anordnen
 	Arrow	Pfeil
 	Artistic Effects	Künstlerische Effekte
 	Asian Typography	Asiatische Typografie
@@ -94,6 +95,7 @@
 	Formatting	Formatierung
 	Include level number from:	Ebenennummer übernehmen aus:
 	Ink	Freihand
+	Ink Equation	Freihandformel
 	Insertions and Deletions	Einfügungen und Löschungen
 	Insertions:	Einfügungen:
 	Left border	Linke Rahmenlinie
@@ -135,12 +137,18 @@
 	Blank document	Leeres Dokument
 	Blank Page	Leere Seite
 	Block\nAuthors	Block-\nAutoren
+	Block Authors	Autoren blockieren
 	Bold	Fett
 	Bookmark	Textmarke
 	Bookmark name:	Textmarkenname:
 	Border Painter	Rahmenlinien-Maler
 	Border\nPainter	Rahmenlinien-\nMaler
 	Borders	Rahmenlinien
+	Side\nby Side	Nebeneinander\nanzeigen
+	Switch Windows	Fenster wechseln
+	Switch\nWindows	Fenster\nwechseln
+	Synchronous Scrolling	Synchrones Scrollen
+	Synchronous\nScrolling	Synchrones\nScrollen
 	Tab stop position:	Tabstoppposition:
 	Default tab stops:	Standardtabstopps:
 	Tab stops to be cleared:	Zu löschende Tabstopps:
@@ -151,6 +159,7 @@
 	Set	Festlegen
 	Page Border	Seitenrahmen
 	Apply to:	Übernehmen für:
+	View Side by Side	Nebeneinander anzeigen
 	Whole document	Gesamtes Dokument
 	This section	Dieser Abschnitt
 	Fill	Füllung
@@ -328,7 +337,7 @@
 	Equation	Formel
 	Eraser	Radierer
 	Even Page	Gerade Seite
-	Every command is available to scripts and AI agents: run `wordcraft-cli mcp` for an MCP server, or start the app with `--control <port>` for the JSON control channel.	Jeder Befehl steht Skripten und KI-Agenten zur Verfügung: Führen Sie `wordcraft-cli mcp` für einen MCP-Server aus, oder starten Sie die App mit `--control <Port>` für den JSON-Steuerkanal.
+	Every command is available to scripts and AI agents: run `quill-cli mcp` for an MCP server, or start the app with `--control <port>` for the JSON control channel.	Jeder Befehl steht Skripten und KI-Agenten zur Verfügung: Führen Sie `quill-cli mcp` für einen MCP-Server aus, oder starten Sie die App mit `--control <Port>` für den JSON-Steuerkanal.
 	Export	Exportieren
 	Export a copy to share (PDF, Word document)	Eine Kopie zum Teilen exportieren (PDF, Word-Dokument)
 	Export Page as PNG	Seite als PNG exportieren
@@ -410,6 +419,7 @@
 	Index	Index
 	Info	Info
 	Ink to\nMath	Freihand zu\nFormel
+	Ink to Math	Freihand zu Formel
 	Ink to\nShape	Freihand zu\nForm
 	Ink\nReplay	Freihand-\nWiedergabe
 	Insert	Einfügen
@@ -746,7 +756,6 @@
 	Small caps	Kapitälchen
 	SmartArt	SmartArt
 	Sort	Sortieren
-	Source code: github.com/storytold/wordcraft	Quellcode: github.com/storytold/wordcraft
 	Space	Leerzeichen
 	Space before/after:	Abstand vor/nach:
 	Spacing	Abstand
@@ -2118,3 +2127,4 @@
 
 	Paste as Equation	Als Gleichung einfügen
 	Open Obsidian Vault…	Obsidian-Speicher öffnen…
+	Source code: github.com/Rasmus-03/Quill	Quellcode: github.com/Rasmus-03/Quill

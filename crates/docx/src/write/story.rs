@@ -73,7 +73,12 @@ impl Writer<'_> {
         if depth == 0 {
             self.move_ranges(w, &[]);
         }
-        if bl.last().is_none_or(|b| matches!(**b, Block::Table(_))) {
+        // Word needs a paragraph after a table at the end of the body and of a table cell. A
+        // header, footer, footnote or comment may end with the table (Word writes those itself),
+        // and adding one there is not a repair but a change: the empty paragraph is a line of
+        // height, so a header that is only a table came back taller after every save.
+        let ends_with_table = matches!(bl.last().map(|b| &**b), Some(Block::Table(_)));
+        if bl.is_empty() || (ends_with_table && (top || depth > 0)) {
             w.raw("<w:p/>");
         }
     }

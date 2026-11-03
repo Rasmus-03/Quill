@@ -47,6 +47,7 @@
 	Apply Styles	選擇並套用樣式
 	Arrange	排列
 	Arrange\nAll	全部排列
+	Arrange All	全部重排
 	Arrow	箭號
 	Artistic Effects	美術效果
 	As you type	輸入時
@@ -100,6 +101,7 @@
 	Include level number from:	包含的層級編號來自：
 	Initials:	縮寫：
 	Ink	筆跡
+	Ink Equation	筆跡公式
 	Insertions and Deletions	插入和刪除
 	Insertions:	插入內容：
 	Interface	介面
@@ -178,6 +180,7 @@
 	Blank document	空白文件
 	Blank Page	空白頁
 	Block\nAuthors	封鎖作者
+	Block Authors	封鎖作者
 	Bold	粗體
 	Bookmark	書籤
 	Bookmark name:	書籤名稱：
@@ -185,9 +188,14 @@
 	Border\nPainter	框線複製
 	Borders	框線
 	Show the mini toolbar when text is selected	選取文字時顯示迷你工具列
+	Side\nby Side	並排\n檢視
 	Spaces	空格
 	Spelling	拼字
 	Spelling and grammar are checked in English (United States).	拼字和文法依英文（美國）檢查。
+	Switch Windows	切換視窗
+	Switch\nWindows	切換\n視窗
+	Synchronous Scrolling	同步捲動
+	Synchronous\nScrolling	同步\n捲動
 	Tab characters	定位字元
 	Tab stop position:	定位點位置：
 	Default tab stops:	預設定位點間距：
@@ -204,6 +212,7 @@
 	Typing replaces selected text	輸入的內容取代選取的文字
 	Update fields before printing	列印前更新功能變數
 	Use the Insert key to switch overtype on and off	使用 Insert 鍵切換取代模式
+	View Side by Side	並排檢視
 	Whole document	整份文件
 	This section	本節
 	Fill	填滿
@@ -383,7 +392,7 @@
 	Equation	方程式
 	Eraser	橡皮擦
 	Even Page	偶數頁
-	Every command is available to scripts and AI agents: run `wordcraft-cli mcp` for an MCP server, or start the app with `--control <port>` for the JSON control channel.	每個命令都可供指令碼和 AI 代理程式使用：執行 `wordcraft-cli mcp` 啟動 MCP 伺服器，或以 `--control <port>` 啟動應用程式以開啟 JSON 控制通道。
+	Every command is available to scripts and AI agents: run `quill-cli mcp` for an MCP server, or start the app with `--control <port>` for the JSON control channel.	每個命令都可供指令碼和 AI 代理程式使用：執行 `quill-cli mcp` 啟動 MCP 伺服器，或以 `--control <port>` 啟動應用程式以開啟 JSON 控制通道。
 	Export	匯出
 	Export a copy to share (PDF, Word document)	匯出副本以共用（PDF、Word 文件）
 	Export Page as PNG	將頁面匯出為 PNG
@@ -466,6 +475,7 @@
 	Index	索引
 	Info	資訊
 	Ink to\nMath	筆跡轉數學公式
+	Ink to Math	將筆跡轉換為數學公式
 	Ink to\nShape	筆跡轉圖形
 	Ink\nReplay	筆跡重播
 	Insert	插入
@@ -816,7 +826,6 @@
 	Small caps	小型大寫字
 	SmartArt	SmartArt
 	Sort	排序
-	Source code: github.com/storytold/wordcraft	原始碼：github.com/storytold/wordcraft
 	Space	空格
 	Space before/after:	段落前/後間距：
 	Spacing	間距
@@ -2120,3 +2129,4 @@
 
 	Paste as Equation	貼上為公式
 	Open Obsidian Vault…	開啟 Obsidian 保存庫…
+	Source code: github.com/Rasmus-03/Quill	原始碼：github.com/Rasmus-03/Quill

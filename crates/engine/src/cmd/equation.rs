@@ -77,6 +77,11 @@ pub fn specs() -> Vec<CommandSpec> {
         CommandSpec::new("insert.equation", "Equation", "Insert › Symbols", insert)
             .key("Alt+=")
             .params(r#"{"linear"?: string, "latex"?: string, "builtin"?: "pythagoras|area|quadratic|binomial|expansion|euler|derivative|taylor|gaussian|fourier|trig1|trig2|normal|bayes", "display"?: bool, "edit"?: bool (default true)}"#),
+        // The ink canvas (Word's Math Input Control) reads the drawn formula and supplies it as
+        // `linear` or `latex`; without one, an empty equation is inserted and the shell is asked
+        // to open the canvas.
+        CommandSpec::new("insert.inkEquation", "Ink Equation", "Insert › Symbols", ink_equation)
+            .params(r#"{"linear"?: string, "latex"?: string, "display"?: bool}  (no formula: insert an empty equation and open the ink canvas)"#),
         CommandSpec::new("equation.edit", "Edit Equation", "Equation", edit)
             .pure()
             .when(near_equation)
@@ -213,6 +218,28 @@ fn insert(s: &mut Session, v: &Value) -> CmdResult {
         None => parse_linear(selected.trim()),
     };
     insert_nodes_as_equation(s, nodes, v)
+}
+
+/// Insert an equation from `linear`, `latex` or a gallery `id`/`builtin` at the caret. Shared
+/// with Ink Equation and Draw › Ink to Math, which supply the formula their ink was read as.
+pub(crate) fn insert_formula(s: &mut Session, v: &Value) -> CmdResult {
+    insert(s, v)
+}
+
+/// Insert › Ink Equation: an equation written by hand on the ink canvas. The canvas hands its
+/// reading over as `linear` or `latex`; with neither, an empty equation is inserted and the
+/// shell is asked for the canvas (the engine never opens a dialog itself).
+fn ink_equation(s: &mut Session, v: &Value) -> CmdResult {
+    if p::str(v, "linear").is_some() || p::str(v, "latex").is_some() {
+        return insert_formula(s, v);
+    }
+    let mut params = json!({"linear": ""});
+    if let Some(display) = p::bool(v, "display") {
+        params["display"] = json!(display);
+    }
+    let result = insert_formula(s, &params)?;
+    s.ui_requests.push(json!({"open": "inkEquation"}));
+    Ok(result)
 }
 
 fn insert_nodes_as_equation(s: &mut Session, nodes: Arg, v: &Value) -> CmdResult {
@@ -1085,6 +1112,25 @@ mod tests {
         s.run("equation.move", &json!({"dir": "left"})).unwrap();
         assert!(!s.dirty);
         assert_eq!(s.undo_depth(), 0);
+    }
+
+    /// E2: Ink Equation inserts the formula the ink canvas read; with none it inserts an empty
+    /// equation and asks the shell for the canvas instead of opening a dialog itself.
+    #[test]
+    fn ink_equation_takes_the_canvas_formula_or_asks_for_the_canvas() {
+        let mut s = session();
+        let r = s.run("insert.inkEquation", &json!({"linear": "x^2"})).unwrap();
+        assert_eq!(r["linear"], "x^2");
+        assert!(s.math.is_some());
+        assert!(s.ui_requests.is_empty());
+
+        let mut s = session();
+        let r = s.run("insert.inkEquation", &json!({})).unwrap();
+        assert_eq!(r["editing"], true);
+        assert!(s.math.is_some());
+        assert_eq!(s.ui_requests, vec![json!({"open": "inkEquation"})]);
+        let equation = s.math.as_ref().and_then(|m| s.doc.para_at(&m.at).and_then(|p| p.object_at(m.at.off)));
+        assert!(matches!(equation, Some(wordcraft_doc::InlineObject::Equation { .. })));
     }
 
     #[test]
