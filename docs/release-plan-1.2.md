@@ -1,6 +1,7 @@
 # Quill 1.2 — release plan
 
-> **Last reviewed:** 2026-11-03 · **Last updated:** 2026-11-03 · **Change:** minor (the release
+> **Last reviewed:** 2026-11-03 · **Last updated:** 2026-11-03 · **Change:** minor (delegation is
+> staffed and blocked by worker capacity, §9; previously minor: the release
 > line exists — `main` and every 1.2 arc merged cleanly as `release/1.2.0`, the branch roster is
 > decided and two branches are recruited for what this machine cannot close; previously minor:
 > A5 closes the supply chain — the two `taiki-e/install-action` tool tags are pinned, so every `uses:` in the
@@ -574,6 +575,7 @@ spent on the file that breaks a student's assignment.
 | CI secrets and reusable workflows are upstream's | The matrix or the release job cannot be fixed locally | A1–A4 need no secrets; upstream changes are separate PRs |
 | The maths tab is one file and one agent | Parallel edits collide | One agent for C3–C4 (see §5) |
 | Upstream merges keep coming | Ports grow | `FORK.md` ledger; keep Quill's code in new files wherever possible |
+| **No worker has capacity** | The release stalls even with the tasks written: on 2026-11-03 Codex answered `You’ve hit your usage limit … try again at Nov 21st, 2026`, Claude answered `Credit balance is too low`, and Orca has no OpenCode account, so all three dispatched workers died at `agent_readiness` | The work is not lost: Orca run `run_f5e6a7034152` holds one task each (`1.2/B1` page parity, `1.2/D3` wordmark, `1.2/gate` release gate) and their worktrees exist. Relaunch one with `orca orchestration worker-start --task <task_id> --retry-of <dispatch_id> --worktree path:… --agent codex` as soon as an account has capacity; until then the coordinator runs the gate itself |
 
 ## 10. An outside critic read 1.2
 
@@ -617,6 +619,7 @@ release checklist. The detail, and how to repeat it, is in
 
 | Date | Change | Summary |
 |---|---|---|
+| 2026-11-03 | minor | Delegation is written down and blocked by capacity, not judgement. Orca run `run_f5e6a7034152` holds three tasks with their worktrees ready (`1.2-page-compare`, `1.2-wordmark`, `1.2-gate`); all three dispatches reached `agent_readiness` and died there — Codex is over its usage limit until 2026-11-21, Claude's credit balance is empty, and Orca has no OpenCode account. §9 now carries that risk with the exact relaunch command. The coordinator runs the release gate in the meantime |
 | 2026-11-03 | minor | The release line exists and the branch zoo is decided. `release/1.2.0` merges all 42 commits of the 1.2 arcs into `main` with no conflict (checked with `git merge-tree`), so the release is one push and one PR away; PR #2 is superseded, because it carries 15 of those 42 commits from an older tip. Nine merged or duplicate branches and seven empty ones are retired from the plan's roster, and two branches are recruited for what this machine cannot prove: `1.2/page-compare` (the page-by-page comparison with Word that B1 leaves open) and `1.2/wordmark` (the DMG background that still carries upstream's wordmark). No code changed |
 | 2026-10-30 | minor | The four audit advisories are gone without suppressing any of them: `zip` 3.0.0 → 9.1.3 (one real API break — `ZipFile::name()` is a `Result` now, so a non-UTF-8 entry name is skipped like an unreadable entry instead of failing the document) and `ctutils` 0.4.3 → 0.4.7. `cargo audit` exits 0, and `cargo xtask ci` passes all 8 steps on the new `zip`. Separately, the fuzz corpus that had collected in the working tree is coverage only: 2,050 inputs and **no** `crash-*`/`timeout-*` artifact, so nothing was promoted to a named seed and the tree is clean |
 | 2026-10-30 | minor | A6 is closed by proving it, and the proof is red. `cargo-audit 0.22.2` on this line exits 1 with four advisories: three in `zip 3.0.0` (SUID/SGID preservation, symlink escape, permissions applied through symlinks — rated up to 9.1 critical, all in `ZipArchive::extract`, which Quill never calls; the DOCX reader reads entries and validates names itself) and `ctutils 0.4.3` (non-constant-time masks, reachable through `digest → hmac` in the DOCX package, fixed by a patch). Seven unmaintained-crate warnings do not fail the run. The `supply-chain.yml` jobs already existed; what was missing was this proof. Nothing was allow-listed or silenced — the release now carries an open decision: upgrade `zip` 3 → 9, or allow-list the three unreachable advisories with that reasoning |
