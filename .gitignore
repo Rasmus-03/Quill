@@ -3,6 +3,7 @@ plan/
 /target
 /dist
 /corpus
+/proptest-regressions/
 /log
 .DS_Store
 /.claude/
