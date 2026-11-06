@@ -1360,4 +1360,66 @@ mod tests {
         assert_eq!((p.props.align, p.props.fmt_change.is_none()), (Some(wordcraft_doc::props::Align::Center), true));
         assert!(s.run("review.changes", &json!({})).unwrap().as_array().unwrap().is_empty());
     }
+
+    /// #41: formatting of a table, its rows, its cells and its section is tracked, listed and
+    /// accept/rejectable — the gap #5 remainder.
+    #[test]
+    fn gap5_remainder_tracked_table_row_cell_section_formatting() {
+        fn first_table(s: &Session) -> &wordcraft_doc::Table {
+            s.doc
+                .body
+                .iter()
+                .find_map(|b| match &**b {
+                    wordcraft_doc::Block::Table(t) => Some(t),
+                    _ => None,
+                })
+                .expect("a table")
+        }
+
+        let mut s = Session::new(Document::new());
+        s.view.proofing = false;
+        s.author = "Ana".into();
+        s.run("insert.table", &json!({"rows": 2, "cols": 2})).unwrap();
+        s.run("review.trackChanges", &json!({"value": true})).unwrap();
+        let borders_before = first_table(&s).props.borders;
+        let section_before = s.doc.last_section.clone();
+
+        // Table-level formatting: borders and alignment.
+        s.run("table.borders", &json!({"kind": "outside", "width": 1.5})).unwrap();
+        let ch = first_table(&s).props.fmt_change.as_deref().expect("a tracked table change").clone();
+        assert_eq!(s.doc.revisions.get(ch.rev as usize).map(|r| r.kind), Some(wordcraft_doc::RevisionKind::Format));
+        assert_eq!(ch.old.borders, borders_before, "the table's borders before the change");
+
+        s.run("table.properties", &json!({"align": "center"})).unwrap();
+        assert!(first_table(&s).props.fmt_change.is_some(), "the table's alignment change is tracked");
+
+        // Row-level formatting: height.
+        s.run("table.rowHeight", &json!({"height": 40})).unwrap();
+        assert!(first_table(&s).rows[0].props.fmt_change.is_some(), "a tracked row change");
+
+        // Cell-level formatting: shading and vertical merge.
+        s.run("table.shading", &json!({"color": "FF0000"})).unwrap();
+        assert!(first_table(&s).rows[0].cells[0].props.fmt_change.is_some(), "a tracked cell change");
+
+        // Section-level formatting: page setup via layout.size.
+        s.run("layout.size", &json!({"width": 700, "height": 900})).unwrap();
+        assert!(s.doc.last_section.fmt_change.is_some(), "the last section's change");
+
+        // The changes are listed, and rejecting restores every one of them.
+        let changes = s.run("review.changes", &json!({})).unwrap();
+        let described: Vec<String> = changes.as_array().into_iter().flatten().filter_map(|c| c["description"].as_str().map(str::to_owned)).collect();
+        assert!(described.iter().any(|d| d.contains("Borders")), "{described:?}");
+        assert!(described.iter().any(|d| d.contains("Height")), "{described:?}");
+        assert!(described.iter().any(|d| d.contains("Shading")), "{described:?}");
+        assert!(described.iter().any(|d| d.contains("Page h") || d.contains("Page w")), "{described:?}");
+
+        s.run("review.rejectAll", &json!({})).unwrap();
+        let table = first_table(&s);
+        assert_eq!(table.props.borders, borders_before, "the table's borders are back");
+        assert!(table.props.fmt_change.is_none(), "the table's change is gone");
+        assert!(table.rows[0].props.fmt_change.is_none(), "the row's change is gone");
+        assert!(table.rows[0].cells[0].props.fmt_change.is_none(), "the cell's change is gone");
+        assert!(s.doc.last_section.fmt_change.is_none());
+        assert_eq!(s.doc.last_section, section_before, "the section is what it was");
+    }
 }
