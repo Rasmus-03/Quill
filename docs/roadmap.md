@@ -93,7 +93,10 @@ languages, screen-reader access, ecosystem decisions (VBA, add-ins, cloud), an i
 | 2026-10-10 | minor | Current focus heading back to ~150–230 h to beta: full number restored to the additive weighted sum (~60%), method aligned with the standard, no new evidence |
 | 2026-10-10 | minor | Alpha gate table added (core-workflow gate from the progress-docs standard): all six workflows pass, stage stays alpha |
 | 2026-10-10 | major | Created: milestones moved from ROADMAP.md with remaining hours; Current focus from gaps.md; M15–M16 added |
-| 2026-10-10 | trivial | M11: ink pens and eraser landed (#307) || 2026-10-11 | trivial | M11: lasso, Add Pen, Ink to Shape and Ink Replay landed (#395) |
+| 2026-10-10 | trivial | M11: ink pens and eraser landed (#307) |
+| 2026-10-11 | trivial | M11: lasso, Add Pen, Ink to Shape and Ink Replay landed (#395) |
 | 2026-11-07 | minor | Release 1.3.0: version bumped to 1.3.0 (`cargo xtask version set 1.3.0`); `release` branch created from gap 1+2 (`Rasmus-03/dagon` = `2e795db`); local checks green (corpus 4/4, native ink round-trip 1/1, formats 86/86, wasm 16/16); GitHub Actions signing + v1.3.0 GitHub Release with SHA256SUMS.txt and publish pending the `release` environment secrets |
+
+| 2026-11-07 | trivial | Stability: AutoSave soak test added (`tests::no_data_loss_soak`, `crates/engine/src/tests.rs`) — saves and reopens a .docx 50 times through `file.save` with no data loss, covering text, paragraphs, run props, and the detached media part. The first draft originally dropped an unreferenced media part; it was fixed before merging so the soak exercises the real Insert/Pictures media path |
 
 

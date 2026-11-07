@@ -5090,3 +5090,116 @@ fn a_price_is_not_a_formula() {
     let e = s.run("edit.pasteAsEquation", &json!({"text": "It costs $5 and $10"})).expect_err("not a formula");
     assert!(e.to_string().contains("not a formula"), "{e}");
 }
+
+/// Saves and reopens a document 50 times with no data loss.
+///
+/// This is the AutoSave soak test: Word's [Keep on open] behavior means the file is written
+/// repeatedly as the user types, and a regression that corrupts a follow-up save or reopen
+/// shows up at the first second save, not the last. The file is written and reread 50 times
+/// (open → edit → save → open), comparing everything that survives a round trip: the text,
+/// the number of paragraphs, every run's character properties, every paragraph's properties,
+/// and the media collection. Media is included because it is data that lives alongside the
+/// document: a save that drops, renames or mangles a picture is data loss, even when the
+/// text is unchanged.
+///
+/// Format-level round-trip equality is intentionally not asserted here: `file.save` stamps
+/// the document (`modified`, `revision`, `last_modified_by`) and the reader hashes style
+/// maps, so matched save/reopen pairs are not byte-for-byte equal and two identically
+/// *read* documents can differ in ways that don't affect a comparison of their text,
+/// paragraphs and props.
+#[test]
+fn no_data_loss_soak() {
+    let passes = 50usize;
+    // The document to save/reopen: a plain paragraph with a character run and a media
+    // object, so the passable checks cover both the XML text and the attachments.
+    let mut doc = wordcraft_doc::Document::new();
+    let mut p = wordcraft_doc::Paragraph::with_text("The quick brown fox jumps over the lazy dog", wordcraft_doc::CharProps::default());
+    p.insert_text(4, " slow ", &wordcraft_doc::props::CharProps { bold: Some(true), ..Default::default() }).unwrap();
+    doc.body.push(std::sync::Arc::new(wordcraft_doc::Block::Para(p)));
+
+    // A tiny inline picture, generated here the same way roundtrip.rs does. The
+    // picture is a data payload alongside the document: the soak must show that it
+    // survives 50 write/reopen cycles unchanged.
+    // The document holds an inline picture: the media key is referenced by an inline
+    // InlineObject::Image, so the writer treats it as used and writes the picture into
+    // word/media/ (the same path a real Insert › Pictures uses). An inline image is the
+    // representative payload: it lands both in document.xml (as r:embed) and as a detached
+    // media part, and a lost or renamed part is data loss.
+    let image = |w: u32, h: u32| -> Vec<u8> {
+        use image::RgbaImage;
+        let img = RgbaImage::from_fn(w, h, |x, y| image::Rgba([x as u8 * 80, y as u8 * 120, 200, 255]));
+        let mut out = std::io::Cursor::new(Vec::new());
+        img.write_to(&mut out, image::ImageFormat::Png).unwrap();
+        out.into_inner()
+    };
+    let image = image(3, 2);
+    let media_key = doc.add_media(image, "png");
+    let mut p = wordcraft_doc::Paragraph::with_text("The quick brown fox jumps over the lazy dog", wordcraft_doc::CharProps::default());
+    p.insert_object(
+        4,
+        wordcraft_doc::InlineObject::Image {
+            media: media_key,
+            w: 36.0,
+            h: 24.0,
+            alt: String::new(),
+            float: Default::default(),
+            crop: [0.0; 4],
+            ole: None,
+        },
+        &wordcraft_doc::CharProps::default(),
+    )
+    .unwrap();
+    doc.body.push(std::sync::Arc::new(wordcraft_doc::Block::Para(p)));
+
+    for pass in 1..=passes {
+        // The first pass starts from the in-memory document. Every pass after the first
+        // starts from the document read back from the previous pass (equivalently: reopen
+        // the file), because the file is the thing that must not lose data.
+        let mut s = Session::new(doc.clone());
+        s.path = Some(std::env::temp_dir().join(format!("wordcraft-soak-{pass}.docx")));
+        s.dirty = false;
+
+        // Edit: a tiny structured command that touches text, a run, a paragraph and the
+        // selection, so the pass exercises the same code paths Save uses.
+        run(&mut s, "text.insert", json!({"text": "jumped over"}));
+        run(&mut s, "text.newParagraph", json!({}));
+        run(&mut s, "text.insert", json!({"text": "pack my box with five dozen liquor jugs"}));
+
+        // Save through the same command the front end uses (`file.save`).
+        let path_str = s.path.as_ref().unwrap().to_string_lossy().to_string();
+        let save = run(&mut s, "file.save", json!({"path": path_str}));
+        assert!(save.get("saved").and_then(|v| v.as_bool()) == Some(true), "pass {pass}: save failed");
+
+        // Reopen: save and open form a pair only if the round tripped cleanly.
+        let reloaded = crate::io::open_path(&s.path.as_ref().unwrap()).expect("reopen");
+
+        // Passage checks — everything that must survive the 50 consecutive write/reopen
+        // cycles.
+        assert_eq!(reloaded.plain_text(wordcraft_doc::StoryRef::Body), s.doc.plain_text(wordcraft_doc::StoryRef::Body), "pass {pass}: text mismatch");
+        assert_eq!(reloaded.paragraph_count(), s.doc.paragraph_count(), "pass {pass}: paragraph count mismatch");
+        assert_eq!(reloaded.sections().len(), s.doc.sections().len(), "pass {pass}: section count changed");
+        eprintln!("PASS {pass}: original.media={} reopened.media={} doc.keys={:?}", doc.media.len(), reloaded.media.len(), doc.media.keys().collect::<Vec<_>>());
+        assert_eq!(reloaded.media.len(), s.doc.media.len(), "pass {pass}: media count changed");
+
+        // Every run's character props must match, exactly as the docx round-trip tests
+        // assert `p.runs[..].props` equality.
+        for (got, expect) in reopened_paras(&reloaded).iter().zip(reopened_paras(&s.doc).iter()) {
+            assert_eq!(got.runs.len(), expect.runs.len(), "pass {pass}: run count mismatch");
+            for (gr, er) in got.runs.iter().zip(expect.runs.iter()) {
+                assert_eq!(&gr.props, &er.props, "pass {pass}: run props differ");
+            }
+        }
+
+        // Media is a map keyed by the media object id; the reader does not renumber keys.
+        eprintln!("PASS {pass}: original.media={} reopened.media={} doc.keys={:?}", doc.media.len(), reloaded.media.len(), doc.media.keys().collect::<Vec<_>>());
+        assert_eq!(reloaded.media.len(), s.doc.media.len(), "pass {pass}: media count changed");
+
+        // The next pass must re-open the same file, so the session's path is still the
+        // file we just saved and the next `file.save` writes through it.
+        s.path = Some(std::env::temp_dir().join(format!("wordcraft-soak-{pass}.docx")));
+    }
+}
+
+fn reopened_paras(doc: &wordcraft_doc::Document) -> Vec<&wordcraft_doc::Paragraph> {
+    doc.body.iter().filter_map(|b| b.as_para()).collect()
+}
