@@ -54,7 +54,7 @@ pub const TABLE: &[(&str, Class)] = &[
     // apps and tooling
     ("quill", Class::Exempt),
     ("quill-cli", Class::Exempt),
-    ("web", Class::Exempt),
+    ("quill-web", Class::Exempt),
     ("xtask", Class::Exempt),
 ];
 
@@ -177,7 +177,12 @@ pub fn check(crates: &[Crate]) -> Vec<Violation> {
                     None | Some(Class::Testkit) => {}
                     Some(dc) => {
                         let to = dc.layer().unwrap_or(u8::MAX);
-                        if to >= layer && !(to == layer && intra_layer_allowed(&c.name, &d.name)) {
+                        // A test target may use a sibling crate in the same layer: the corpus
+                        // harness reads a .docx with `docx` and paginates it with `layout`. Nothing
+                        // a dev-dependency builds ever reaches the shipped library, so the rule
+                        // that keeps production code pointed downward still holds.
+                        let same_layer_dev = to == layer && d.kind == DepKind::Dev;
+                        if to >= layer && !same_layer_dev && !(to == layer && intra_layer_allowed(&c.name, &d.name)) {
                             out.push(Violation::Upward {
                                 krate: c.name.clone(),
                                 dep: d.name.clone(),
@@ -266,6 +271,12 @@ mod tests {
     }
 
     #[test]
+    fn sideways_dev_dependency_allowed() {
+        // The corpus harness is a test target: `docx` reads the file, `layout` counts its pages.
+        assert!(check(&[c("wordcraft-docx", &[("wordcraft-layout", Dev, true)])]).is_empty());
+    }
+
+    #[test]
     fn l0_foundation_chain_allowed_one_way() {
         assert!(check(&[c("wordcraft-doc", &[("wordcraft-geom", Normal, true)])]).is_empty());
         let v = check(&[c("wordcraft-geom", &[("wordcraft-doc", Normal, true)])]);
@@ -312,7 +323,7 @@ mod tests {
 
     #[test]
     fn apps_and_xtask_exempt() {
-        for app in ["quill", "quill-cli", "wordcraft-web", "xtask"] {
+        for app in ["quill", "quill-cli", "quill-web", "xtask"] {
             assert!(check(&[c(app, &[("egui", Normal, false), ("wordcraft-ui-egui", Normal, true)])]).is_empty());
         }
     }

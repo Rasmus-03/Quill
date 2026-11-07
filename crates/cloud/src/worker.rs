@@ -54,7 +54,8 @@ pub enum Answer {
     /// The contents of a folder.
     Listing(Vec<Entry>),
     /// A file's bytes.
-    Bytes(Vec<u8>),
+    /// A file's bytes, and the server's tag for the version that was read.
+    Bytes { bytes: Vec<u8>, etag: String },
     /// A file was written, with the server's new tag for it.
     Saved { path: String, etag: String },
     /// A public link was made.
@@ -197,7 +198,9 @@ fn run(id: u64, client: &crate::Client, kind: JobKind) -> Outcome {
         JobKind::Capabilities => client.capabilities().map(Answer::Capabilities),
         JobKind::Account => client.account().map(Answer::Account),
         JobKind::List(path) => client.list(&path).map(Answer::Listing),
-        JobKind::Get(path) => client.get(&path).map(Answer::Bytes),
+        // The tag for the version that was read travels with the bytes: it is what a later
+        // write sends back, so a file that changed on the server is not overwritten.
+        JobKind::Get(path) => client.get_with_etag(&path).map(|(bytes, etag)| Answer::Bytes { bytes, etag }),
         JobKind::Put { path, bytes, etag } => client.put_if(&path, &bytes, etag.as_deref()).map(|etag| Answer::Saved { path, etag }),
         JobKind::MkDir(path) => client.mkdir(&path).map(|()| Answer::Saved { path, etag: String::new() }),
         JobKind::Delete(path) => client.delete(&path).map(|()| Answer::Saved { path, etag: String::new() }),

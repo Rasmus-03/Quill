@@ -47,6 +47,7 @@
 	Apply Style	Rakenda stiil
 	Arrange	Paiguta
 	Arrange\nAll	Paiguta\nkõik
+	Arrange All	Paiguta kõik
 	Arrow	Nool
 	Artistic Effects	Kunstilised efektid
 	As you type	Kirjutamise ajal
@@ -77,6 +78,7 @@
 	Blank Page	Tühi leht
 	Blank document	Tühi dokument
 	Block\nAuthors	Blokeeri\nautorid
+	Block Authors	Blokeeri autorid
 	Bold	Paks
 	Bookmark	Järjehoidja
 	Bookmark name:	Järjehoidja nimi:
@@ -250,7 +252,7 @@
 	Envelopes	Ümbrikud
 	Eraser	Kustutuskumm
 	Even Page	Paarisleht
-	Every command is available to scripts and AI agents: run `wordcraft-cli mcp` for an MCP server, or start the app with `--control <port>` for the JSON control channel.	Kõik käsud on saadaval skriptidele ja tehisintellekti agentidele. MCP-serveri jaoks käivita `wordcraft-cli mcp`. JSON-juhtkanali jaoks käivita rakendus valikuga `--control <port>`.
+	Every command is available to scripts and AI agents: run `quill-cli mcp` for an MCP server, or start the app with `--control <port>` for the JSON control channel.	Kõik käsud on saadaval skriptidele ja tehisintellekti agentidele. MCP-serveri jaoks käivita `quill-cli mcp`. JSON-juhtkanali jaoks käivita rakendus valikuga `--control <port>`.
 	Export	Ekspordi
 	Export PDF	Ekspordi PDF
 	Export Page as PNG	Ekspordi leht PNG-na
@@ -346,7 +348,9 @@
 	Index	Register
 	Info	Teave
 	Initials:	Initsiaalid:
+	Ink Equation	Tindi võrrand
 	Ink to\nMath	Käsikiri\nvalemiks
+	Ink to Math	Tint matemaatikasse
 	Ink to\nShape	Käsikiri\nkujundiks
 	Ink\nReplay	Esita\nkäsikiri
 	Insert	Lisa
@@ -720,6 +724,7 @@
 	Show\nComments	Kuva\nkommentaarid
 	Shrink Font 1 Point	Vähenda fonti 1 punkti võrra
 	Side to Side	Kõrvuti
+	Side\nby Side	Kõrvuti
 	Side\nto Side	Kõr-\nvuti
 	Signature Line	Allkirjarida
 	Single	Ühekordne
@@ -730,7 +735,6 @@
 	Small caps	Kapiteelkiri
 	SmartArt	SmartArt
 	Sort	Sordi
-	Source code: github.com/storytold/wordcraft	Lähtekood: github.com/storytold/wordcraft
 	Space before/after:	Vahe enne/pärast:
 	Spaces	Tühikud
 	Spacing	Vahe
@@ -769,9 +773,13 @@
 	Subtle Reference	Tagasihoidlik viide
 	Superscript	Ülaindeks
 	Switch Modes	Vaheta režiimi
+	Switch Windows	Vaheta akent
 	Switch\nModes	Vaheta\nrežiimi
+	Switch\nWindows	Vaheta\nakent
 	Symbol	Sümbol
 	Symbols	Sümbolid
+	Synchronous Scrolling	Sünkroonne kerimine
+	Synchronous\nScrolling	Sünkroonne\nkerimine
 	Synonyms	Sünonüümid
 	Tab	Tabeldus
 	Tab characters	Tabeldusmärgid
@@ -858,6 +866,7 @@
 	Vertical Alignment	Püstjoondus
 	View	Vaade
 	View Gridlines	Kuva ruudujooned
+	View Side by Side	Kuva kõrvuti
 	View State	Vaate olek
 	Views	Vaated
 	Voice	Hääl
@@ -2153,3 +2162,4 @@
 
 	Paste as Equation	Kleebi võrrandina
 	Open Obsidian Vault…	Ava Obsidiani hoidla…
+	Source code: github.com/Rasmus-03/Quill	Lähtekood: github.com/Rasmus-03/Quill

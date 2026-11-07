@@ -3,7 +3,7 @@ name = "wordcraft-docx"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
-description = "WordCraft DOCX (OOXML WordprocessingML) reader and writer"
+description = "Quill DOCX (OOXML WordprocessingML) reader and writer"
 
 [lints]
 workspace = true
@@ -30,5 +30,10 @@ getrandom = { workspace = true, features = ["wasm_js"] }
 
 [dev-dependencies]
 proptest = { workspace = true }
+# The corpus harness paginates each file to compare the page count with Word's own
+# (`crates/docx/tests/corpus.rs`, behind `QUILL_CORPUS_PAGES=1`). Tests may use a sibling
+# crate in the same layer; production code may not (xtask/src/layers.rs).
+wordcraft-layout = { workspace = true }
+serde_json = { workspace = true }
 image = { workspace = true }
 zip = { workspace = true }

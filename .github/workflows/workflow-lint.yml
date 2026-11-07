@@ -1,0 +1,47 @@
+# Guard: every `cargo -p <package>` in a workflow must name a package that exists.
+#
+# A rename that misses a workflow step leaves CI failing on a package it cannot find, which
+# reads like a broken build instead of a stale name (this happened: the fork's packages are
+# `quill` and `quill-cli`, but the macOS/Windows matrix still asked for `wordcraft`, so that
+# matrix had never run green). This job turns that into a clear message.
+name: Workflow lint
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: workflow-lint-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  package-names:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Check the package names the workflows use
+        run: cargo run -q -p xtask -- pkg-names
+
+  yaml:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Check the workflow files parse
+        run: |
+          set -euo pipefail
+          pip install --quiet yamllint
+          # yamllint's default rules are stricter than GitHub's YAML; only the parse errors
+          # matter here, so the style rules are switched off.
+          yamllint --disable rule:line-length --disable rule:document-start --disable rule:truthy \
+            --disable rule:comments --disable rule:indentation --disable rule:empty-lines \
+            --disable rule:braces --disable rule:octal-values --disable rule:quoted-strings \
+            .github/workflows/

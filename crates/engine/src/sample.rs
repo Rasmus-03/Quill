@@ -30,7 +30,7 @@ fn italic() -> CharProps {
 pub fn sample_document() -> Document {
     let mut d = Document::new();
     d.core.title = "The Open Studio Handbook".into();
-    d.core.creator = "WordCraft".into();
+    d.core.creator = "Quill".into();
     let mut b: Vec<Block> = Vec::new();
     b.push(Block::Para(styled("The Open Studio Handbook", "Title")));
     b.push(Block::Para(styled("How a small community of makers shares space, tools and time", "Subtitle")));
@@ -203,6 +203,80 @@ pub fn report() -> Document {
     d
 }
 
+/// An assignment sheet: the subject, the name, the class and the date, the task, and room for
+/// the answer. Our own text, in Danish.
+pub fn opgaveark() -> Document {
+    let mut d = Document::new();
+    d.core.title = "Opgaveark".into();
+    d.core.creator = "Quill".into();
+    let mut b: Vec<Block> = vec![Block::Para(styled("Opgaveark", "Title")), Block::Para(styled("Matematik · Algebra", "Subtitle"))];
+    // Who handed it in, and when.
+    let mut t = Table::new(3, 2, 468.0);
+    t.props.style = Some("GridTable4Accent1".into());
+    for (r, (what, who)) in [("Navn", ""), ("Klasse", ""), ("Dato", "")].into_iter().enumerate() {
+        if let Some(cell) = t.rows.get_mut(r).and_then(|x| x.cells.first_mut()) {
+            cell.blocks = vec![para_block(para(what))];
+        }
+        if let Some(cell) = t.rows.get_mut(r).and_then(|x| x.cells.get_mut(1)) {
+            cell.blocks = vec![para_block(para(who))];
+        }
+    }
+    b.push(Block::Table(t));
+    b.push(Block::Para(styled("Opgaven", "Heading1")));
+    b.push(Block::Para(para("Skriv opgaven her. Beskriv, hvad der skal findes, og hvilke oplysninger der er givet.")));
+    b.push(Block::Para(styled("Svar", "Heading1")));
+    for _ in 0..6 {
+        b.push(Block::Para(para("")));
+    }
+    b.push(Block::Para(styled("Noter", "Heading1")));
+    b.push(Block::Para(para("Plads til noter om regnestykker, skitser og dine overvejelser.")));
+    d.body = b.into_iter().map(std::sync::Arc::new).collect();
+    d
+}
+
+/// A report cover: the title, the author, the subject, the class and the date.
+pub fn rapportforside() -> Document {
+    let mut d = Document::new();
+    d.core.title = "Rapport".into();
+    d.core.creator = "Quill".into();
+    let mut b: Vec<Block> =
+        vec![Block::Para(styled("Rapport", "Title")), Block::Para(styled("Skriv rapportens titel her", "Subtitle")), Block::Para(para(""))];
+    let mut t = Table::new(5, 2, 468.0);
+    t.props.style = Some("GridTable4Accent1".into());
+    for (r, what) in ["Forfatter", "Fag", "Klasse", "Dato", "Vejleder"].into_iter().enumerate() {
+        if let Some(cell) = t.rows.get_mut(r).and_then(|x| x.cells.first_mut()) {
+            cell.blocks = vec![para_block(para(what))];
+        }
+        if let Some(cell) = t.rows.get_mut(r).and_then(|x| x.cells.get_mut(1)) {
+            cell.blocks = vec![para_block(para(""))];
+        }
+    }
+    b.push(Block::Table(t));
+    b.push(Block::Para(para("")));
+    b.push(Block::Para(para("Skriv rapportens indledning her: emnet, problemstillingen og hvorfor den er værd at undersøge.")));
+    d.body = b.into_iter().map(std::sync::Arc::new).collect();
+    d
+}
+
+/// A two-column handout: the same text in two columns, for a lesson.
+pub fn haandout() -> Document {
+    let mut d = Document::new();
+    d.core.title = "Håndout".into();
+    d.core.creator = "Quill".into();
+    // Two columns, with a line between them.
+    d.last_section.columns = wordcraft_doc::section::Columns { count: 2, space: 28.0, separator: true, widths: Vec::new() };
+    let mut b: Vec<Block> = vec![Block::Para(styled("Håndout", "Title"))];
+    b.push(Block::Para(styled("Emne", "Heading1")));
+    b.push(Block::Para(para("Skriv det korte forklaring her — det, eleverne skal have læst før de regner.")));
+    b.push(Block::Para(styled("Regnestykke", "Heading1")));
+    b.push(Block::Para(para("x² + 2x − 3 = 0")));
+    b.push(Block::Para(para("Faktoren er (x − 1)(x + 3), så løsningerne er x = 1 og x = −3.")));
+    b.push(Block::Para(para("")));
+    b.push(Block::Para(para("Se i bogen side 42 for eksemplet.")));
+    d.body = b.into_iter().map(std::sync::Arc::new).collect();
+    d
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -210,7 +284,7 @@ mod tests {
     #[test]
     fn samples_are_valid() {
         assert_eq!(sample_document().word_count(), 361);
-        for d in [sample_document(), letter(), resume(), report()] {
+        for d in [sample_document(), letter(), resume(), report(), opgaveark(), rapportforside(), haandout()] {
             assert!(d.word_count() > 5);
             let l = wordcraft_layout::layout(&d, &mut wordcraft_layout::LayoutCache::new(), &Default::default());
             assert!(!l.pages.is_empty());

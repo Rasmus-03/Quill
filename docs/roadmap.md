@@ -1,6 +1,6 @@
 # WordCraft roadmap: milestones and what's next
 
-> **Last reviewed:** 2026-10-10 · **Last updated:** 2026-10-21 · **Change:** minor (release 1.1.0: Nextcloud, deeper Obsidian vaults, Focus mode and the cleanup ritual; previously minor: Portuguese proofing; previously minor: Polish interface and Polish proofing; previously trivial: M7: formatting revisions landed, #41; previously trivial: M5: Draw Table and Eraser landed, #303; previously minor: beta distance restated: ~15 points, ~150–230 h; previously: alpha gate checked: six core workflows pass; previously major: milestones moved here from ROADMAP.md; Current focus set from the re-measured gaps) · **Target:** Microsoft Word (Microsoft 365) for Mac 16.113.4
+> **Last reviewed:** 2026-10-10 · **Last updated:** 2026-10-27 · **Change:** minor (the 1.2 line's measurements are in: the real-world corpus answers the opening question of gaps #1 (71 files round-trip, 62 of 65 page counts match Word's), so the alpha gate's "open a .docx someone sent" row and M1 say what is left — the page-by-page comparison and the other producers; M15 is 20 interface languages with Danish and four proofing languages; previously minor: release 1.1.0: Nextcloud, deeper Obsidian vaults, Focus mode and the cleanup ritual; previously minor: Portuguese proofing; previously minor: Polish interface and Polish proofing; previously trivial: M7: formatting revisions landed, #41; previously trivial: M5: Draw Table and Eraser landed, #303; previously minor: beta distance restated: ~15 points, ~150–230 h; previously: alpha gate checked: six core workflows pass; previously major: milestones moved here from ROADMAP.md; Current focus set from the re-measured gaps) · **Target:** Microsoft Word (Microsoft 365) for Mac 16.113.4
 
 Forward-looking plan. The summary is [`ROADMAP.md`](../ROADMAP.md); the ranked work list is
 [`gaps.md`](gaps.md); the numbers are in [`target-app-parity.md`](target-app-parity.md). Hours are
@@ -11,9 +11,10 @@ Opus 5.5 agent wall-clock.
 1. **Merge or close the ~45 open PRs** before starting overlapping work: many close catalog gaps
    (Clipboard pane #264, Manage Styles #270, Group #267), fix field bugs (Hebrew RTL #20, IME
    fixes #155–#164) or add languages (nb, nn, he). Owner review needed.
-2. **DOCX real-world corpus** (gap #1, 30–50 h): collect openly licensed real-world .docx files,
-   open/render/round-trip them, compare with Word locally, fix what breaks. Omitted/empty
-   paragraph defaults now have synthetic save/reopen coverage; the corpus gate remains open.
+2. **DOCX real-world corpus** (gap #1, 15–30 h of what is left): the 71-file Apache-POI corpus is
+   fetched by hash, round-trips in its own CI job and matches Word's recorded page count in 62 of
+   the 65 files that carry one; what is left is the page-by-page render comparison with Word and
+   documents from the other producers (Google Docs, Pages, LibreOffice).
 3. **Preserve what we can't render** (gap #2, 10–15 h): remaining native ink forms and unsupported
    graphics survive a round trip. Drawing-level native ink now keeps its InkML and optional picture
    fallback alongside chart, SmartArt, OLE and drawing-canvas support.
@@ -33,7 +34,7 @@ every day, checked end to end on the main platform (macOS desktop), including sa
 | Core workflow | Works end to end? | Evidence | Hours to pass |
 |---|---|---|---|
 | Write and format a document: type, fonts, paragraph formatting, styles, lists, undo, find/replace; save as .docx and reopen | yes | 422 commands, typing parity pinned by `tests_typing.rs`, DOCX round-trip tests (`crates/docx/tests/roundtrip.rs`) | 0 |
-| Open a .docx someone sent, edit it, send back a .docx Word opens | partial (not blocking) | Word opens our files; typical text/table/picture documents work; never tested on a real-world corpus; charts, SmartArt and OLE dropped silently, move tracking lost (gaps #1, #2, #5) | 0 (beta work: 50–80) |
+| Open a .docx someone sent, edit it, send back a .docx Word opens | partial (not blocking) | Word opens our files; the 71-file real-world corpus (Apache POI) round-trips and 62 of the 65 files whose page count Word recorded come out at the same number of pages; charts, SmartArt and OLE are kept but not editable, and nobody has compared the pages themselves with Word's (gap #1) | 0 (beta work: gap #1's 15–30 h; charts and pagination are gaps #2–#4) |
 | Build a structured document: tables, pictures, headers/footers, page numbers, sections, columns | yes | Tables with row splitting and floating tables (#137), floating pictures (#136), first/odd/even headers; columns don't balance (gap #4) | 0 |
 | Review with others: comments, track changes, accept/reject, compare | yes | Margin balloons, tracked insert/delete incl. paragraph marks (#125, #244), formatting revisions (#41), compare | 0 |
 | References for reports and papers: TOC, footnotes, citations and bibliography, captions | yes | Updatable TOC field (#52), notes, APA/MLA/Chicago/IEEE, Zotero (#189); long footnotes don't continue (gap #4) | 0 |
@@ -47,7 +48,7 @@ partial rows are fidelity gaps (beta work), not broken workflows. WordCraft stay
 | # | Milestone | State | Remaining |
 |---|---|---|---|
 | M0 | Skeleton and vertical slice (model, layout, render, engine, Word-style UI, CLI, MCP, web) | done | — |
-| M1 | DOCX I/O | done (first version); real-world corpus not started; charts/SmartArt/OLE dropped | 45–75 h |
+| M1 | DOCX I/O | done (first version); 71 real-world files round-trip and 62 of 65 page counts match Word's; the pages themselves are not compared, and charts/SmartArt/OLE are kept but not editable | 15–30 h |
 | M2 | Home tab | done except Paste Special, Clipboard pane, Style Inspector, Manage Styles, Asian typography (PRs open for four) | 5–10 h |
 | M3 | Insert tab | mostly done; equations done (#191), icons done (#309); charts, SmartArt, 3D, screenshot, online media missing | 50–80 h |
 | M4 | Layout and Design tabs | done except column balancing, group | 6–10 h |
@@ -61,7 +62,7 @@ partial rows are fidelity gaps (beta work), not broken workflows. WordCraft stay
 | M12 | Formats breadth (PDF, ODT, RTF, HTML, MD, TXT, LaTeX, `.doc` import) | done (first versions); `.doc` write, encryption, minor formats missing | 60–100 h |
 | M13 | Performance budgets | on track (1.4 ms relayout); large real-world documents unmeasured | 10–20 h |
 | M14 | 1.0 polish, packaging, signing | releases v0.1.0–v0.4.0 published (signed macOS, Windows MSI x64/x86/arm64, Linux, FreeBSD, web) | — |
-| M15 | Localization (12 key languages, RTL interface, proofing languages) | 15 UI languages; English, Polish and Portuguese proofing, a proofing language per run | 70–115 h |
+| M15 | Localization (12 key languages, RTL interface, proofing languages) | 20 UI languages with Danish; English, Polish, Portuguese and Danish proofing, a proofing language per run | 70–115 h |
 | M16 | Right-to-left and East Asian typography | RTL paragraphs done (#207) | 30–45 h |
 
 ## Next after beta
@@ -73,6 +74,7 @@ languages, screen-reader access, ecosystem decisions (VBA, add-ins, cloud), an i
 
 | Date | Change | Summary |
 |---|---|---|
+| 2026-10-27 | minor | The 1.2 line's measurements replace the 1.1 ones. The alpha gate's "open a .docx someone sent" row and M1 no longer say the real-world corpus was never tested: 71 Apache-POI files round-trip in their own CI job, and 62 of the 65 whose page count Word recorded come out at the same count; what remains is the page-by-page comparison and the other producers (gaps #1's 30–50 h becomes 15–30 of what is left). M15 reads 20 interface languages with Danish and four proofing languages. Catalog 497/504, 678 commands, 2,198 tests, ~210,000 lines |
 | 2026-10-21 | minor | Release 1.1.0: Nextcloud (a new `wordcraft-cloud` crate; the Navigation pane's Nextcloud tab connects, browses, opens, saves, shares and searches a server; a file that changed there is not overwritten), Obsidian with a backlinks view, a tags view and Insert › Link, Focus mode that really hides the interface, and the cleanup ritual (`cargo xtask test` removes what the run left behind). The roadmap's focus is unchanged: the beta list (gaps #1–#7) comes first |
 | 2026-10-12 | minor | M15: Portuguese proofing (pt-BR spelling from the installed VERO dictionary, suggestions, grammar, hyphenation; Review › Language gains Português (Brasil)) |
 | 2026-10-11 | trivial | M15: Polish interface and Polish proofing landed |

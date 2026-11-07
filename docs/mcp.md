@@ -4,12 +4,12 @@ WordCraft speaks the [Model Context Protocol](https://modelcontextprotocol.io) o
 Claude and other agents can write and edit documents.
 
 ```sh
-wordcraft-cli mcp                          # headless session (no window)
+quill-cli mcp                          # headless session (no window)
 wordcraft --control 7981 &                 # or: drive the running app…
-wordcraft-cli mcp --connect 127.0.0.1:7981 # …including clicks, keys and screenshots
+quill-cli mcp --connect 127.0.0.1:7981 # …including clicks, keys and screenshots
 ```
 
-Claude Code: `claude mcp add wordcraft -- wordcraft-cli mcp`.
+Claude Code: `claude mcp add wordcraft -- quill-cli mcp`.
 
 With `--connect`, the bridge sends the app's control key, which it reads from
 `WORDCRAFT_CONTROL_KEY` or from the key file the app writes at start. It sends the key only to
@@ -19,19 +19,19 @@ loopback addresses; see [Keys](control-protocol.md#keys).
 
 Tracked changes and comments are recorded under the session's user name ("WordCraft User" by
 default). Name the agent so reviewers can tell its edits from people's: start the headless server
-with `wordcraft-cli mcp --author "Claude (copyedit)"`, or run
+with `quill-cli mcp --author "Claude (copyedit)"`, or run
 `file.setAuthor {"name": "Claude (copyedit)"}`. Turn tracking on explicitly with
 `review.trackChanges {"value": true}`; without `value` it toggles, which turns tracking *off* in
-a document that was saved with it on. `wordcraft-cli run` takes `--author` too.
+a document that was saved with it on. `quill-cli run` takes `--author` too.
 
 ## Confining file access
 
 ```sh
-wordcraft-cli mcp --automation-read-root /work/project --automation-write-root /work/project/out
+quill-cli mcp --automation-read-root /work/project --automation-write-root /work/project/out
 ```
 
 ```json
-{"mcpServers": {"wordcraft": {"command": "/abs/path/target/release/wordcraft-cli",
+{"mcpServers": {"wordcraft": {"command": "/abs/path/target/release/quill-cli",
   "args": ["mcp", "--automation-read-root", "/work/project", "--automation-write-root", "/work/project/out"]}}}
 ```
 

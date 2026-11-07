@@ -39,7 +39,7 @@ cat ~/.config/wordcraft/control-key.local-7981   # Linux, outside Flatpak, port 
   one limit: blank lines and bad JSON do not extend it. After an authorised request the
   connection may stay idle.
 
-`wordcraft-cli mcp --connect` takes the key from `WORDCRAFT_CONTROL_KEY`, or else from the key
+`quill-cli mcp --connect` takes the key from `WORDCRAFT_CONTROL_KEY`, or else from the key
 file for the port it connects to, and reads it again on every new connection (the app may have
 restarted). It sends the key only to loopback addresses (`127.0.0.0/8`, `::1`, `localhost`). For
 any other host it sends no key, says so, and the app refuses its requests: to drive an app on

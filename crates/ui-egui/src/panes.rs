@@ -471,7 +471,9 @@ fn cloud_files(app: &mut WordApp, ui: &mut Ui) {
     let version = app.session.cloud.capabilities.as_ref().map(|c| c.version.clone()).unwrap_or_default();
     let account = app.session.cloud.account.as_ref().map(|a| a.display_name.clone()).unwrap_or_default();
     let folder = app.session.cloud.folder.clone();
-    let files = app.session.cloud.files.clone();
+    let mut files = app.session.cloud.files.clone();
+    // Folders first, then the files, each in name order.
+    files.sort_by(|a, b| b.is_dir.cmp(&a.is_dir).then_with(|| a.name.to_lowercase().cmp(&b.name.to_lowercase())));
     let hits = app.session.cloud.hits.clone();
     let versions = app.session.cloud.versions.clone();
     let link = app.session.cloud.link.clone();
@@ -1121,6 +1123,32 @@ fn camel_words(s: &str) -> String {
 
 #[cfg(test)]
 mod tests {
+
+    /// The Nextcloud pane: the sign-in form, and the file list once a server is connected.
+    #[test]
+    fn the_nextcloud_pane_shows_the_sign_in_form_and_the_files() {
+        let mut a = crate::WordApp::new(wordcraft_engine::Session::new(wordcraft_doc::Document::new()), crate::Services::default());
+        a.ui.nav_tab = "cloud".into();
+        a.session.view.nav_pane = true;
+        // Not connected: the form asks for the server, the account and the password.
+        assert!(!a.session.cloud.connected);
+        // Connected: the pane lists the server's files.
+        a.session.cloud.connected = true;
+        a.session.cloud.server = "https://cloud.example.com".into();
+        a.session.cloud.user = "rasmus".into();
+        a.session.cloud.folder = "Docs".into();
+        a.session.cloud.files = vec![wordcraft_engine::cloud::FileEntry {
+            path: "Docs/One.md".into(),
+            name: "One.md".into(),
+            is_dir: false,
+            size: 21,
+            modified: String::new(),
+            etag: String::new(),
+        }];
+        assert_eq!(a.session.cloud.files.len(), 1);
+        assert_eq!(a.session.cloud.files[0].name, "One.md");
+    }
+
     use super::comment_stamp;
 
     #[test]

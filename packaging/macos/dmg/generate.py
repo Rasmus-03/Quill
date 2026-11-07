@@ -19,23 +19,25 @@ import tempfile
 
 from ds_store import DSStore
 from mac_alias import Alias, TargetInfo, VolumeInfo
-from PIL import Image, ImageCms
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 
 # Keep in sync with package.sh (volume name) and README.md (layout).
-VOLUME = "WordCraft"
+VOLUME = "Quill"
 WIDTH, HEIGHT = 660, 400  # window content, pt; the background's 1x size
 TITLE_BAR = 32
 ICON_SIZE = 128
 PALETTE = 16  # colours in background.tiff
-ICONS = {"WordCraft.app": (326, 205), "Applications": (574, 205)}
+ICONS = {"Quill.app": (326, 205), "Applications": (574, 205)}
 # A fixed date for the alias and the colour profile. Finder never matches it against the image
 # (each build is a new volume): it finds the background by volume name and path.
 FIXED_DATE = datetime.datetime(2026, 10, 8, tzinfo=datetime.timezone.utc)
 
 
 def render(svg, width, out):
+    # Pillow is imported where it is used, so `--only-ds-store` runs without it.
+    from PIL import Image
+
     # The SVG's text is already outlined and no fonts are loaded, so every machine draws the
     # same pixels.
     subprocess.run(
@@ -47,11 +49,15 @@ def render(svg, width, out):
 
 
 def quantize(im):
+    from PIL import Image
+
     # No dithering: dither noise compresses badly and the artwork has flat fills.
     return im.quantize(PALETTE, method=Image.Quantize.FASTOCTREE, dither=Image.Dither.NONE)
 
 
 def srgb_profile():
+    from PIL import ImageCms
+
     # LittleCMS's built-in sRGB ("No copyright, use freely"), with its creation date fixed.
     icc = bytearray(ImageCms.ImageCmsProfile(ImageCms.createProfile("sRGB")).tobytes())
     d = FIXED_DATE
@@ -63,6 +69,8 @@ def srgb_profile():
 
 def write_tiff(svg, out):
     """1x (72 dpi) and 2x (144 dpi) in one TIFF, as `tiffutil -cathidpicheck` writes them."""
+    from PIL import Image
+
     with tempfile.TemporaryDirectory() as tmp:
         one, two = (
             quantize(render(svg, WIDTH * s, os.path.join(tmp, f"{s}x.png"))) for s in (1, 2)
@@ -148,9 +156,15 @@ def write_ds_store(out):
 
 
 def main():
-    if not shutil.which("resvg"):
-        sys.exit("error: resvg not found (brew install resvg / cargo install resvg --locked)")
-    write_tiff(os.path.join(HERE, "background.svg"), os.path.join(HERE, "background.tiff"))
+    args = sys.argv[1:]
+    # The .DS_Store carries the volume name and the app icon's name, so it changes whenever the
+    # app is renamed; the background image does not. `--only-ds-store` regenerates just the
+    # layout, which needs no resvg (and no fonts) on the machine.
+    only_ds_store = "--only-ds-store" in args
+    if not only_ds_store:
+        if not shutil.which("resvg"):
+            sys.exit("error: resvg not found (brew install resvg / cargo install resvg --locked)")
+        write_tiff(os.path.join(HERE, "background.svg"), os.path.join(HERE, "background.tiff"))
     write_ds_store(os.path.join(HERE, "dmg-layout.DS_Store"))
 
 

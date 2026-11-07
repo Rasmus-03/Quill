@@ -234,7 +234,7 @@ fn odt_round_trip() {
 fn latex_round_trip() {
     check_round_trip("tex", true);
     let tex = String::from_utf8(export("tex", &sample()).unwrap().unwrap()).unwrap();
-    assert!(tex.starts_with("% Written by WordCraft") && tex.contains("\\documentclass{article}"), "{tex}");
+    assert!(tex.starts_with("% Written by Quill") && tex.contains("\\documentclass{article}"), "{tex}");
     assert!(tex.contains("\\section*{Main Heading}") && tex.contains("\\subsection*{Second Level}"), "{tex}");
     assert!(tex.contains("\\textbf{bold}") && tex.contains("\\textit{italic}"), "{tex}");
     assert!(tex.contains("\\href{https://example.com/x}{a link}"), "{tex}");
@@ -343,6 +343,18 @@ fn markdown_text_shapes() {
     assert!(md.contains("| Name | Value |"));
     assert!(md.contains("> A wise quote"));
     assert!(md.contains("![tiny]("));
+}
+
+/// A paragraph whose text is only hashes reads back as an empty ATX heading, so the export
+/// escapes it. Without that, the text was lost on the way through Markdown.
+#[test]
+fn markdown_keeps_text_that_looks_like_a_heading() {
+    for text in ["#", "##", "###", "## ##", "# tag", "#tag"] {
+        let d = Document::from_text(text);
+        let md = export("md", &d).unwrap().unwrap();
+        let back = import("md", &md).unwrap().unwrap();
+        assert_eq!(back.plain_text(Default::default()).trim(), text, "md: {}", String::from_utf8_lossy(&md));
+    }
 }
 
 #[test]

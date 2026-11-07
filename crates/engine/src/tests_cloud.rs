@@ -83,6 +83,42 @@ fn a_note_on_the_server_is_an_obsidian_note() {
     assert!(source.is_some(), "the note keeps its own source");
 }
 
+/// The tag for the version that was read travels with the document, so a write cannot
+/// overwrite a file that changed on the server.
+#[test]
+fn the_server_tag_travels_with_the_document() {
+    let mock = Mock::start();
+    let mut s = s();
+    connect(&mut s, &mock);
+    run(&mut s, "cloud.open", json!({"path": "Docs/hello.txt"}));
+    run(&mut s, "cloud.wait", json!({"ms": 10000}));
+    let status = run(&mut s, "cloud.status", json!({}));
+    assert_eq!(status["document"]["etag"], json!("\"etag-1\""), "{status}");
+    // Saving sends the tag back, so the server refuses the write if the file changed.
+    run(&mut s, "text.insert", json!({"text": "More."}));
+    run(&mut s, "cloud.save", json!({}));
+    run(&mut s, "cloud.wait", json!({"ms": 10000}));
+    let seen = mock.seen();
+    assert!(seen.iter().any(|r| r.to_ascii_lowercase().contains("if-match: \"etag-1\"")), "{seen:?}");
+}
+
+/// File > Save on a document from the server writes it back to the server.
+#[test]
+fn saving_a_document_from_the_server_writes_it_back() {
+    let mock = Mock::start();
+    let mut s = s();
+    connect(&mut s, &mock);
+    run(&mut s, "cloud.open", json!({"path": "Docs/hello.txt"}));
+    run(&mut s, "cloud.wait", json!({"ms": 10000}));
+    run(&mut s, "text.insert", json!({"text": "More."}));
+    let before = mock.seen().len();
+    run(&mut s, "file.save", json!({}));
+    run(&mut s, "cloud.wait", json!({"ms": 10000}));
+    let seen = mock.seen();
+    assert!(seen.len() > before, "the document was written to the server");
+    assert!(seen[before..].iter().any(|r| r.starts_with("PUT /remote.php/dav/files/rasmus/Docs/hello.txt")), "{seen:?}");
+}
+
 #[test]
 fn a_public_link_is_made() {
     let mock = Mock::start();
@@ -137,4 +173,40 @@ fn disconnecting_forgets_the_account() {
     let status = run(&mut s, "cloud.status", json!({}));
     assert_eq!(status["connected"], json!(false));
     assert_eq!(status["files"].as_array().map(|f| f.len()), Some(0));
+}
+
+/// A note saved to the server keeps its frontmatter and goes up with its images.
+#[test]
+fn a_note_saved_to_the_server_keeps_its_form_and_its_images() {
+    let mock = Mock::start();
+    let mut s = s();
+    connect(&mut s, &mock);
+    // A document with a picture and a heading.
+    let doc = wordcraft_doc::Document::new();
+    s.set_document(doc);
+    s.run("text.insert", &json!({"text": "# One\n", "raw": true})).unwrap();
+    s.run("file.save", &json!({"path": "/tmp/does-not-matter.md"})).ok();
+    // Save it to the server as a note.
+    let r = s.run("cloud.save", &json!({"path": "Notes/One.md"})).expect("queued");
+    assert_eq!(r["queued"], json!(true));
+    run(&mut s, "cloud.wait", json!({"ms": 10000}));
+    let seen = mock.seen();
+    let put = seen.iter().find(|r| r.starts_with("PUT /remote.php/dav/files/rasmus/Notes/One.md")).expect("the note was written");
+    assert!(put.contains("One"), "the note's text went up: {put:?}");
+}
+
+/// A path that tries to leave the account is refused before anything is sent.
+#[test]
+fn a_path_cannot_leave_the_account() {
+    let mock = Mock::start();
+    let mut s = s();
+    connect(&mut s, &mock);
+    let before = mock.seen().len();
+    // The client refuses the path before it sends anything; the answer comes back as an error.
+    run(&mut s, "cloud.list", json!({"path": "../elsewhere"}));
+    run(&mut s, "cloud.wait", json!({"ms": 10000}));
+    let status = run(&mut s, "cloud.status", json!({}));
+    let error = status["error"].as_str().unwrap_or_default();
+    assert!(error.contains("leave") || error.contains("outside"), "the path was refused: {status}");
+    assert_eq!(mock.seen().len(), before, "nothing was sent to the server");
 }

@@ -24,7 +24,7 @@ use wordcraft_layout::{DocLayout, Placed};
 
 use super::ink_shape::{InkShape, recognise};
 use super::pos_json;
-use crate::{CmdError, CmdResult, CommandSpec, Session, p};
+use crate::{CmdError, CmdResult, CommandSpec, Selection, Session, p};
 
 /// What dragging on the page does (Draw tab).
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
@@ -251,6 +251,10 @@ pub fn specs() -> Vec<CommandSpec> {
         .params(r#"{"value"?: bool}  (no value: convert the lasso-selected strokes, or turn Ink to Shape on or off)"#)
         .pure(),
         CommandSpec::new("draw.convertInk", "Convert to Shapes", "Draw › Convert", convert_selection),
+        // The ink canvas reads the selected strokes and supplies the formula as `linear` or
+        // `latex`; with neither there is no reading to insert (the ink stays put).
+        CommandSpec::new("draw.inkToMath", "Ink to Math", "Draw › Convert", ink_to_math)
+            .params(r#"{"linear"?: string, "latex"?: string, "display"?: bool}  (one of `linear` or `latex` from the ink canvas)"#),
         CommandSpec::new("draw.replay", "Ink Replay", "Draw › Replay", replay)
             .params(r#"{"value"?: bool}  (starts or stops Ink Replay; returns the strokes in the order they were drawn)"#)
             .pure(),
@@ -730,6 +734,44 @@ fn convert_at(s: &mut Session, pos: &Pos) -> Result<Option<&'static str>, CmdErr
     Ok(Some(found.name()))
 }
 
+// --- Ink to Math ---------------------------------------------------------------------------
+
+/// Draw › Ink to Math: turn the lasso-selected ink into an equation. The ink canvas reads the
+/// strokes and passes the result as `linear` or `latex`; without a reading nothing changes (the
+/// ink is not thrown away for an empty equation).
+fn ink_to_math(s: &mut Session, v: &Value) -> CmdResult {
+    let selected = lasso_required(s)?;
+    let mut items: Vec<Pos> = selected
+        .items
+        .into_iter()
+        .filter(|pos| s.doc.para_at(pos).and_then(|p| p.object_at(pos.off)).and_then(InlineObject::ink).is_some())
+        .collect();
+    items.sort();
+    items.dedup();
+    if items.is_empty() {
+        return Err(CmdError::Failed("the lasso selection holds no ink".into()));
+    }
+    let formula = match (p::str(v, "linear"), p::str(v, "latex")) {
+        (Some(linear), _) => Some(json!({"linear": linear})),
+        (None, Some(latex)) => Some(json!({"latex": latex})),
+        (None, None) => None,
+    };
+    let Some(mut params) = formula else {
+        return Err(CmdError::Disabled("Ink to Math needs the ink canvas's reading: pass `linear` or `latex`".into()));
+    };
+    // The first stroke keeps its place while the later ones go; the equation lands where it was.
+    let at = items.first().cloned().ok_or_else(|| CmdError::Failed("the lasso selection holds no ink".into()))?;
+    for pos in items.iter().rev() {
+        delete_object(s, pos)?;
+    }
+    s.view.draw.lasso = None;
+    s.sel = Selection::caret(at);
+    if let Some(display) = p::bool(v, "display") {
+        params["display"] = json!(display);
+    }
+    super::equation::insert_formula(s, &params)
+}
+
 // --- Ink Replay ----------------------------------------------------------------------------
 
 /// Every ink stroke in the document with its page, in the order it was drawn: strokes that
@@ -1016,5 +1058,47 @@ mod tests {
         assert!(d.ink_to_shape);
         let back: super::DrawState = serde_json::from_value(serde_json::to_value(&d).unwrap()).unwrap();
         assert_eq!(back.pens, d.pens);
+    }
+
+    fn equations(s: &Session) -> Vec<InlineObject> {
+        s.doc
+            .body
+            .iter()
+            .filter_map(|b| b.as_para())
+            .flat_map(|p| p.objects.iter())
+            .filter(|o| matches!(o, InlineObject::Equation { .. }))
+            .cloned()
+            .collect()
+    }
+
+    /// E2: the ink canvas reads the lasso-selected strokes and supplies the formula; the strokes
+    /// become that equation. Without a reading the command is disabled and nothing changes.
+    #[test]
+    fn ink_to_math_turns_the_lassoed_strokes_into_an_equation() {
+        let loop_params = json!({"page": 0, "points": [[60, 50], [320, 50], [320, 180], [60, 180]]});
+        let mut s = session();
+        s.run("draw.stroke", &json!({"page": 0, "points": [[120, 100], [180, 120], [240, 100]]})).unwrap();
+        assert_eq!(ink(&s).len(), 1);
+        s.run("draw.lasso", &loop_params).unwrap();
+        let r = s.run("draw.inkToMath", &json!({"linear": "x^2"})).unwrap();
+        assert_eq!(r["linear"], "x^2");
+        assert!(ink(&s).is_empty(), "the strokes became the equation");
+        assert_eq!(equations(&s).len(), 1);
+        assert!(s.view.draw.lasso.is_none());
+
+        // No reading yet: the command is disabled, nothing is thrown away, and no undo step is made.
+        let mut s = session();
+        s.run("draw.stroke", &json!({"page": 0, "points": [[120, 100], [180, 120], [240, 100]]})).unwrap();
+        s.run("draw.lasso", &loop_params).unwrap();
+        let undo = s.undo_depth();
+        assert!(s.run("draw.inkToMath", &json!({})).is_err());
+        assert_eq!(ink(&s).len(), 1);
+        assert_eq!(s.undo_depth(), undo);
+
+        // Lasso cleared, or a lasso holding no ink, is refused.
+        s.run("draw.lasso", &json!({"clear": true})).unwrap();
+        assert!(s.run("draw.inkToMath", &json!({"linear": "x"})).is_err());
+        s.run("draw.lasso", &json!({"page": 0, "points": [[320, 50], [400, 50], [400, 180], [320, 180]]})).unwrap();
+        assert!(s.run("draw.inkToMath", &json!({"linear": "x"})).is_err());
     }
 }

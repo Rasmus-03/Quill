@@ -840,7 +840,7 @@ fn unzip(bytes: &[u8]) -> std::collections::BTreeMap<String, Vec<u8>> {
         let mut f = z.by_index(i).unwrap();
         let mut b = Vec::new();
         f.read_to_end(&mut b).unwrap();
-        out.insert(f.name().to_string(), b);
+        out.insert(f.name().expect("zip entry name").to_string(), b);
     }
     out
 }
@@ -1442,7 +1442,7 @@ fn includepicture_keeps_its_embedded_picture() {
                 let mut f = z.by_index(i).unwrap();
                 let mut v = Vec::new();
                 std::io::Read::read_to_end(&mut f, &mut v).unwrap();
-                entries.push((f.name().to_string(), v));
+                entries.push((f.name().expect("zip entry name").to_string(), v));
             }
             entries.push(("word/media/picture.png".into(), png.to_vec()));
             zip(&entries.iter().map(|(n, v)| (n.as_str(), v.as_slice())).collect::<Vec<_>>())
@@ -1996,7 +1996,7 @@ fn unreadable_picture_frame_takes_the_pictures_natural_size() {
             let mut f = z.by_index(i).unwrap();
             let mut v = Vec::new();
             std::io::Read::read_to_end(&mut f, &mut v).unwrap();
-            entries.push((f.name().to_string(), v));
+            entries.push((f.name().expect("zip entry name").to_string(), v));
         }
         entries.push(("word/media/s.png".into(), png(400, 50)));
         entries.push(("word/media/b.png".into(), png(20, 20)));

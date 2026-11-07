@@ -1,4 +1,4 @@
-# Flatpak manifest for WordCraft, ready for a Flathub submission.
+# Flatpak manifest for Quill, ready for a Flathub submission.
 #
 # Flatpak builds run offline, so the crate sources must be vendored first. From the repo root:
 #
@@ -16,7 +16,7 @@ runtime-version: '25.08'
 sdk: org.freedesktop.Sdk
 sdk-extensions:
   - org.freedesktop.Sdk.Extension.rust-stable
-command: wordcraft
+command: quill
 finish-args:
   # Display: Wayland first; X11 only when no Wayland compositor is running.
   - --socket=wayland
@@ -37,15 +37,15 @@ finish-args:
 build-options:
   append-path: /usr/lib/sdk/rust-stable/bin
 modules:
-  - name: wordcraft
+  - name: quill
     buildsystem: simple
     build-options:
       env:
-        CARGO_HOME: /run/build/wordcraft/cargo
+        CARGO_HOME: /run/build/quill/cargo
         CARGO_NET_OFFLINE: 'true'
     build-commands:
-      - cargo --offline build --release --locked -p wordcraft -p quill-cli
-      - install -Dm755 target/release/wordcraft /app/bin/wordcraft
+      - cargo --offline build --release --locked -p quill -p quill-cli
+      - install -Dm755 target/release/quill /app/bin/quill
       - install -Dm755 target/release/quill-cli /app/bin/quill-cli
       - install -Dm644 packaging/linux/io.github.rasmus03.quill.desktop /app/share/applications/io.github.rasmus03.quill.desktop
       - install -Dm644 packaging/linux/io.github.rasmus03.quill.mime.xml /app/share/mime/packages/io.github.rasmus03.quill.xml

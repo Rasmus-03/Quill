@@ -564,7 +564,7 @@ impl WordApp {
         // First run (or wiped prefs): the math tab builds itself.
         wordcraft_engine::cmd::mathcraft::ensure_wordmat_tab(&mut session);
         if !wordcraft_engine::cmd::mathcraft::maxima_available() {
-            session.status = "Maxima is missing — install it before calculating (e.g. sudo pacman -S maxima)".to_string();
+            session.status = format!("Maxima is missing — install it before calculating: {}", wordcraft_engine::cmd::mathcraft::install_hint());
         }
         WordApp {
             session,
@@ -1030,7 +1030,7 @@ impl WordApp {
             _ => "Isolate for variable",
         };
         egui::Window::new(title).collapsible(false).resizable(false).anchor(egui::Align2::CENTER_CENTER, [0.0, 0.0]).show(ctx, |ui| {
-            ui.label("The equation has several variables. Pick the one to isolate:");
+            ui.label(tl!("Ligningen har flere variable — vælg den, der skal isoleres:"));
             ui.horizontal_wrapped(|ui| {
                 for v in &pick.vars {
                     if ui.button(v).clicked() {
@@ -1059,7 +1059,7 @@ impl WordApp {
         let mut choice: Option<String> = None;
         let mut cancel = false;
         egui::Window::new("History").collapsible(false).resizable(true).anchor(egui::Align2::CENTER_CENTER, [0.0, 0.0]).show(ctx, |ui| {
-            ui.label("Recent results (newest first). Pick one to insert at the caret:");
+            ui.label(tl!("Seneste resultater (nyeste først) — vælg et at indsætte ved markøren:"));
             egui::ScrollArea::vertical().max_height(300.0).show(ui, |ui| {
                 for item in &pick.items {
                     if ui.button(item).clicked() {

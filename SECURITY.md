@@ -1,6 +1,6 @@
 # Security model
 
-WordCraft opens and calculates on documents it did not create. This file records the
+Quill opens and calculates on documents it did not create. This file records the
 boundaries that are enforced in code and the ones that are deliberately left to the
 operator's environment.
 
@@ -56,7 +56,7 @@ The following inputs are trusted local/operator input, not document input:
 
 - `math.maxima` with a `{"cmd": "..."}` parameter runs raw Maxima. Maxima can call the
   operating system (`system`, `load`, file output, Lisp interop), so this executes with
-  the same privileges as WordCraft. Do not pass untrusted or model-generated text to
+  the same privileges as Quill. Do not pass untrusted or model-generated text to
   this parameter. There is no in-process sandbox around Maxima.
 - `MATHCRAFT_DEFS` and the persisted math-definitions list are local configuration.
   Definitions are revalidated and unsafe entries are logged and skipped, but a valid
@@ -66,7 +66,7 @@ The following inputs are trusted local/operator input, not document input:
   local code.
 - A local `maxima-init.mac` and other Maxima packages are loaded by Maxima itself.
 
-If WordCraft must run against hostile documents and hostile automation input, put the
+If Quill must run against hostile documents and hostile automation input, put the
 whole process in an OS sandbox or container with no access to secrets or the rest of the
 filesystem. The expression allowlist reduces the attack surface; it is not a substitute
 for process isolation.
@@ -89,7 +89,7 @@ address-space cap. These limits contain accidental or hostile resource use — a
 expression can still occupy Maxima until the 30 s timeout — but they are not a sandbox.
 
 Batches up to 8 KiB are passed with `--batch-string`; larger batches (up to the 4 MiB
-hard cap) are written to Maxima's stdin, so the cap is enforced by WordCraft rather than
+hard cap) are written to Maxima's stdin, so the cap is enforced by Quill rather than
 by the operating system's argument-length limit.
 
 ## Files and saves
@@ -134,5 +134,5 @@ by the operating system's argument-length limit.
 ## Reporting
 
 Please report security issues privately to the repository maintainers rather than in a
-public issue. Include the WordCraft version, the platform, and a minimal reproducer
+public issue. Include the Quill version, the platform, and a minimal reproducer
 (document, command invocation, or automation request).

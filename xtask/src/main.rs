@@ -5,11 +5,13 @@
 
 mod assets;
 mod clean;
+mod corpus;
 mod ico;
 mod install;
 mod layers;
 mod parity;
 mod pkg_names;
+mod review;
 mod stats;
 mod version;
 
@@ -37,8 +39,14 @@ commands:
                   than DAYS days, the incremental caches, the scratch folders a crashed test left
                   and the half-written files a killed save left. --all removes this checkout's
                   build directory too
-  corpus [--download]
-                  show where test corpora live; --download fetches PngSuite into corpus/pngsuite
+  corpus [--download | --docx]
+                  show where test corpora live; --download fetches PngSuite into corpus/pngsuite,
+                  --docx fetches the .docx corpus into corpus/docx (pinned by SHA-256)
+  review <action> the author→reviewer hand-over: submit, list, next, show, accept (send it
+                  further), changes (send it back with a message), status, wait, reviewer,
+                  agent (be the review stage: claim a request, put it in front of a reviewer
+                  and let the verdict go back to the author)
+                  (docs/review-loop.md; `cargo xtask review` for the actions)
   stats [--exact] count tests and lines per crate (--exact: ask the test harness via `-- --list`)
   parity          recompute the Word feature-parity summary in docs/parity-checklist.md
   ico <out.ico> <in.png>...
@@ -57,7 +65,8 @@ fn main() -> ExitCode {
         Some("wasm") => cmd_wasm(),
         Some("pkg-names") => pkg_names::run(&root()),
         Some("ci") => cmd_ci(),
-        Some("corpus") => cmd_corpus(rest.contains(&"--download")),
+        Some("corpus") => cmd_corpus(&rest),
+        Some("review") => review::run(&root(), &rest),
         Some("stats") => stats::run(&root(), rest.contains(&"--exact")),
         Some("parity") => parity::run(&root()),
         Some("ico") => ico::run(&rest),
@@ -290,7 +299,15 @@ fn cmd_ci() -> Result<(), String> {
 
 const PNGSUITE_URL: &str = "http://www.schaik.com/pngsuite/PngSuite-2017jul19.tgz";
 
-fn cmd_corpus(download: bool) -> Result<(), String> {
+fn cmd_corpus(args: &[&str]) -> Result<(), String> {
+    let download = args.contains(&"--download");
+    let docx = args.contains(&"--docx");
+    if docx {
+        return corpus::fetch(&root()).map(|_| ());
+    }
+    if !download {
+        return corpus::show(&root());
+    }
     let corpus = root().join("corpus");
     println!(
         "Test corpora live under {} (git-ignored, never committed).

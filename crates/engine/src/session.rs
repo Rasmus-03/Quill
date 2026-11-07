@@ -163,6 +163,23 @@ pub struct ViewState {
     /// Review › Hide Ink: ink strokes aren't shown on screen (they stay in the document).
     #[serde(default)]
     pub hide_ink: bool,
+    /// View › Window › View Side by Side: the window asks for two documents beside each other
+    /// (`view.sideBySide`). The shell arranges the windows; the engine keeps the choice.
+    #[serde(default)]
+    pub side_by_side: bool,
+    /// View › Window › Synchronous Scrolling: side-by-side windows scroll together. Only
+    /// meaningful while `side_by_side` is on (turning that off turns this off too).
+    #[serde(default)]
+    pub sync_scroll: bool,
+    /// Review › Block Authors: who made each tracked change and comment is hidden — they all
+    /// read as "Author" and revisions use one neutral colour. The document keeps its authors;
+    /// the colours to put back when it is turned off are kept in `blocked_colors`.
+    #[serde(default)]
+    pub block_authors: bool,
+    /// The Track Changes insert/delete colours that Block Authors replaced, put back when it is
+    /// turned off.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub blocked_colors: Option<(Option<wordcraft_doc::props::Rgb>, Option<wordcraft_doc::props::Rgb>)>,
     /// Draw tab: the tool dragging on the page uses, and each pen's colour and thickness.
     #[serde(default)]
     pub draw: crate::cmd::draw::DrawState,
@@ -232,6 +249,10 @@ impl Default for ViewState {
             proofing: true,
             numeral: NumeralMode::default(),
             hide_ink: false,
+            side_by_side: false,
+            sync_scroll: false,
+            block_authors: false,
+            blocked_colors: None,
             draw: Default::default(),
             field_codes: false,
             hide_white_space: false,
@@ -765,6 +786,12 @@ impl Session {
             && !v.multi_page
             && v.mode == ViewMode::Print
             && self.prefs.markup.balloons != wordcraft_layout::display::BalloonMode::Inline
+    }
+
+    /// The name a tracked change or comment shows: Block Authors replaces every author with the
+    /// neutral "Author" label, so the lists and balloons it feeds cannot tell them apart.
+    pub fn author_label<'a>(&self, author: &'a str) -> &'a str {
+        if self.view.block_authors { "Author" } else { author }
     }
 
     /// Show revisions in balloons, with the balloons on screen: tracked deletions in the body leave
