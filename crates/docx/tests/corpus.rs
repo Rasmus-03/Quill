@@ -20,7 +20,14 @@
 //! The corpus is optional: without it the test says so and passes. With it, every file is
 //! checked, and a file that loses something fails with its name, so the work list
 //! ([`docs/gaps.md`](../../../docs/gaps.md)) can point at it.
+//!
+//! With `QUILL_CORPUS_PAGES=1` the test also compares the page count with the one the file's
+//! producer recorded (`docProps/app.xml`, `<Pages>`): Word's own answer for that document, saved
+//! before Quill existed. It is gated because the count depends on the fonts installed on the
+//! machine ([`docs/docx-corpus.md`](../../../docs/docx-corpus.md)); without the variable the test
+//! behaves exactly as it did before.
 
+use std::io::Read;
 use std::path::{Path, PathBuf};
 
 use serde_json::Value;
@@ -73,6 +80,27 @@ fn corpus_files(dir: &Path) -> Vec<PathBuf> {
         .collect();
     files.sort();
     files
+}
+
+/// The page count the file's producer recorded: `<Pages>` in `docProps/app.xml`, which Word (and
+/// Outlook, and LibreOffice) writes at save time. `None` when the file carries none — a tool that
+/// never paginated, the empty document, or a package that is not readable as one.
+fn recorded_pages(bytes: &[u8]) -> Option<u32> {
+    let mut zip = zip::ZipArchive::new(std::io::Cursor::new(bytes)).ok()?;
+    let mut entry = zip.by_name("docProps/app.xml").ok()?;
+    let mut xml = String::new();
+    entry.read_to_string(&mut xml).ok()?;
+    // The default namespace gives `<Pages>`; a writer that prefixes it gives `<ep:Pages>`.
+    let start = xml.find("<Pages>").map(|i| i + "<Pages>".len()).or_else(|| xml.find(":Pages>").map(|i| i + ":Pages>".len()))?;
+    let rest = xml.get(start..)?;
+    let end = rest.find('<')?;
+    rest.get(..end)?.trim().parse().ok()
+}
+
+/// The pages Quill's layout makes of a document — the same print layout the app shows.
+fn quill_pages(doc: &Document) -> usize {
+    let mut cache = wordcraft_layout::LayoutCache::new();
+    wordcraft_layout::layout(doc, &mut cache, &wordcraft_layout::LayoutOptions::default()).pages.len()
 }
 
 /// The document's text, paragraph by paragraph: what a reader sees.
@@ -517,6 +545,13 @@ fn every_corpus_file_survives_a_round_trip() {
         missing.len()
     );
 
+    // Page counts are compared only on request: the number depends on the fonts installed on the
+    // machine, so it is not a property of the document alone.
+    let check_pages = std::env::var("QUILL_CORPUS_PAGES").is_ok_and(|v| v.trim() == "1");
+    let mut page_files = 0usize;
+    let mut page_matches = 0usize;
+    let mut page_broken: Vec<String> = Vec::new();
+
     let mut broken: Vec<String> = Vec::new();
     let mut checked = 0usize;
     let mut refused = 0usize;
@@ -546,6 +581,25 @@ fn every_corpus_file_survives_a_round_trip() {
             broken.push(losses.describe(&name));
             continue;
         }
+        // The page count Word recorded against the pages Quill lays out of the same file. A
+        // matching count is not a matching page (the lines can break elsewhere), but a count that
+        // moves says the layout did.
+        if check_pages && let Some(word) = recorded_pages(&bytes) {
+            page_files += 1;
+            match wordcraft_docx::read(&bytes) {
+                Ok(d) => {
+                    let quill = quill_pages(&d);
+                    if quill == word as usize {
+                        page_matches += 1;
+                    } else {
+                        let delta = quill as i64 - word as i64;
+                        let sign = if delta > 0 { "more" } else { "fewer" };
+                        page_broken.push(format!("{name}: Word recorded {word} page(s), Quill lays out {quill} ({} {sign})", delta.abs()));
+                    }
+                }
+                Err(e) => page_broken.push(format!("{name}: read once but not again: {e}")),
+            }
+        }
         if let Some(d) = doc {
             println!(
                 "{name}: {} paragraphs, {} tables, {} parts, {} pictures, {} characters",
@@ -573,6 +627,19 @@ fn every_corpus_file_survives_a_round_trip() {
         .map(|e| e.name.as_str())
         .collect();
     assert!(stale.is_empty(), "these files open now, so the manifest is out of date: {stale:?}");
+
+    // The page count has to be what Word recorded, or the difference has to be explained in
+    // `docs/docx-corpus.md`. Adding a file to the corpus with a count that does not match makes
+    // this fail, which is the point: the count is the only pagination evidence Word left behind.
+    if check_pages {
+        assert!(
+            page_broken.is_empty(),
+            "{} of {page_files} corpus files whose producer recorded a page count paginate differently:\n{}",
+            page_broken.len(),
+            page_broken.join("\n")
+        );
+        println!("pages: {page_matches} of {page_files} corpus files paginate to the recorded count");
+    }
 
     println!("{checked} corpus files round-tripped without losing anything ({refused} refused on purpose)");
 }

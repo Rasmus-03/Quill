@@ -144,5 +144,76 @@ layout is close to Word, not that the pages look the same — the page-by-page r
 still the open item. What each difference is, and what the check does not cover, is in
 [`file-format-parity.md`](file-format-parity.md#pagination-against-word).
 
+### The count is an assertion now
+
+```sh
+QUILL_CORPUS_PAGES=1 cargo test -p wordcraft-docx --test corpus
+```
+
+The harness reads `<Pages>` from each file, lays the document out the way the app does, and fails
+naming every file whose count moved, with both numbers and the delta. The gate is opt-in for two
+reasons: the count depends on the fonts installed on the machine, and three files below are still
+one page apart, so the gated run is red until they are put right. Without `QUILL_CORPUS_PAGES=1`
+the test behaves exactly as before.
+
+### The three files that are one page apart
+
+Measured 2026-11-03 on this line, the corpus fetched by hash (`cargo xtask corpus --docx`, 71
+files), each page read from Quill's own print layout — the page it lands on, its height and the
+room left around it:
+
+| File | Word | Quill | Delta |
+|---|---|---|---|
+| `60329.docx` | 3 | 4 | +1 |
+| `drawing.docx` | 20 | 21 | +1 |
+| `form_footnotes.docx` | 3 | 2 | −1 |
+
+**`60329.docx`** — a government protocol: one 5×2 table, four of whose cells hold nested tables,
+on a landscape page with 0.1″ margins, under a header (“Study Design, Objectives and Endpoints”)
+and a four-row footer of its own. The body area is 459.9 pt of the 612 pt page: the header takes
+34.2 pt and the footer 110.8 pt (`w:header`/`w:footer` are 0, so both sit at the page edge). Quill
+fills pages 1–3 to the body bottom (content ends at 501.2, 494.7 and 501.2 against 501.2). Page 4
+holds the last 13 lines of the paragraph at `[0,4,0,0,2,1,0]` (lines 34–46, 138 pt) and the empty
+paragraph that closes the document: 165.8 pt of content and 294 pt of blank page. Nothing is
+teased apart by a break rule — the file has no `keepNext`, no `pageBreakBefore` and no `cantSplit`,
+and zeroing every paragraph's space after does not change the count. Quill's content is 1538.7 pt
+against the 1379.6 pt three pages hold, so the nested tables are 159 pt (11.5%) taller here than
+in Word's three pages; the lines at the boundary are the 46-line cell that starts on page 3. The
+file's own footer says “Page 1 of 3” — its `NUMPAGES` field agrees with `<Pages>` — while Quill's
+render of page 4 says “Page 4 of 4”.
+
+**`drawing.docx`** — 8,800 words of Russian media monitoring, 189 paragraphs of `Normal (Web)` text
+with HTML auto spacing, and five small tables. The extra page is the last three paragraphs of the
+“Управление на французский манер” piece (187–189, 207.4 pt); page 20 ends 19.0 pt above the body
+bottom (766.2 of 785.2), so paragraph 187 — its 14 pt automatic space before plus a first line of
+11.5 pt — could not fit. No `keepNext`, `pageBreakBefore` or `cantSplit` exists in the file. The
+space Quill loses is on page 8: the table at body block 80 ends its second row at 586.5 with 198.7
+pt left, and its third row is 199.7 pt tall — one point too tall — so the row moves whole to page 9,
+because only the cell's bottom edge crosses the cut and no line inside the row does. That one row's
+cell holds a nested table with a picture. Removing the space after the body paragraphs (the
+`w:beforeAutospacing`/`w:afterAutospacing` pairs that resolve to 14 pt before and after,
+`AUTO_SPACING` in `crates/doc/src/resolve.rs`) makes the file paginate to exactly Word's 20 pages,
+so the page is the accumulated auto spacing and the substituted Arial/Verdana metrics, not one
+discrete break.
+
+**`form_footnotes.docx`** — an American consular visa form: six tables of fixed-height rows, one
+one-line footnote (“testdoc test phrase”) and 215 line boxes. Quill ends page 2 with the
+INSTRUCTIONS table (block 16) and the empty paragraph that closes the document, at 671.9–678.8,
+58.5 pt above the body bottom (737.3). Total content is 1344.1 pt against the 1402.6 pt two pages
+hold — 96% full — so Word's third page needs at least 59 pt more content than Quill lays out. The
+file has no page break, no `keepNext` and no `pageBreakBefore`; its only break rules are four small
+`cantSplit` rows (18.9, 16.7, 11.5 and 11.5 pt) and a one-line note, none of them at a page
+boundary. Either Word's layout is about 4% taller (a substituted Times New Roman, 0.3 pt per line
+over 215 line boxes, is the plausible metric) or `<Pages>` was written at a save of a slightly
+different document.
+
+**What the diagnosis can and cannot say.** Every number above was measured: Where Quill's pages
+end, how much room each had, what the row heights are, and which experiment moves the count. Word
+is observed only through the totals it wrote into its files. Its page breaks are not in the file
+and no Word render was compared, so for `60329.docx` and `form_footnotes.docx` the difference is
+localised to a page, a row and an amount, not traced line by line; the page-by-page comparison
+remains gap #1's open item. Fixing any of the three moves the gated count, which is what the gate
+is for.
+
 The full state of the format — what is read, what is written and what is lost on the way — is in
 [`docs/file-format-parity.md`](file-format-parity.md).

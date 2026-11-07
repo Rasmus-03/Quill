@@ -498,9 +498,10 @@ Both own files no other row of §5 touches, so they run beside the release-line 
       compatibility table (B3), not a surprise. *(landed 2026-10-21: 71 Apache-POI files pinned by
       SHA-256, read → write → read, every one round-trips; 2026-10-23: the page count is compared
       with Word's own recorded count — 62 of 65 exact, three one page apart, all three named —
-      though not yet asserted in the harness. The page-by-page render comparison remains open in
-      gap #1; 2026-10-30: the harness was run on this line after `zip` 3 → 9 and all 71 files still
-      round-trip)*
+      2026-11-03: and asserted: `QUILL_CORPUS_PAGES=1` fails naming any file whose count moves,
+      and the three are diagnosed page by page in `docs/docx-corpus.md`. The page-by-page render
+      comparison remains open in gap #1; 2026-10-30: the harness was run on this line after
+      `zip` 3 → 9 and all 71 files still round-trip)*
 - [x] The interface is Danish at the points a student meets it, errors included. *(2026-10-23:
       the maths tab's 24 English error and status strings and its formula gallery are Danish; the
       Maths tab reads Danish in all 20 interfaces, which is the open item for the others)*
