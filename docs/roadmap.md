@@ -1,6 +1,6 @@
 # WordCraft roadmap: milestones and what's next
 
-> **Last reviewed:** 2026-10-10 · **Last updated:** 2026-11-03 · **Change:** trivial (gap #1: the DOCX corpus gate landed — `corpus/docx/` with a provenance manifest, checked by `cargo test -p wordcraft-docx --test corpus`, skipping while empty; previously trivial: gap #2: every native ink form round-trips, including Word 2010's run-level content part and ink inside groups and canvases; previously minor: release 1.1.0: Nextcloud, deeper Obsidian vaults, Focus mode and the cleanup ritual; previously minor: Portuguese proofing; previously minor: Polish interface and Polish proofing; previously trivial: M7: formatting revisions landed, #41; previously trivial: M5: Draw Table and Eraser landed, #303; previously minor: beta distance restated: ~15 points, ~150–230 h; previously: alpha gate checked: six core workflows pass; previously major: milestones moved here from ROADMAP.md; Current focus set from the re-measured gaps) · **Target:** Microsoft Word (Microsoft 365) for Mac 16.113.4
+> **Last reviewed:** 2026-10-10 · **Last updated:** 2026-11-07 · **Change:** minor (release 1.3.0: version bumped to `1.3.0`; `release` branch created and pushed with the gap 1+2 work (`Rasmus-03/dagon` = `2e795db`; corpus gate 4/4, native ink round-trip 1/1, formats 86/86, wasm 16/16); signing + GitHub Release (v1.3.0, SHA256SUMS.txt) pending the `release` environment secrets in GitHub Actions) · **Target:** Microsoft Word (Microsoft 365) for Mac 16.113.4
 
 Forward-looking plan. The summary is [`ROADMAP.md`](../ROADMAP.md); the ranked work list is
 [`gaps.md`](gaps.md); the numbers are in [`target-app-parity.md`](target-app-parity.md). Hours are
@@ -93,5 +93,7 @@ languages, screen-reader access, ecosystem decisions (VBA, add-ins, cloud), an i
 | 2026-10-10 | minor | Current focus heading back to ~150–230 h to beta: full number restored to the additive weighted sum (~60%), method aligned with the standard, no new evidence |
 | 2026-10-10 | minor | Alpha gate table added (core-workflow gate from the progress-docs standard): all six workflows pass, stage stays alpha |
 | 2026-10-10 | major | Created: milestones moved from ROADMAP.md with remaining hours; Current focus from gaps.md; M15–M16 added |
-| 2026-10-10 | trivial | M11: ink pens and eraser landed (#307) |
-| 2026-10-11 | trivial | M11: lasso, Add Pen, Ink to Shape and Ink Replay landed (#395) |
+| 2026-10-10 | trivial | M11: ink pens and eraser landed (#307) || 2026-10-11 | trivial | M11: lasso, Add Pen, Ink to Shape and Ink Replay landed (#395) |
+| 2026-11-07 | minor | Release 1.3.0: version bumped to 1.3.0 (`cargo xtask version set 1.3.0`); `release` branch created from gap 1+2 (`Rasmus-03/dagon` = `2e795db`); local checks green (corpus 4/4, native ink round-trip 1/1, formats 86/86, wasm 16/16); GitHub Actions signing + v1.3.0 GitHub Release with SHA256SUMS.txt and publish pending the `release` environment secrets |
+
+
