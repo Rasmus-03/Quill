@@ -35,6 +35,9 @@ FIXED_DATE = datetime.datetime(2026, 10, 8, tzinfo=datetime.timezone.utc)
 
 
 def render(svg, width, out):
+    # Pillow is imported where it is used, so `--only-ds-store` runs without it.
+    from PIL import Image
+
     # The SVG's text is already outlined and no fonts are loaded, so every machine draws the
     # same pixels.
     subprocess.run(
@@ -46,11 +49,15 @@ def render(svg, width, out):
 
 
 def quantize(im):
+    from PIL import Image
+
     # No dithering: dither noise compresses badly and the artwork has flat fills.
     return im.quantize(PALETTE, method=Image.Quantize.FASTOCTREE, dither=Image.Dither.NONE)
 
 
 def srgb_profile():
+    from PIL import ImageCms
+
     # LittleCMS's built-in sRGB ("No copyright, use freely"), with its creation date fixed.
     icc = bytearray(ImageCms.ImageCmsProfile(ImageCms.createProfile("sRGB")).tobytes())
     d = FIXED_DATE
@@ -62,8 +69,7 @@ def srgb_profile():
 
 def write_tiff(svg, out):
     """1x (72 dpi) and 2x (144 dpi) in one TIFF, as `tiffutil -cathidpicheck` writes them."""
-    # Pillow is only needed here, so `--only-ds-store` runs without it.
-    from PIL import Image, ImageCms
+    from PIL import Image
 
     with tempfile.TemporaryDirectory() as tmp:
         one, two = (

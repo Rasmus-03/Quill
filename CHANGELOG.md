@@ -70,7 +70,8 @@ speaks Danish.
   layering is enforced, and the browser build of every layer still compiles
 - **Quill says Quill**: the release workflow, the web page's title, the app's and the command
   line tool's messages, the print title and the packaging output. The internal crate names and
-  the build variables keep theirs, and `docs/releasing.md` says why
+  the build variables keep theirs, and `docs/releasing.md` says why. The macOS disk image's window
+  says it too: its lettering is `Quill`, drawn at the size and weight the window already used
 - **The 19 interface languages keep their translations**: the English text of about sixteen
   strings was renamed to Quill, but the catalogs still carried the old wording as their key, so
   those strings fell back to English in every language. The catalogs are re-keyed, so the German,

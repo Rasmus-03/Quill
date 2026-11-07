@@ -7,7 +7,7 @@ Finder scripting on CI, nothing extra installed in the signing job).
 
 | File | What |
 |---|---|
-| `background.svg` | Source of the background: the app icon (`assets/app-icon/quill.svg`, linked, not copied) cropped as a cover on the Quill colour field (`#3b5bdb`), Ink and Paper. Its text (Inter, JetBrains Mono) is outlined, so rendering it needs no fonts. No paper grain: noise doesn't compress, and this keeps `background.tiff` small. |
+| `background.svg` | Source of the background: the app icon (`assets/app-icon/quill.svg`, linked, not copied) cropped as a cover on the Quill colour field (`#3b5bdb`), Ink and Paper. Its text is outlined, so rendering it needs no fonts: the wordmark is `Quill` in Inter SemiBold at 30 pt (cap height 21.83, baseline y 72, ink starting at x 266.73), the two labels are Inter and JetBrains Mono. |
 | `background.tiff` | The background at 1x (660 × 400 px, 72 dpi) and 2x (1320 × 800 px, 144 dpi) in one HiDPI TIFF (16-colour palette, Deflate, sRGB). Goes to `.background/background.tiff`. |
 | `dmg-layout.DS_Store` | Finder's view settings for the volume: window size, icon size 128, Quill.app at (326, 205), `Applications` at (574, 205), and the background. Goes to `.DS_Store` in the image; named so it isn't mistaken for (or ignored like) a Finder-generated `.DS_Store`. |
 | `generate.py` | Writes `background.tiff` and `dmg-layout.DS_Store` from the SVG and the layout above. |
@@ -44,8 +44,11 @@ python3 packaging/macos/dmg/generate.py --only-ds-store
 
 Both outputs are byte-for-byte reproducible and carry nothing from the machine that ran it: the
 SVG renders without any fonts, and `dmg-layout.DS_Store` is written from scratch, its background
-alias holding only the volume name and `/.background/background.tiff`. If you add text to the SVG,
-outline it (`usvg` from resvg converts text to paths). The window is 660 × 432 with Finder's 32 pt
-title bar; the content area is 660 × 400.
+alias holding only the volume name and `/.background/background.tiff`. If you change the text in
+the SVG, keep it outlined rather than retyped: the wordmark's `#text` path is Inter SemiBold at
+30 pt, drawn from `assets/fonts/Inter-SemiBold.ttf` with HarfBuzz and fontTools
+(`glyphSet` → `SVGPathPen`), placed by ink-left edge and baseline. Outlined text is what makes
+the SVG render identically on a machine without fonts, and it is what keeps `background.tiff`
+reproducible.
 
 This follows VectorCraft's `packaging/macos/dmg/` (storytold/vectorcraft#493).

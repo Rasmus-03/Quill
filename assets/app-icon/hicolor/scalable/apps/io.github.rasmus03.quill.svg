@@ -1,5 +1,5 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
-  <!-- WordCraft placeholder icon (original; MIT OR Apache-2.0). To be replaced by the mascot drawing. -->
+  <!-- Quill placeholder icon (original; MIT OR Apache-2.0). To be replaced by the mascot drawing. -->
   <rect width="512" height="512" rx="112" fill="#3B5BDB"/>
   <g transform="rotate(-6 256 256)">
     <path d="M150 92 H322 L384 154 V420 H150 Z" fill="#efe9dc" stroke="#0b0b0c" stroke-width="14" stroke-linejoin="round"/>

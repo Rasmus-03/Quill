@@ -2,7 +2,7 @@
 
 > **Last reviewed:** 2026-11-03 · **Last updated:** 2026-11-03 · **Change:** minor (delegation is
 > staffed and blocked by worker capacity, §9; previously minor: the release
-> line exists — `main` and every 1.2 arc merged cleanly as `release/1.2.0`, the branch roster is
+> line exists — `main` and every 1.2 arc merged cleanly as `release-1.2.0`, the branch roster is
 > decided and two branches are recruited for what this machine cannot close; previously minor:
 > A5 closes the supply chain — the two `taiki-e/install-action` tool tags are pinned, so every `uses:` in the
 > workflows is a commit — and the gate is re-run on this line: all 8 steps pass, wasm included,
@@ -48,6 +48,7 @@ Three legs, in priority order:
 
 | Leg | What it buys | Workstreams |
 |---|---|---|
+| 2026-11-07 | minor | The line is green and both recruited branches are in. `cargo xtask ci` passed all 8 steps on it, and `1.2/page-compare` and `1.2/wordmark` are merged — the corpus harness now asserts Word's recorded page count (`QUILL_CORPUS_PAGES=1`) and the DMG wordmark reads `Quill`. One rename was forced: the line is `release-1.2.0`, not `release/1.2.0`, because another crew created a branch named `release` in this checkout and git cannot hold `refs/heads/release` and `refs/heads/release/1.2.0` at once — the ref was deleted under us. The commits were recovered from the worker branches (`Rasmus-03/1.2-gate` is at the pre-fleet tip) and nothing was lost |
 | **Trust** | The build is verified on every platform; the document format is tested against real files, not only synthetic fixtures | A, B |
 | **Danish** | The interface, the proofing and the maths tab speak Danish; the maths tab says clearly what happened | C |
 | **Use** | The classroom workflows hold up end to end | B, C, D |
@@ -327,9 +328,13 @@ names, the `WORDCRAFT_*` build variables and the workspace's `repository` field 
 but not the catalogs, so 16 strings per language had lost their translation and fallen back to
 English — they are translated again. The exported files (PDF, ODT, HTML, RTF, LaTeX) and the
 DOCX properties now say Quill in their metadata, and the MCP server calls itself Quill.
-Still open: the **wordmark in the macOS DMG background** is upstream's outlined
-"WordCraft" — redrawing it needs the Inter and JetBrains Mono outlines, so it is a small
-artwork task of its own.
+*The DMG wordmark landed last:* the macOS DMG window's lettering is `Quill`, outlined from Inter
+SemiBold at 30 pt with HarfBuzz and fontTools — the same size and weight as the word it replaced
+(cap height 21.83, baseline y 72, ink starting at x 266.73), so the window reads as the same
+artwork with the right name. `background.tiff` is regenerated from it against the same palette
+and geometry, and `dmg-layout.DS_Store` comes out byte-identical: the layout never depended on
+the lettering. `packaging/` and `assets/` say nothing else now; the only remaining hits are the
+`WORDCRAFT_*` build variables §8.3 keeps.
 
 **D4. Spell out the fork boundary** — 1 h — **done**
 *What:* `FORK.md` is already a good port ledger; add a short "what is Quill's own code" table
@@ -453,7 +458,7 @@ through `cargo xtask review` ([`review-loop.md`](review-loop.md)), not by being 
 
 ### The release line and the branch roster, 2026-11-03
 
-`release/1.2.0` is `main` (`a4022a7`) with every 1.2 arc merged into it: 42 commits, 193 files,
+`release-1.2.0` is `main` (`a4022a7`) with every 1.2 arc merged into it: 42 commits, 193 files,
 +11,879/−878. `git merge-tree main Rasmus-03/1.2` reports no conflict, so the release is one push
 and one pull request away. What the line still does not carry is exactly §6's open boxes — the CI
 proof on the three platforms, one nightly fuzz run, the DMG wordmark, the checklist walk — and
@@ -461,7 +466,7 @@ proof on the three platforms, one nightly fuzz run, the DMG wordmark, the checkl
 
 | Branch | What it holds | Decision |
 |---|---|---|
-| `release/1.2.0` | `main` + the whole 1.2 line, merged clean | **the release line**; the pull request comes from here |
+| `release-1.2.0` | `main` + the whole 1.2 line, merged clean | **the release line**; the pull request comes from here |
 | `Rasmus-03/1.2` (same commit as `math-degrees`) | the 42 commits the line was built from | frozen, no new commits |
 | `1.2-danish-ui`, `1.2-danish-proof`, `1.2-fuzz`, `1.2-parity`, `1.2-docs` | one arc each, all merged into 1.2 | retire |
 | `quill-1.2-corpus`, `quill-1.2-review` (= `docs-sweep`), `quill-1.2-render-stability` (= `review-delta`) | merged into 1.2; two pairs are the same commit | retire |
@@ -474,7 +479,7 @@ Two branches are recruited for what §6 cannot close from here:
 | New branch | Owns | Done when | Cost |
 |---|---|---|---|
 | `1.2/page-compare` | the last piece of B1: render a corpus file and the pages Word wrote for it, and diff them page by page (Word is observed black-box, screenshots by window id under the gitignored `plan/word/`) | the three files that are one page apart are explained or fixed, and a page count that moves fails the harness | 6–10 h |
-| `1.2/wordmark` | the macOS DMG background's `#text` group is still upstream's outlined "WordCraft" (`packaging/macos/dmg/background.svg`; the glyphs are paths, so it is redrawn from open outlines, not retyped) | `rg -i wordcraft` finds nothing user-visible outside the credits, `cargo xtask assets` green | 2–4 h |
+| `1.2/wordmark` — **done 2026-11-03** | the macOS DMG background's `#text` group said upstream's outlined "WordCraft" (`packaging/macos/dmg/background.svg`); it now reads `Quill`, drawn from `assets/fonts/Inter-SemiBold.ttf` at 30 pt and rendered into `background.tiff` by `generate.py` | `rg -i wordcraft` finds nothing in `packaging/` or `assets/` outside the `WORDCRAFT_*` build variables (§8.3), `cargo xtask assets` green | — |
 
 Both own files no other row of §5 touches, so they run beside the release-line work.
 
@@ -621,7 +626,8 @@ release checklist. The detail, and how to repeat it, is in
 | Date | Change | Summary |
 |---|---|---|
 | 2026-11-03 | minor | Delegation is written down and blocked by capacity, not judgement. Orca run `run_f5e6a7034152` holds three tasks with their worktrees ready (`1.2-page-compare`, `1.2-wordmark`, `1.2-gate`); all three dispatches reached `agent_readiness` and died there — Codex is over its usage limit until 2026-11-21, Claude's credit balance is empty, and Orca has no OpenCode account. §9 now carries that risk with the exact relaunch command. Freebuff runs in the same worktrees instead, from Orca terminals; the coordinator reviews the result before it reaches the line |
-| 2026-11-03 | minor | The release line exists and the branch zoo is decided. `release/1.2.0` merges all 42 commits of the 1.2 arcs into `main` with no conflict (checked with `git merge-tree`), so the release is one push and one PR away; PR #2 is superseded, because it carries 15 of those 42 commits from an older tip. Nine merged or duplicate branches and seven empty ones are retired from the plan's roster, and two branches are recruited for what this machine cannot prove: `1.2/page-compare` (the page-by-page comparison with Word that B1 leaves open) and `1.2/wordmark` (the DMG background that still carries upstream's wordmark). No code changed |
+| 2026-11-03 | minor | `1.2/wordmark` landed: the macOS DMG window's wordmark is `Quill`, outlined from Inter SemiBold at 30 pt — the size and weight the artwork already used (cap height 21.83, baseline 72, ink at x 266.73) — so nothing in `packaging/` or `assets/` says the old name except the `WORDCRAFT_*` build variables. `background.tiff` is regenerated from the SVG and `dmg-layout.DS_Store` is byte-identical. `generate.py`'s TIFF path had drifted into a `NameError` (Pillow imported inside `write_tiff` only, so `render`, `quantize` and `srgb_profile` could not see it) and is fixed, which is why no run could have refreshed the image |
+| 2026-11-03 | minor | The release line exists and the branch zoo is decided. `release-1.2.0` merges all 42 commits of the 1.2 arcs into `main` with no conflict (checked with `git merge-tree`), so the release is one push and one PR away; PR #2 is superseded, because it carries 15 of those 42 commits from an older tip. Nine merged or duplicate branches and seven empty ones are retired from the plan's roster, and two branches are recruited for what this machine cannot prove: `1.2/page-compare` (the page-by-page comparison with Word that B1 leaves open) and `1.2/wordmark` (the DMG background that still carries upstream's wordmark). No code changed |
 | 2026-10-30 | minor | The four audit advisories are gone without suppressing any of them: `zip` 3.0.0 → 9.1.3 (one real API break — `ZipFile::name()` is a `Result` now, so a non-UTF-8 entry name is skipped like an unreadable entry instead of failing the document) and `ctutils` 0.4.3 → 0.4.7. `cargo audit` exits 0, and `cargo xtask ci` passes all 8 steps on the new `zip`. Separately, the fuzz corpus that had collected in the working tree is coverage only: 2,050 inputs and **no** `crash-*`/`timeout-*` artifact, so nothing was promoted to a named seed and the tree is clean |
 | 2026-10-30 | minor | A6 is closed by proving it, and the proof is red. `cargo-audit 0.22.2` on this line exits 1 with four advisories: three in `zip 3.0.0` (SUID/SGID preservation, symlink escape, permissions applied through symlinks — rated up to 9.1 critical, all in `ZipArchive::extract`, which Quill never calls; the DOCX reader reads entries and validates names itself) and `ctutils 0.4.3` (non-constant-time masks, reachable through `digest → hmac` in the DOCX package, fixed by a patch). Seven unmaintained-crate warnings do not fail the run. The `supply-chain.yml` jobs already existed; what was missing was this proof. Nothing was allow-listed or silenced — the release now carries an open decision: upgrade `zip` 3 → 9, or allow-list the three unreachable advisories with that reasoning |
 | 2026-10-30 | minor | §6's README item is closed. The README's "Not yet" row claimed the maths tab's messages are still English; the code says otherwise — every user-facing string in `crates/engine/src/cmd/mathcraft.rs` is Danish and no English sentence is left in it — so the row now says the tab is Danish and names what is actually open, the native-speaker review of the Danish strings. The platform table, the feature matrix and the limits themselves were already there |
