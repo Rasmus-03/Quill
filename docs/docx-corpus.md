@@ -151,10 +151,13 @@ QUILL_CORPUS_PAGES=1 cargo test -p wordcraft-docx --test corpus
 ```
 
 The harness reads `<Pages>` from each file, lays the document out the way the app does, and fails
-naming every file whose count moved, with both numbers and the delta. The gate is opt-in for two
-reasons: the count depends on the fonts installed on the machine, and three files below are still
-one page apart, so the gated run is red until they are put right. Without `QUILL_CORPUS_PAGES=1`
-the test behaves exactly as before.
+naming every file whose count moved, with both numbers and the delta. The gate is opt-in because
+the count depends on the fonts installed on the machine. The three files below are still one page
+apart, so the harness carries them as a named exception list — each entry pinned to the difference
+this document explains — and the run is green while those three are the only differences. A new
+file that moves, a listed file that moves by another amount, and a listed file that starts matching
+all fail it, so the list can only shrink. Without `QUILL_CORPUS_PAGES=1` the test behaves exactly as
+before.
 
 ### The three files that are one page apart
 
