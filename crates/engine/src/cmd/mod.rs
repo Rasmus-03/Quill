@@ -461,6 +461,41 @@ pub fn default_lang(s: &Session) -> Option<String> {
 }
 
 #[cfg(test)]
+mod cmd_shortcut_checks {
+    use super::registry;
+
+    #[test]
+    fn mailings_start_present() {
+        // Start Mail Merge: Word gives it no Mac key (ribbon-only); on non-Mac
+        // it is Alt+M. Assert the command is registered and, on non-Mac,
+        // resolves to Alt+M.
+        let reg = registry();
+        let spec = reg.get("mailings.start").expect("mailings.start");
+        let mac = cfg!(target_os = "macos");
+        assert_eq!(spec.shortcut, if mac { "" } else { "Alt+M" });
+    }
+
+    #[test]
+    fn no_330_mod_shift_n_collision() {
+        // para.normal already owns Mod+Shift+N (Normal style). A third
+        // command must not be re-bound to it; verify via by_shortcut.
+        let reg = registry();
+        assert_eq!(
+            reg.by_shortcut("Mod+Shift+N").map(|c| c.id),
+            Some("para.normal"),
+            "Mod+Shift+N must resolve to a single known command (Normal style)"
+        );
+    }
+
+    #[test]
+    fn view_marks_remains_8_key() {
+        let reg = registry();
+        let spec = reg.get("view.marks").expect("view.marks");
+        assert_eq!(spec.shortcut, "Mod+Shift+8 / Mod+8", "view.marks Show/Hide uses Mod+Shift+8 / Mod+8");
+    }
+}
+
+#[cfg(test)]
 mod iso_tests {
     use super::iso_from_unix_secs;
 
