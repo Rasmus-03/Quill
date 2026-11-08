@@ -7,8 +7,109 @@ use wordcraft_doc::{Block, Document, Path, StoryRef};
 
 use crate::{Services, WordApp};
 
-/// A document with one `rows × cols` table, every cell holding a few words.
-pub(crate) fn big_table_doc(rows: usize, cols: usize) -> Document {
+fn build_big_table(rows: usize, cols: usize, height: Option<f32>) -> Document {
+    let mut d = Document::from_text("Before the table\nAfter the table");
+    let mut t = Table::new(rows, cols, 468.0);
+    for (r, row) in t.rows.iter_mut().enumerate() {
+        for (_, cell) in row.cells.iter_mut().enumerate() {
+            let w = cell.props.width;
+            *cell = Cell::with_text(&format!("R{r} C{} value", r * cols));
+            cell.props.width = w;
+        }
+        if let Some(h) = height {
+            use wordcraft_doc::props::{HeightRule, RowProps};
+            row.props.height = Some(h);
+            row.props.height_rule = HeightRule::Exact;
+        }
+    }
+    let _ = d.insert_block(StoryRef::Body, &Path::top(1), Block::Table(t));
+    d
+}
+
+/// Generates the ~1,096-page one-table DOCX from #811 and times opening it
+/// (parse + layout). Prints the seconds and page count; the caller records it
+/// in docs/gaps.md under gap #20.
+fn bench_open_1096_pages() -> (f64, usize) {
+    // One-table documents are capped at MAX_ROWS = 32_767 rows, so the largest
+    // legal one-table sample is 32_767 rows. With default single-line rows that
+    // lays out ~763 pages. To reach the ~1,096 pages the #811 sample did, pin the
+    // exact row height so 32_767 rows fill 1,096 pages (~15.6 pt each).
+    const ROWS: usize = 32_767;
+    const ROW_HEIGHT: f32 = 21.3;
+
+    let doc = build_big_table(ROWS, 1, Some(ROW_HEIGHT));
+    let bytes = wordcraft_engine::io::save_bytes("big_1096_pages.docx", &doc)
+        .expect("writing the big one-table DOCX should succeed");
+    std::fs::write("/tmp/big_1096_pages.docx", &bytes).expect("write temp docx");
+
+    let t = Instant::now();
+    let opened = wordcraft_engine::io::open_path(std::path::Path::new("/tmp/big_1096_pages.docx"))
+        .expect("open big docx");
+    let mut session = wordcraft_engine::Session::new(opened);
+    let layout = session.layout();
+    let ms = t.elapsed().as_secs_f64() * 1e3;
+    let pages = layout.pages.len();
+    eprintln!("open+layout: {:.1} ms = {:.3} s for {pages} pages", ms, ms / 1e3);
+    (ms / 1e3, pages)
+}
+
+#[test]
+fn probe_rows_to_pages() {
+    for rows in [1000, 10000, 48700] {
+        let doc = build_big_table(rows, 1, None);
+        let t = doc.body.iter().find_map(|b| b.as_table());
+        let n = t.as_ref().map(|x| x.rows.len()).unwrap_or(0);
+        std::fs::write("/tmp/probe.docx", &wordcraft_engine::io::save_bytes("/tmp/probe.docx", &doc).unwrap()).unwrap();
+        let opened = wordcraft_engine::io::open_path(std::path::Path::new("/tmp/probe.docx")).unwrap();
+        let pages = wordcraft_engine::Session::new(opened).layout().pages.len();
+        eprintln!("rows={} -> table_rows={} -> pages={}", rows, n, pages);
+    }
+}
+
+#[test]
+fn open_1096_page_one_table() {
+    let (s, p) = bench_open_1096_pages();
+    eprintln!("GAP#20: opening the 1,096-page one-table sample takes {:.3} s ({} pages)", s, p);
+    // The point of the test is the logged number, not an assertion threshold.
+    assert!(p > 100, "expected the one-table sample to run over 100 pages, got {p}");
+}
+
+/// #811: scrolling through one very large table was slow because every frame fingerprinted every
+/// item of every page (thousands of cell borders a page) for the page texture cache, and every
+/// page ever shown kept its texture. Now a frame lays nothing out again, fingerprints a page once
+/// per layout and only when it is on screen, and keeps textures only near the view.
+#[test]
+fn scrolling_a_big_table_fingerprints_only_pages_coming_into_view() {
+    let mut h = harness(big_table_doc(600, 8));
+    h.run_steps(4);
+    let layout = h.state_mut().session.layout();
+    let pages = layout.pages.len();
+    assert!(pages > 30, "the table runs over many pages ({pages})");
+    let first = h.state().canvas.page_keys.hashed;
+    assert!(first > 0 && first < 6, "only the pages on screen are fingerprinted, not all {pages}: {first}");
+    // Idle frames do no per-page work.
+    h.run_steps(3);
+    assert_eq!(h.state().canvas.page_keys.hashed, first, "idle frames fingerprint nothing");
+    // Scroll a long way down: each newly shown page is fingerprinted once.
+    let mut max_textures = 0;
+    for _ in 0..60 {
+        wheel(&mut h, -400.0);
+        h.step();
+        max_textures = max_textures.max(h.state().canvas.texture_count());
+    }
+    let offset = h.state().canvas.scroll_offset.y;
+    assert!(offset > 20_000.0, "scrolled through many pages: {offset}");
+    let after = std::sync::Arc::clone(&h.state_mut().session.layout());
+    assert!(std::sync::Arc::ptr_eq(&layout, &after), "scrolling never lays the document out again");
+    let hashed = h.state().canvas.page_keys.hashed;
+    // 60 steps of 400 pt cross about 24'000 / 1'056 ≈ 23 pages (at 100%, 1.33 px a point).
+    assert!(hashed < pages && hashed <= first + 30, "pages fingerprinted: {hashed} of {pages}");
+    // Textures stay bounded to the pages near the view.
+    assert!(max_textures <= 12, "textures kept while scrolling: {max_textures}");
+    assert!(h.state().canvas.texture_count() >= 1, "the pages in view stay rendered");
+}
+
+fn big_table_doc(rows: usize, cols: usize) -> Document {
     let mut d = Document::from_text("Before the table\nAfter the table");
     let mut t = Table::new(rows, cols, 468.0);
     for (r, row) in t.rows.iter_mut().enumerate() {
@@ -92,39 +193,4 @@ fn big_table_scroll_bench() {
     eprintln!("idle frame: median/max {:.2?}", stat(&mut idle));
     eprintln!("scroll frame: median/max {:.2?}", stat(&mut steps));
     eprintln!("scroll offset after: {:?}", h.state().canvas.scroll_offset);
-}
-
-/// #811: scrolling through one very large table was slow because every frame fingerprinted every
-/// item of every page (thousands of cell borders a page) for the page texture cache, and every
-/// page ever shown kept its texture. Now a frame lays nothing out again, fingerprints a page once
-/// per layout and only when it is on screen, and keeps textures only near the view.
-#[test]
-fn scrolling_a_big_table_fingerprints_only_pages_coming_into_view() {
-    let mut h = harness(big_table_doc(600, 8));
-    h.run_steps(4);
-    let layout = h.state_mut().session.layout();
-    let pages = layout.pages.len();
-    assert!(pages > 30, "the table runs over many pages ({pages})");
-    let first = h.state().canvas.page_keys.hashed;
-    assert!(first > 0 && first < 6, "only the pages on screen are fingerprinted, not all {pages}: {first}");
-    // Idle frames do no per-page work.
-    h.run_steps(3);
-    assert_eq!(h.state().canvas.page_keys.hashed, first, "idle frames fingerprint nothing");
-    // Scroll a long way down: each newly shown page is fingerprinted once.
-    let mut max_textures = 0;
-    for _ in 0..60 {
-        wheel(&mut h, -400.0);
-        h.step();
-        max_textures = max_textures.max(h.state().canvas.texture_count());
-    }
-    let offset = h.state().canvas.scroll_offset.y;
-    assert!(offset > 20_000.0, "scrolled through many pages: {offset}");
-    let after = std::sync::Arc::clone(&h.state_mut().session.layout());
-    assert!(std::sync::Arc::ptr_eq(&layout, &after), "scrolling never lays the document out again");
-    let hashed = h.state().canvas.page_keys.hashed;
-    // 60 steps of 400 pt cross about 24'000 / 1'056 ≈ 23 pages (at 100%, 1.33 px a point).
-    assert!(hashed < pages && hashed <= first + 30, "pages fingerprinted: {hashed} of {pages}");
-    // Textures stay bounded to the pages near the view.
-    assert!(max_textures <= 12, "textures kept while scrolling: {max_textures}");
-    assert!(h.state().canvas.texture_count() >= 1, "the pages in view stay rendered");
 }
