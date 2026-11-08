@@ -32,6 +32,7 @@ pub mod control;
 pub mod credits;
 pub mod desktop_theme;
 pub mod dialogs;
+pub mod dialogs_switch_windows;
 pub mod dialogs_chart;
 pub mod dialogs_controls;
 pub mod dialogs_insert;
@@ -1285,6 +1286,17 @@ impl WordApp {
             }
             "ui.dialog" => {
                 self.dialog = dialogs::Dialog::open(s("name").unwrap_or(""), self);
+                json!({"dialog": self.dialog.as_ref().map(|d| d.name())})
+            }
+            "view.switchWindows" => {
+                // Switch Windows opens the list of open documents; the list shows the
+                // document that is currently open, and selecting one switches to it.
+                let path = match self.session.path.clone() {
+                    Some(p) => p,
+                    None => return Some(Err("no document is open".into())),
+                };
+                let documents = vec![path.to_string_lossy().to_string()];
+                self.dialog = Some(dialogs::Dialog::SwitchWindows { documents, selected: 0 });
                 json!({"dialog": self.dialog.as_ref().map(|d| d.name())})
             }
             "ui.closeDialog" => {

@@ -6,7 +6,7 @@
 //! `dialogs_keyboard`, Customize Ribbon in `dialogs_ribbon`). Every dialog ends by running a
 //! command (or shows one's result), so agents get the same result without the dialog.
 
-use egui::{Sense, Ui, vec2};
+use egui::{Align2, RichText, Sense, Ui, Vec2, vec2};
 use serde::Serialize;
 use serde_json::{Value, json};
 
@@ -488,6 +488,11 @@ pub enum Dialog {
     },
     /// Line Numbers, Hyphenation, Language, Envelopes and Labels (#407).
     Layout(Box<crate::dialogs_layout::LayoutDialog>),
+    /// Switch Windows: the list of open documents, so the user can switch the active one.
+    SwitchWindows {
+        documents: Vec<String>,
+        selected: usize,
+    },
 }
 
 /// The Table Properties dialog's fields. Lengths are in the interface unit
@@ -919,6 +924,7 @@ impl Dialog {
             Dialog::Templates { .. } => "templates",
             Dialog::Organizer { .. } => "organizer",
             Dialog::Layout(d) => d.name(),
+            Dialog::SwitchWindows { .. } => "switchWindows",
         }
     }
 
@@ -1368,6 +1374,7 @@ pub fn show(app: &mut WordApp, ctx: &egui::Context) {
         Dialog::Templates { .. } => "Templates and Add-ins",
         Dialog::Organizer { .. } => "Organizer",
         Dialog::Layout(d) => d.title(),
+        Dialog::SwitchWindows { .. } => "Switch Windows",
     };
     let id = egui::Id::new(("dialog", title));
     let paste_special = matches!(d, Dialog::PasteSpecial { .. });
@@ -1814,8 +1821,34 @@ fn body(app: &mut WordApp, ui: &mut Ui, d: &mut Dialog) -> bool {
             });
             close
         }
+        Dialog::SwitchWindows { documents, selected } => {
+            ui.label(tl!("Switch Windows"));
+            ui.separator();
+            ui.label(tl!("Select the document to switch to."));
+            let t = crate::theme::Tokens::get(ui.ctx());
+            for (i, path) in documents.iter().enumerate() {
+                let is_selected = i == *selected;
+                let label = path.split('/').last().unwrap_or(path);
+                let text = RichText::new(label).size(13.0);
+                let button = egui::Button::new(text)
+                    .fill(if is_selected { t.accent } else { t.panel })                        .min_size(Vec2::new(0.0, 24.0));
+                        let resp = ui.add_sized(Vec2::INFINITY, button);
+                if resp.clicked() {
+                    *selected = i;
+                }
+            }
+            ui.add_space(6.0);
+            ui.horizontal(|ui| {
+                if ui.button(tl!("Switch")).clicked() {
+                    if let Some(p) = documents.get(*selected) {
+                        let _ = app.session.run("file.open", &serde_json::json!({ "path": p }));
+                    }
+                }
+            });
+            ui.add_space(6.0);
+            buttons(ui, tl!("Close")).0
+        }
         Dialog::Enclose { style, text, shape } => {
-            ui.label(egui::RichText::new(tl!("Style")).font(semibold(12.5)));
             ui.horizontal(|ui| {
                 for (v, l) in [("none", "None"), ("shrink", "Shrink text"), ("enlarge", "Enlarge symbol")] {
                     ui.radio_value(style, v.to_string(), tl!(l));
