@@ -11,10 +11,17 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # Ubuntu 26.04's `maxima` is a GCL build that cannot load the Lisp share
+      # packages the math commands need (linearalgebra: submatrix, rowop,
+      # mat_trace; draw), and without maxima-share it has no ode2, unit or
+      # ezunits either. maxima-sage is the ECL build, and maxima-sage-share
+      # ships every one of those packages: run it under the name the app
+      # launches, which maxima_available() also looks for.
       - name: Install Maxima and desktop tooling
         run: |
           sudo apt-get update
-          sudo apt-get install -y --no-install-recommends maxima xdg-utils
+          sudo apt-get install -y --no-install-recommends maxima-sage maxima-sage-share xdg-utils
+          sudo ln -sf /usr/bin/maxima-sage /usr/local/bin/maxima
 
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@stable
