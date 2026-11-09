@@ -95,7 +95,6 @@ fn recorded_pages(bytes: &[u8]) -> Option<u32> {
     rest.get(..end)?.trim().parse().ok()
 }
 
-
 /// The document's text, paragraph by paragraph: what a reader sees.
 fn body_text(doc: &Document) -> Vec<String> {
     doc.body.iter().filter_map(|b| b.as_para()).map(|p| p.plain_text().to_string()).collect()
@@ -552,17 +551,9 @@ fn every_corpus_file_survives_a_round_trip() {
         }
         let (losses, _) = round_trip(&entry.name, &bytes);
         if losses.any() {
-            let pages = recorded_pages(&bytes)
-                .map(|n| format!(" (the producer recorded {n} page(s))"))
-                .unwrap_or_default();
+            let pages = recorded_pages(&bytes).map(|n| format!(" (the producer recorded {n} page(s))")).unwrap_or_default();
             failures.push(format!("{}{pages}", losses.describe(&entry.name)));
         }
     }
-    assert!(
-        failures.is_empty(),
-        "{} of {} corpus file(s) did not survive a round trip:\n  {}",
-        failures.len(),
-        entries.len(),
-        failures.join("\n  ")
-    );
+    assert!(failures.is_empty(), "{} of {} corpus file(s) did not survive a round trip:\n  {}", failures.len(), entries.len(), failures.join("\n  "));
 }
