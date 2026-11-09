@@ -21,17 +21,15 @@
 //! checked, and a file that loses something fails with its name, so the work list
 //! ([`docs/gaps.md`](../../../docs/gaps.md)) can point at it.
 //!
-//! With `QUILL_CORPUS_PAGES=1` the test also compares the page count with the one the file's
-//! producer recorded (`docProps/app.xml`, `<Pages>`): Word's own answer for that document, saved
-//! before Quill existed. It is gated because the count depends on the fonts installed on the
-//! machine ([`docs/docx-corpus.md`](../../../docs/docx-corpus.md)); without the variable the test
-//! behaves exactly as it did before.
+//! When a file loses something, the count its producer recorded (`docProps/app.xml`, `<Pages>` —
+//! Word's own answer for that document, saved before Quill existed) is reported next to the loss,
+//! so the work list says how much document is behind it.
 
 use std::io::Read;
 use std::path::{Path, PathBuf};
 
 use serde_json::Value;
-use wordcraft_doc::{Document, StoryRef};
+use wordcraft_doc::Document;
 
 /// The manifest: the corpus's file list with the expectation for each file.
 const MANIFEST: &str = include_str!("corpus-manifest.tsv");
@@ -541,5 +539,30 @@ fn every_corpus_file_survives_a_round_trip() {
         missing.len()
     );
 
-   
+    let mut failures: Vec<String> = Vec::new();
+    for entry in &entries {
+        let Ok(bytes) = std::fs::read(dir.join(&entry.name)) else { continue };
+        // `refused: <reason>` is a promise in both directions: a file listed there must still be
+        // refused, and one that opens now means the list has gone stale.
+        if let Some(reason) = entry.expect.strip_prefix("refused:") {
+            if wordcraft_docx::read(&bytes).is_ok() {
+                failures.push(format!("{}: listed as refused ({}), but it opens now", entry.name, reason.trim()));
+            }
+            continue;
+        }
+        let (losses, _) = round_trip(&entry.name, &bytes);
+        if losses.any() {
+            let pages = recorded_pages(&bytes)
+                .map(|n| format!(" (the producer recorded {n} page(s))"))
+                .unwrap_or_default();
+            failures.push(format!("{}{pages}", losses.describe(&entry.name)));
+        }
+    }
+    assert!(
+        failures.is_empty(),
+        "{} of {} corpus file(s) did not survive a round trip:\n  {}",
+        failures.len(),
+        entries.len(),
+        failures.join("\n  ")
+    );
 }
