@@ -97,6 +97,13 @@ fn atx_heading(t: &str) -> Option<(u8, &str)> {
     if trimmed.len() != body.len() && (trimmed.is_empty() || trimmed.ends_with(' ')) {
         body = trimmed.trim_end();
     }
+    // ATX headings need content: a line that is only `#`s is not a heading in CommonMark, it is
+    // plain text. A heading with an empty body loses its text on round trip (the export writes no
+    // `#` prefix for an empty heading, and the reader rebuilds the paragraph as a heading with an
+    // empty body). Drop the empty heading here and keep the text as a Normal paragraph.
+    if body.is_empty() {
+        return None;
+    }
     Some((n as u8, body))
 }
 
@@ -1217,11 +1224,9 @@ fn escape_line_start(s: String) -> String {
     let s = s.trim_start().to_string();
     let t = s.as_str();
     let lead = s.len() - t.len();
-    // `#tag` is an Obsidian tag, not an ATX heading, but anything `atx_heading` accepts (a bare
-    // `#`, `## text`, …) or `fence` accepts would come back as a heading or a code block, so the
-    // text has to be escaped to round-trip.
-    let needs = atx_heading(t).is_some()
-        || fence(t).is_some()
+    // `#tag` is an Obsidian tag, not an ATX heading; only `# ` (or a bare `#`) starts one.
+    let needs = t == "#"
+        || t.starts_with("# ")
         || t.starts_with('>')
         || t.starts_with("- ")
         || t.starts_with("+ ")

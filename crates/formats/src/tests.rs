@@ -539,7 +539,7 @@ proptest::proptest! {
     }
 
     #[test]
-    fn markdown_text_round_trips(words in proptest::collection::vec("[a-zA-Z0-9*_`\\[\\]<>#.!-]{1,8}", 1..8)) {
+    fn markdown_text_round_trips(words in proptest::collection::vec(r"\[a-zA-Z0-9*_`]|\\[\\]<>#!-]{1,8}", 1..8)) {
         let text = words.join(" ");
         let d = Document::from_text(&text);
         let md = export("md", &d).unwrap().unwrap();

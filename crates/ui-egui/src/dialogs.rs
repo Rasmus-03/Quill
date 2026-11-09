@@ -1838,8 +1838,9 @@ fn body(app: &mut WordApp, ui: &mut Ui, d: &mut Dialog) -> bool {
             }
             ui.add_space(6.0);
             ui.horizontal(|ui| {
-                let clicked = ui.button(tl!("Switch")).clicked();
-                if let Some(p) = documents.get(*selected).filter(|_| clicked) {
+                if ui.button(tl!("Switch")).clicked()
+                    && let Some(p) = documents.get(*selected)
+                {
                     let _ = app.session.run("file.open", &serde_json::json!({ "path": p }));
                 }
             });

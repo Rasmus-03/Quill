@@ -1,6 +1,7 @@
 //! Mailings tab: mail merge (recipients from CSV/JSON or an Excel/OpenDocument spreadsheet,
 //! merge fields, preview, finish), envelopes and labels.
 
+use super::non_mac;
 use serde_json::{Value, json};
 use wordcraft_doc::para::InlineObject;
 use wordcraft_doc::props::{Align, CharProps};
@@ -44,6 +45,7 @@ pub fn specs() -> Vec<CommandSpec> {
             s.merge.kind = kind;
             Ok(json!({"kind": s.merge.kind}))
         })
+        .key(non_mac("Alt+M"))
         .params(r#"{"kind": "letters|emails|envelopes|labels|directory|normal"}"#)
         .pure(),
         CommandSpec::new("mailings.recipients", "Select Recipients", "Mailings › Start Mail Merge", recipients)
