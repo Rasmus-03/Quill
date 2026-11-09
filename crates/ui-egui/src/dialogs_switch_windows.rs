@@ -18,14 +18,8 @@ pub struct SwitchWindows {
 
 impl SwitchWindows {
     pub fn new(documents: Vec<String>) -> Self {
-        let selected = documents
-            .iter()
-            .position(|p| p == documents.first().unwrap_or(&String::new()));
-        Self {
-            documents,
-            selected: selected.unwrap_or(0),
-            need_show: true,
-        }
+        let selected = documents.iter().position(|p| p == documents.first().unwrap_or(&String::new()));
+        Self { documents, selected: selected.unwrap_or(0), need_show: true }
     }
 
     pub fn documents(&self) -> &[String] {
@@ -63,9 +57,7 @@ impl SwitchWindows {
                     let is_selected = i == self.selected;
                     let label = path.split('/').last().unwrap_or(path);
                     let text = RichText::new(label).size(13.0);
-                    let button = egui::Button::new(text)
-                        .fill(if is_selected { t.accent } else { t.panel })
-                        .min_size(Vec2::new(0.0, 24.0));
+                    let button = egui::Button::new(text).fill(if is_selected { t.accent } else { t.panel }).min_size(Vec2::new(0.0, 24.0));
                     let resp = ui.add_sized(Vec2::INFINITY, button);
                     if resp.clicked() {
                         self.selected = i;

@@ -38,13 +38,11 @@ fn bench_open_1096_pages() -> (f64, usize) {
     const ROW_HEIGHT: f32 = 21.3;
 
     let doc = build_big_table(ROWS, 1, Some(ROW_HEIGHT));
-    let bytes = wordcraft_engine::io::save_bytes("big_1096_pages.docx", &doc)
-        .expect("writing the big one-table DOCX should succeed");
+    let bytes = wordcraft_engine::io::save_bytes("big_1096_pages.docx", &doc).expect("writing the big one-table DOCX should succeed");
     std::fs::write("/tmp/big_1096_pages.docx", &bytes).expect("write temp docx");
 
     let t = Instant::now();
-    let opened = wordcraft_engine::io::open_path(std::path::Path::new("/tmp/big_1096_pages.docx"))
-        .expect("open big docx");
+    let opened = wordcraft_engine::io::open_path(std::path::Path::new("/tmp/big_1096_pages.docx")).expect("open big docx");
     let mut session = wordcraft_engine::Session::new(opened);
     let layout = session.layout();
     let ms = t.elapsed().as_secs_f64() * 1e3;
