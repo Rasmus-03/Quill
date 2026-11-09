@@ -6,7 +6,7 @@
 //! `dialogs_keyboard`, Customize Ribbon in `dialogs_ribbon`). Every dialog ends by running a
 //! command (or shows one's result), so agents get the same result without the dialog.
 
-use egui::{Align2, RichText, Sense, Ui, Vec2, vec2};
+use egui::{RichText, Sense, Ui, Vec2, vec2};
 use serde::Serialize;
 use serde_json::{Value, json};
 
@@ -1828,7 +1828,7 @@ fn body(app: &mut WordApp, ui: &mut Ui, d: &mut Dialog) -> bool {
             let t = crate::theme::Tokens::get(ui.ctx());
             for (i, path) in documents.iter().enumerate() {
                 let is_selected = i == *selected;
-                let label = path.split('/').last().unwrap_or(path);
+                let label = path.split('/').next_back().unwrap_or(path);
                 let text = RichText::new(label).size(13.0);
                 let button = egui::Button::new(text).fill(if is_selected { t.accent } else { t.panel }).min_size(Vec2::new(0.0, 24.0));
                 let resp = ui.add_sized(Vec2::INFINITY, button);
@@ -1838,10 +1838,9 @@ fn body(app: &mut WordApp, ui: &mut Ui, d: &mut Dialog) -> bool {
             }
             ui.add_space(6.0);
             ui.horizontal(|ui| {
-                if ui.button(tl!("Switch")).clicked() {
-                    if let Some(p) = documents.get(*selected) {
-                        let _ = app.session.run("file.open", &serde_json::json!({ "path": p }));
-                    }
+                let clicked = ui.button(tl!("Switch")).clicked();
+                if let Some(p) = documents.get(*selected).filter(|_| clicked) {
+                    let _ = app.session.run("file.open", &serde_json::json!({ "path": p }));
                 }
             });
             ui.add_space(6.0);
