@@ -24,7 +24,7 @@ commands:
   assets          check that every icon/image/font/asset is attributed in ATTRIBUTION.md
   layers          enforce the crate dependency layering (plan/architecture.md §3)
   wasm            cargo check --target wasm32-unknown-unknown for the wasm-safe crates
-  pkg-names       check that every `cargo -p <package>` in a workflow or a packaging script
+  pkg-names       check that every package, executable and icon a workflow or packaging script names
                   names a package that exists in the workspace
   ci              fmt --check, clippy -D warnings, test, assets, layers, wasm, pkg-names
                   (stops at first failure)
