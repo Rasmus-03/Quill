@@ -58,7 +58,7 @@ echo "==> WordCraft $VERSION for macOS ($ARCH), identity: $IDENTITY, notarize: $
 if [ "$SKIP_BUILD" = 0 ]; then
   args=()
   for t in "${TARGETS[@]}"; do args+=(--target "$t"); done
-  (cd "$ROOT" && cargo build --release --locked -p wordcraft -p wordcraft-cli "${args[@]}")
+  (cd "$ROOT" && cargo build --release --locked -p quill -p quill-cli "${args[@]}")
 fi
 
 rm -rf "$WORK"
