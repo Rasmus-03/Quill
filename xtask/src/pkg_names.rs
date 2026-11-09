@@ -50,18 +50,12 @@ fn wanted_packages(line: &str) -> Vec<String> {
         let name = if token == "-p" || token == "--package" {
             line.split_whitespace().nth(index + 1).map(str::to_owned)
         } else {
-            token
-                .strip_prefix("-p=")
-                .or_else(|| token.strip_prefix("--package="))
-                .map(str::to_owned)
+            token.strip_prefix("-p=").or_else(|| token.strip_prefix("--package=")).map(str::to_owned)
         };
         let Some(name) = name else { continue };
         // The name ends at the first character that cannot be part of a package name
         // (a closing parenthesis, a quote, a comma…).
-        let name: String = name
-            .chars()
-            .take_while(|c| c.is_alphanumeric() || *c == '_' || *c == '-')
-            .collect();
+        let name: String = name.chars().take_while(|c| c.is_alphanumeric() || *c == '_' || *c == '-').collect();
         if !name.is_empty() {
             out.push(name);
         }
@@ -88,14 +82,8 @@ pub fn unknown_packages(root: &Path, packages: &[String]) -> Vec<(PathBuf, usize
 /// The workspace's package names.
 pub fn workspace_packages() -> Result<Vec<String>, String> {
     let meta = crate::metadata()?;
-    let mut names: Vec<String> = meta["packages"]
-        .as_array()
-        .map(|pkgs| {
-            pkgs.iter()
-                .filter_map(|p| p["name"].as_str().map(str::to_owned))
-                .collect()
-        })
-        .unwrap_or_default();
+    let mut names: Vec<String> =
+        meta["packages"].as_array().map(|pkgs| pkgs.iter().filter_map(|p| p["name"].as_str().map(str::to_owned)).collect()).unwrap_or_default();
     names.sort();
     Ok(names)
 }
@@ -106,19 +94,10 @@ pub fn run(root: &Path) -> Result<(), String> {
     let packages = workspace_packages()?;
     let unknown = unknown_packages(root, &packages);
     for (path, number, name, line) in &unknown {
-        println!(
-            "{}:{}: the package '{}' is not in the workspace: {}",
-            path.display(),
-            number,
-            name,
-            line
-        );
+        println!("{}:{}: the package '{}' is not in the workspace: {}", path.display(), number, name, line);
     }
     if !unknown.is_empty() {
-        return Err(format!(
-            "{} package name(s) in the workflows and the packaging scripts do not exist",
-            unknown.len()
-        ));
+        return Err(format!("{} package name(s) in the workflows and the packaging scripts do not exist", unknown.len()));
     }
     println!("every package name in the workflows and the packaging scripts exists");
     Ok(())
@@ -131,10 +110,7 @@ mod tests {
     #[test]
     fn only_cargo_lines_count() {
         assert_eq!(wanted_packages("cargo test -p quill"), vec!["quill".to_owned()]);
-        assert!(
-            wanted_packages("echo -p quill").is_empty(),
-            "not a cargo line"
-        );
+        assert!(wanted_packages("echo -p quill").is_empty(), "not a cargo line");
     }
 
     #[test]
@@ -143,10 +119,7 @@ mod tests {
         assert_eq!(wanted_packages("cargo test --package quill"), vec!["quill".to_owned()]);
         assert_eq!(wanted_packages("cargo test -p=quill"), vec!["quill".to_owned()]);
         assert_eq!(wanted_packages("cargo test --package=quill"), vec!["quill".to_owned()]);
-        assert_eq!(
-            wanted_packages("cargo build -p quill -p quill-cli"),
-            vec!["quill".to_owned(), "quill-cli".to_owned()]
-        );
+        assert_eq!(wanted_packages("cargo build -p quill -p quill-cli"), vec!["quill".to_owned(), "quill-cli".to_owned()]);
         assert_eq!(
             wanted_packages("cargo build --release --locked -p quill -p quill-cli --target x"),
             vec!["quill".to_owned(), "quill-cli".to_owned()]
@@ -155,14 +128,8 @@ mod tests {
 
     #[test]
     fn a_name_ends_at_the_first_character_that_cannot_be_part_of_it() {
-        assert_eq!(
-            wanted_packages("(cd \"$ROOT\" && cargo build -p quill -p quill-cli)"),
-            vec!["quill".to_owned(), "quill-cli".to_owned()]
-        );
-        assert_eq!(
-            wanted_packages("cargo test -p wordcraft-engine --lib -- --ignored"),
-            vec!["wordcraft-engine".to_owned()]
-        );
+        assert_eq!(wanted_packages("(cd \"$ROOT\" && cargo build -p quill -p quill-cli)"), vec!["quill".to_owned(), "quill-cli".to_owned()]);
+        assert_eq!(wanted_packages("cargo test -p wordcraft-engine --lib -- --ignored"), vec!["wordcraft-engine".to_owned()]);
     }
 
     #[test]

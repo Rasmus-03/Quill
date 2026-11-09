@@ -1830,9 +1830,8 @@ fn body(app: &mut WordApp, ui: &mut Ui, d: &mut Dialog) -> bool {
                 let is_selected = i == *selected;
                 let label = path.split('/').last().unwrap_or(path);
                 let text = RichText::new(label).size(13.0);
-                let button = egui::Button::new(text)
-                    .fill(if is_selected { t.accent } else { t.panel })                        .min_size(Vec2::new(0.0, 24.0));
-                        let resp = ui.add_sized(Vec2::INFINITY, button);
+                let button = egui::Button::new(text).fill(if is_selected { t.accent } else { t.panel }).min_size(Vec2::new(0.0, 24.0));
+                let resp = ui.add_sized(Vec2::INFINITY, button);
                 if resp.clicked() {
                     *selected = i;
                 }

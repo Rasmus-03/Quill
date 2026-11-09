@@ -32,7 +32,6 @@ pub mod control;
 pub mod credits;
 pub mod desktop_theme;
 pub mod dialogs;
-pub mod dialogs_switch_windows;
 pub mod dialogs_chart;
 pub mod dialogs_controls;
 pub mod dialogs_insert;
@@ -45,6 +44,7 @@ pub mod dialogs_refs;
 pub mod dialogs_review;
 pub mod dialogs_ribbon;
 pub mod dialogs_smart_art;
+pub mod dialogs_switch_windows;
 pub mod dialogs_templates;
 pub mod equation_tab;
 /// The built-in file browser, for desktops without a system file dialog (#576).
