@@ -7,6 +7,11 @@ use wordcraft_doc::{Block, Document, Path, StoryRef};
 
 use crate::{Services, WordApp};
 
+/// The tests below write real DOCX files; Windows has no `/tmp`.
+fn temp_path(name: &str) -> std::path::PathBuf {
+    std::env::temp_dir().join(name)
+}
+
 fn build_big_table(rows: usize, cols: usize, height: Option<f32>) -> Document {
     let mut d = Document::from_text("Before the table\nAfter the table");
     let mut t = Table::new(rows, cols, 468.0);
@@ -38,11 +43,12 @@ fn bench_open_1096_pages() -> (f64, usize) {
     const ROW_HEIGHT: f32 = 21.3;
 
     let doc = build_big_table(ROWS, 1, Some(ROW_HEIGHT));
+    let path = temp_path("big_1096_pages.docx");
     let bytes = wordcraft_engine::io::save_bytes("big_1096_pages.docx", &doc).expect("writing the big one-table DOCX should succeed");
-    std::fs::write("/tmp/big_1096_pages.docx", &bytes).expect("write temp docx");
+    std::fs::write(&path, &bytes).expect("write temp docx");
 
     let t = Instant::now();
-    let opened = wordcraft_engine::io::open_path(std::path::Path::new("/tmp/big_1096_pages.docx")).expect("open big docx");
+    let opened = wordcraft_engine::io::open_path(&path).expect("open big docx");
     let mut session = wordcraft_engine::Session::new(opened);
     let layout = session.layout();
     let ms = t.elapsed().as_secs_f64() * 1e3;
@@ -57,8 +63,9 @@ fn probe_rows_to_pages() {
         let doc = build_big_table(rows, 1, None);
         let t = doc.body.iter().find_map(|b| b.as_table());
         let n = t.as_ref().map(|x| x.rows.len()).unwrap_or(0);
-        std::fs::write("/tmp/probe.docx", wordcraft_engine::io::save_bytes("/tmp/probe.docx", &doc).unwrap()).unwrap();
-        let opened = wordcraft_engine::io::open_path(std::path::Path::new("/tmp/probe.docx")).unwrap();
+        let path = temp_path("probe.docx");
+        std::fs::write(&path, wordcraft_engine::io::save_bytes("probe.docx", &doc).unwrap()).unwrap();
+        let opened = wordcraft_engine::io::open_path(&path).unwrap();
         let pages = wordcraft_engine::Session::new(opened).layout().pages.len();
         eprintln!("rows={} -> table_rows={} -> pages={}", rows, n, pages);
     }
