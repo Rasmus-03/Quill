@@ -81,6 +81,8 @@ pub(crate) struct Writer<'d> {
     endnotes: Vec<u32>,
     /// Header/footer part id → (file name, is footer).
     hf: Vec<(u32, String, bool)>,
+    /// Writing a header or footer: its story may end with a table and no paragraph after it.
+    in_hf: bool,
     /// Paragraphs that need a `w14:paraId` (last paragraph of each comment), by address.
     para_ids: HashMap<usize, String>,
     /// A note reference mark to put at the start of the next paragraph.
@@ -149,6 +151,7 @@ pub(crate) fn write_parts(doc: &Document, flavor: Flavor) -> Result<Vec<(String,
         footnotes: Vec::new(),
         endnotes: Vec::new(),
         hf: Vec::new(),
+        in_hf: false,
         para_ids: HashMap::new(),
         pending_mark: None,
         current_note: None,
@@ -212,7 +215,11 @@ pub(crate) fn write_parts(doc: &Document, flavor: Flavor) -> Result<Vec<(String,
         let tag = if footer { "w:ftr" } else { "w:hdr" };
         w.open(tag, &ns_refs);
         let blocks: Blocks = doc.parts.get(&id).map(|p| p.blocks.clone()).unwrap_or_default();
+        // Word saves a header or footer that ends with a table without a paragraph after it, and
+        // adding one is a change to the file: only the body and cells need that paragraph.
+        wr.in_hf = true;
         wr.blocks(&mut w, &blocks, &mut prels, false, 0);
+        wr.in_hf = false;
         w.close(tag);
         push_part(
             &mut entries,
