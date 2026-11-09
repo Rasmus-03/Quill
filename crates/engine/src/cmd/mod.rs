@@ -466,13 +466,12 @@ mod cmd_shortcut_checks {
 
     #[test]
     fn mailings_start_present() {
-        // Start Mail Merge: Word gives it no Mac key (ribbon-only); on non-Mac
-        // it is Alt+M. Assert the command is registered and, on non-Mac,
-        // resolves to Alt+M.
+        // Start Mail Merge is ribbon-only: Word's Alt+M is the Mailings tab's
+        // access key, and WordMat owns Alt+M for New equation, so this command
+        // must not take Alt+M from it.
         let reg = registry();
         let spec = reg.get("mailings.start").expect("mailings.start");
-        let mac = cfg!(target_os = "macos");
-        assert_eq!(spec.shortcut, if mac { "" } else { "Alt+M" });
+        assert_eq!(spec.shortcut, "", "mailings.start must not take a key");
     }
 
     #[test]
