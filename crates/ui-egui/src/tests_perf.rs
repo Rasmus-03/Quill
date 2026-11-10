@@ -3,7 +3,7 @@
 use std::time::Instant;
 use wordcraft_doc::props::HeightRule;
 use wordcraft_doc::table::{Cell, Table};
-use wordcraft_doc::{Block, Document, Path, StoryRef};
+use wordcraft_doc::{Block, Document, InlineObject, Paragraph, Path, StoryRef, para_block};
 
 use crate::WordApp;
 
@@ -69,6 +69,63 @@ fn open_1096_page_one_table() {
     eprintln!("GAP#20: opening the 1,096-page one-table sample takes {:.3} s ({} pages)", s, p);
     // The point of the test is the logged number, not an assertion threshold.
     assert!(p > 100, "expected the one-table sample to run over 100 pages, got {p}");
+}
+
+/// A real-world-looking large document: 500+ pages of text with many inline
+/// pictures (a thesis with many figures). Saves a DOCX and times parsing,
+/// layout and cell shading, then records it under gap #20.
+#[test]
+fn bench_open_500_pages_many_pictures() {
+    // Each picture is ~4 pages tall (about 1.5 in tall at 100% zoom with the
+    // Default: 1.15 line spacing, ~11 pt body text. 4 pictures per paragraph
+    // × 160 paragraphs ≈ 560 pages, each picture ~1.5 in tall.
+    const PICS_PER_PAGE: usize = 4;
+    const PAGES: usize = 500;
+    const PICS: usize = PAGES * PICS_PER_PAGE;
+
+    let mut d = Document::new();
+    for _ in 0..PAGES {
+        let p = Paragraph::new();
+        d.body.push(para_block(p));
+    }
+
+    for pic in 0..PICS {
+        let row = pic / PICS_PER_PAGE;
+        let col = pic % PICS_PER_PAGE;
+        let media = d.add_media(vec![1, 2, 3, 4, 5], "png");
+        let props = wordcraft_doc::CharProps::default();
+        let obj = InlineObject::Image {
+            media: media,
+            w: 300.0,
+            h: 150.0,
+            alt: format!("figure {pic}"),
+            float: wordcraft_doc::para::Float::default(),
+            crop: [0.0; 4],
+            ole: None,
+        };
+        let para = d.para_mut(StoryRef::Body, &Path::top(row + 1)).expect("paragraph exists");
+        // Figures on the same "page" are interleaved with a line of body text.
+        // `insert_object` appends the OBJ marker and a run, so the offset is
+        // the current text length (0 after `Paragraph::new` for col 0,
+        // then after the separator for col 1, 2, 3).
+        para.insert_object(para.text.len(), obj, &props).expect("insert object");
+        // A short line of body text between figures on the same "page".
+        if col < PICS_PER_PAGE - 1 {
+            para.insert_text(para.text.len(), " Quisque dictum mi id mi consectetur vulputate. ", &props).expect("insert text");
+        }
+    }
+
+    let bytes = wordcraft_engine::io::save_bytes("big_500_pages_pictures.docx", &d).expect("writing the big picture DOCX should succeed");
+    std::fs::write("/tmp/big_500_pages_pictures.docx", &bytes).expect("write temp docx");
+
+    let t = Instant::now();
+    let opened = wordcraft_engine::io::open_path(std::path::Path::new("/tmp/big_500_pages_pictures.docx")).expect("open big docx");
+    let mut session = wordcraft_engine::Session::new(opened);
+    let layout = session.layout();
+    let ms = t.elapsed().as_secs_f64() * 1e3;
+    let pages = layout.pages.len();
+    eprintln!("GAP#20: opening the 500-page document with {PICS} pictures takes {:.3} s ({pages} pages)", ms / 1e3);
+    assert!(pages > 500, "expected the picture document to run over 500 pages, got {pages}");
 }
 
 /// #811: scrolling through one very large table was slow because every frame fingerprinted every
