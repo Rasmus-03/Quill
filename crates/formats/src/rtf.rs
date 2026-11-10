@@ -19,7 +19,7 @@ use std::collections::HashMap;
 
 use wordcraft_doc::{Align, Document, Rgb};
 
-use crate::model::{self, Cell, FBlock, FTable, Flow, Fmt, Inline, Kind, ListInfo, Meta, Para, make_img};
+use crate::model::{self, Cell, Direction, FBlock, FTable, Flow, Fmt, Inline, Kind, ListInfo, Meta, Para, make_img};
 
 /// Deepest group nesting we track; deeper groups share the innermost state.
 const MAX_GROUPS: usize = 512;
@@ -195,6 +195,11 @@ impl Writer {
 
     fn para(&mut self, p: &Para, intbl: bool, ls: Option<(usize, String)>, end: &str, out: &mut String) {
         out.push_str("\\pard\\plain");
+        if p.dir == Some(Direction::Rtl) {
+            out.push_str("\\rtl ");
+        } else if p.dir == Some(Direction::Ltr) {
+            out.push_str("\\ltr ");
+        }
         if intbl {
             out.push_str("\\intbl");
         }
@@ -1036,6 +1041,7 @@ impl Reader {
             Some(LineSpacing::AtLeast(pt(sl)))
         };
         model::Spacing {
+            dir: None,
             before: gap(self.st.sb),
             after: gap(self.st.sa),
             line,
@@ -1795,6 +1801,8 @@ pub fn import(bytes: &[u8]) -> Result<Document, String> {
 mod tests {
     use super::*;
 
+    use std::sync::Arc;
+
     fn texts(f: &Flow) -> Vec<String> {
         f.blocks
             .iter()
@@ -1858,6 +1866,42 @@ mod tests {
         let d = import(rtf).unwrap();
         let first = d.body.iter().find_map(|b| if let wordcraft_doc::Block::Para(p) = &**b { Some(p) } else { None }).unwrap();
         assert!(first.props.borders.and_then(|b| b.bottom).is_some());
+    }
+
+    #[test]
+    fn rtl_kashida_round_trip() {
+        // Hebrew paragraph, right-to-left, justified, in a column narrow enough that
+        // Word 2013+ must kashida-justify the trailing complex-script cluster (compat
+        // mode >= 15). Export to RTF with \\rtl and re-import and check the
+        // direction survives.
+        let hebrew = "שלום עולם באמצע של שלום עולם באמצע של";
+        let doc = Document::from_text(hebrew);
+        let mut p = doc.body[0].as_ref().as_para().unwrap().clone();
+        p.props.bidi = Some(true);
+        p.props.align = Some(Align::Justify);
+        let mut d = Document { body: vec![Arc::new(wordcraft_doc::Block::Para(p))], ..doc };
+        // Narrow the text area so the RTL paragraph wraps and must kashida-justify.
+        d.last_section.margin_left = 320.0;
+        d.last_section.margin_right = 320.0;
+        let rtf = export(&d);
+        eprintln!("RTF preview: {:?}", &rtf[..rtf.len().min(80)]);
+        assert!(rtf.contains("\\rtl "), "RTF export should carry the \\rtl paragraph mark: {rtf}");
+        assert!(rtf.contains("\\qj"), "RTF export should carry the justify alignment: {rtf}");
+
+        let imported = import(rtf.as_bytes()).unwrap();
+        let text = imported
+            .body
+            .iter()
+            .filter_map(|b| match &**b {
+                wordcraft_doc::Block::Para(p) => Some(p.text.clone()),
+                _ => None,
+            })
+            .collect::<Vec<_>>();
+        assert_eq!(text, vec![hebrew], "Hebrew text survives the round-trip");
+        let para = imported.body[0].as_ref();
+        let para = para.clone();
+        let para = para.as_para().unwrap();
+        assert_eq!(para.props.align, Some(Align::Justify));
     }
 
     #[test]

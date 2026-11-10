@@ -33,6 +33,9 @@ pub struct Fmt {
     pub code: bool,
     pub sup: bool,
     pub sub: bool,
+    /// A run-level kashida justification mark — the trailing complex-script cluster
+    /// carries the extra advance (RTF `\k:sh` style, Word 2013+ compat).
+    pub kashida: Option<usize>,
     pub link: Option<String>,
     /// Obsidian `[[target|display]]`: the target including `#heading`, `^block` and `|alias`'s
     /// left side. The text of the span is the display text.
@@ -113,6 +116,19 @@ pub struct Spacing {
     pub right: Option<f32>,
     /// First-line indent; negative = hanging.
     pub first: Option<f32>,
+    /// Direction the source states for the paragraph (RTF `\rtl`; ODT `fo:text-align`
+    /// `start`/`end` on an RTL run); `None` = inherit + layout bidi.
+    pub dir: Option<Direction>,
+}
+
+/// Direction a paragraph or run states, independent of the surrounding paragraph (RTF `\rtl`).
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Default)]
+pub enum Direction {
+    /// The source states a left-to-right paragraph or run (`\ltr` / plain).
+    #[default]
+    Ltr,
+    /// The source states a right-to-left paragraph or run (`\rtl` / `dir="rtl"`).
+    Rtl,
 }
 
 #[derive(Clone, Debug, Default, PartialEq)]
@@ -125,6 +141,10 @@ pub struct Para {
     pub spacing: Spacing,
     /// Borders the source puts on the paragraph itself (RTF `\brdrb`…).
     pub borders: Option<wordcraft_doc::props::Borders>,
+    /// The direction the source states for this paragraph (RTF `\rtl`). `None` = inherit
+    /// from the section / layout bidi. ODT uses `fo:text-align` (start/end) on an RTL run;
+    /// HTML uses the `dir` attribute on the paragraph.
+    pub dir: Option<Direction>,
 }
 
 impl Para {
@@ -722,6 +742,7 @@ fn fmt_of(doc: &Document, cp: &CharProps, in_code: bool) -> Fmt {
         code,
         sup: e.vert_align == Some(VertAlign::Superscript),
         sub: e.vert_align == Some(VertAlign::Subscript),
+        kashida: None,
         link,
         wikilink,
         embed,
@@ -794,6 +815,7 @@ pub fn flow_paras(doc: &Document, p: &Paragraph) -> Vec<Para> {
         inlines: Vec::new(),
         spacing: Spacing::default(),
         borders: None,
+        dir: wordcraft_doc::bidi::first_strong_is_rtl(&p.text).then_some(Direction::Rtl),
     };
     let in_code = kind == Kind::Code;
     let mut k = 0usize;
@@ -814,6 +836,7 @@ pub fn flow_paras(doc: &Document, p: &Paragraph) -> Vec<Para> {
                         inlines: Vec::new(),
                         spacing: Spacing::default(),
                         borders: None,
+                        dir: None,
                     };
                     let prev = std::mem::replace(&mut out, next);
                     if prev.inlines.is_empty() {

@@ -18,8 +18,7 @@ use quick_xml::XmlVersion;
 use quick_xml::events::{BytesStart, Event};
 use wordcraft_doc::{Align, Document, Rgb};
 
-use crate::model::{self, Cell, FBlock, FTable, Flow, Fmt, Inline, Kind, ListInfo, Meta, Para, make_img, mime_of};
-
+use crate::model::{self, Cell, Direction, FBlock, FTable, Flow, Fmt, Inline, Kind, ListInfo, Meta, Para, make_img, mime_of};
 /// Largest zip entry we inflate.
 const MAX_ENTRY: u64 = 256 << 20;
 /// Deepest element nesting handled in content.xml.
@@ -152,6 +151,11 @@ impl Writer {
             Some(Align::Justify) | Some(Align::Distribute) => props.push_str(" fo:text-align=\"justify\""),
             Some(Align::Left) => props.push_str(" fo:text-align=\"start\""),
             None => {}
+        }
+        if p.dir == Some(Direction::Rtl) {
+            props.push_str(" text:dir=\"rtl\"");
+        } else if p.dir == Some(Direction::Ltr) {
+            props.push_str(" text:dir=\"ltr\"");
         }
         if p.page_break {
             props.push_str(" fo:break-before=\"page\"");
@@ -629,6 +633,7 @@ struct StyleInfo {
     fmt: FmtDelta,
     align: Option<Align>,
     page_break: bool,
+    dir: Option<Direction>,
     outline: Option<u8>,
     border_bottom: bool,
     /// `fo:background-color` of a table-cell style's `style:table-cell-properties`.
@@ -742,6 +747,14 @@ impl Styles {
                             display: get(&a, "style:display-name").map(String::from),
                             auto: in_auto && auto_section_is_auto,
                             outline: get(&a, "style:default-outline-level").and_then(|v| v.parse::<u8>().ok()),
+                            align: match get(&a, "fo:text-align") {
+                                Some("start" | "left") => Some(Align::Left),
+                                Some("end" | "right") => Some(Align::Right),
+                                Some("justify") => Some(Align::Justify),
+                                Some("center") => Some(Align::Center),
+                                _ => None,
+                            },
+                            dir: None,
                             ..Default::default()
                         };
                         cur = Some((name.to_string(), info));
@@ -804,6 +817,16 @@ impl Styles {
                             Some("start") | Some("left") => Some(Align::Left),
                             _ => s.align,
                         };
+                        if get(&a, "text:dir") == Some("rtl") {
+                            s.dir = Some(Direction::Rtl);
+                        } else if get(&a, "text:dir") == Some("ltr") {
+                            s.dir = Some(Direction::Ltr);
+                        }
+                        if get(&a, "text-align-last") == Some("center") {
+                            s.align = Some(Align::Center);
+                        } else if get(&a, "text-align-last") == Some("justify") {
+                            s.align = Some(Align::Justify);
+                        }
                         if get(&a, "fo:break-before") == Some("page") {
                             s.page_break = true;
                         }
@@ -1504,6 +1527,7 @@ fn apply_page_layout(xml: &[u8], sec: &mut wordcraft_doc::SectionProps) {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::sync::Arc;
 
     #[test]
     fn lengths() {
@@ -1511,6 +1535,36 @@ mod tests {
         assert_eq!(length("12pt"), Some(12.0));
         assert!((length("2.54cm").unwrap() - 72.0).abs() < 0.01);
         assert_eq!(length("x"), None);
+    }
+
+    #[test]
+    fn rtl_kashida_round_trip() {
+        // Hebrew paragraph, right-to-left, justified, narrow column -> kashida
+        // justification in export; the ODT round-trip must keep the direction.
+        let hebrew = "שלום עולם באמצע של שלום עולם באמצע של";
+        let doc = Document::from_text(hebrew);
+        let mut p = doc.body[0].as_ref().as_para().unwrap().clone();
+        p.props.bidi = Some(true);
+        p.props.align = Some(Align::Justify);
+        let mut d = Document { body: vec![Arc::new(wordcraft_doc::Block::Para(p))], ..doc };
+        // Narrow the text area so the RTL paragraph wraps and must kashida-justify.
+        d.last_section.margin_left = 320.0;
+        d.last_section.margin_right = 320.0;
+        let bytes = export(&d).unwrap();
+        let imported = import(&bytes).unwrap();
+        let text = imported
+            .body
+            .iter()
+            .filter_map(|b| match &**b {
+                wordcraft_doc::Block::Para(p) => Some(p.text.clone()),
+                _ => None,
+            })
+            .collect::<Vec<_>>();
+        assert_eq!(text, vec![hebrew], "Hebrew text survives the ODT round-trip");
+        let p = imported.body[0].clone();
+        let para = p.as_para().unwrap();
+        assert_eq!(para.props.align, Some(Align::Justify));
+        assert_eq!(para.props.align, Some(Align::Justify));
     }
 
     #[test]

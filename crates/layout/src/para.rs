@@ -166,6 +166,14 @@ pub struct Line {
     pub vis: Vec<VisCl>,
     /// The paragraph reads right to left (its start edge is on the right).
     pub rtl: bool,
+    /// For a justified right-to-left line, the trailing complex-script cluster the ragged
+    /// edge is dragged out on (`(k, extra)` = the cluster and the extra advance, in points).
+    /// Word drags the tail of the last letter (`kashida`) instead of widening the trailing
+    /// space, and only when `w:compat` (compat_mode >= 15) is on — that is the Word 2013
+    /// "Kashida justification" the layout-parity table records. The extra advance is applied
+    /// on the visual end of the cluster, so an RTL paragraph's last letter grows to the
+    /// right, an LTR paragraph's to the left.
+    pub kashida: Option<(usize, f32)>,
 }
 
 /// Where a cluster of a bidirectional line is drawn.
@@ -1946,6 +1954,31 @@ fn break_lines(pl: &mut ParaLayout, env: &ParaEnv, mark_style: u16, level: Optio
         let justify = display.is_none() && ((rp.align == Align::Justify && end == LineEnd::Wrap) || rp.align == Align::Distribute);
         // A line that only fits with shrunk spaces is shrunk, the last line of the paragraph too.
         let shrink = display.is_none() && shrink_spaces && slack < 0.0 && last_tab.is_none();
+        // Kashida justification (Arabic): when the paragraph reads right to left and the line
+        // is justified, drag the ragged edge out on the trailing complex-script letter — the
+        // `kashida` — instead of widening the trailing space, and only under the Word 2013
+        // compat rule (`rp.align == Align::Justify` plus compat mode >= 15). `kashida` is a
+        // (cluster, extra) pair measured on the visual end of the cluster, so an RTL
+        // paragraph's tail grows rightwards and an LTR one's leftwards.
+        let kashida =
+            if rp.bidi && rp.align == Align::Justify && end == LineEnd::Wrap && env.doc.settings.compat_mode >= wordcraft_doc::COMPAT_MODE_CURRENT {
+                let mut found: Option<(usize, f32)> = None;
+                for k in (c0..c1).rev() {
+                    if matches!(pl.clusters.get(k).map(|c| c.kind), Some(ClKind::Text | ClKind::Marker))
+                        && pl.clusters.get(k).is_some_and(|c| c.adv > 0.0)
+                    {
+                        if pl.clusters.get(k).is_some_and(|c| c.kind == ClKind::Text) {
+                            found = Some((k, right_edge - content_end));
+                        } else {
+                            found = Some((k, pl.clusters.get(k).map(|c| c.adv).unwrap_or(0.0)));
+                        }
+                        break;
+                    }
+                }
+                found
+            } else {
+                None
+            };
         if shrink {
             shrink_line_spaces(pl, &mut xs, c0, c1, content_end, slack);
         } else if justify && slack > 0.0 {
@@ -1984,6 +2017,17 @@ fn break_lines(pl: &mut ParaLayout, env: &ParaEnv, mark_style: u16, level: Optio
         }
         let start = pl.clusters.get(c0).map(|c| c.start).unwrap_or(pl.text_len);
         let stop = if c1 > c0 { pl.clusters.get(c1 - 1).map(|c| c.end).unwrap_or(pl.text_len) } else { start };
+        // Kashida justification: apply the extra advance on the trailing complex-script
+        // cluster's visual end. For an RTL paragraph that is the right edge (the end of
+        // the paragraph's text); for an LTR paragraph, the mirror, the left edge.
+        if let Some((k, extra)) = kashida {
+            // The added whitespace is not a justified space: the size of the one trailing
+            // cluster is clamped so a pathological line can't overflow the page.
+            let add = extra.clamp(0.0, (right_edge - left) * 0.5);
+            if let Some(c) = pl.clusters.get_mut(k) {
+                c.adv = (c.adv + add).max(0.0);
+            }
+        }
         if first_x0.is_none() {
             first_x0 = xs.first().copied();
         }
@@ -2002,6 +2046,7 @@ fn break_lines(pl: &mut ParaLayout, env: &ParaEnv, mark_style: u16, level: Optio
             right: right_edge,
             hyphen,
             beside,
+            kashida,
             vis: Vec::new(),
             rtl: rtl_para,
         };
@@ -2054,6 +2099,7 @@ fn break_lines(pl: &mut ParaLayout, env: &ParaEnv, mark_style: u16, level: Optio
                     right,
                     hyphen: None,
                     beside: false,
+                    kashida: None,
                     vis: Vec::new(),
                     rtl: rtl_para,
                 });

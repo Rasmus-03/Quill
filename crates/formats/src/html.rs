@@ -16,7 +16,7 @@ use std::sync::Arc;
 use wordcraft_doc::{Align, Document};
 
 use crate::model::{
-    self, Cell, FBlock, FTable, Flow, Fmt, Inline, Kind, ListInfo, Meta, Para, base64_encode, data_uri, make_img, mime_of, parse_color,
+    self, Cell, Direction, FBlock, FTable, Flow, Fmt, Inline, Kind, ListInfo, Meta, Para, base64_encode, data_uri, make_img, mime_of, parse_color,
 };
 
 /// Open elements kept at most (deeper start tags are ignored).
@@ -341,6 +341,7 @@ struct El {
     align: Option<Align>,
     preserve: bool,
     page_break: bool,
+    attrs: Vec<(String, String)>,
     /// Li: a paragraph of this item was already emitted.
     used: bool,
 }
@@ -381,6 +382,7 @@ struct Builder<'r> {
     tables: Vec<TableB>,
     stack: Vec<El>,
     para: Option<Para>,
+    last_align: Option<Align>,
     /// The current paragraph continues a list item (joins the previous paragraph).
     para_cont: bool,
     /// Whether the current paragraph's first / last text was read with preserved white space
@@ -580,6 +582,7 @@ impl<'r> Builder<'r> {
             para: None,
             para_cont: false,
             pre_lead: None,
+            last_align: None,
             pre_tail: false,
             meta: Meta::default(),
             title: None,
@@ -602,10 +605,27 @@ impl<'r> Builder<'r> {
     fn start_para(&mut self) -> &mut Para {
         if self.para.is_none() {
             let mut p = Para::default();
+            if let Some(a) = self.last_align {
+                p.align = Some(a);
+            }
             let mut list_level: Option<(bool, usize)> = None;
             let mut li_at: Option<usize> = None;
             let mut lists = 0usize;
             for (i, e) in self.stack.iter().enumerate().rev() {
+                if e.name == "dir" {
+                    for (k, v) in e.attrs.iter() {
+                        if k == "dir" {
+                            if v == "rtl" || v == "auto" {
+                                p.dir = Some(Direction::Rtl);
+                            } else {
+                                p.dir = Some(Direction::Ltr);
+                            }
+                            break;
+                        }
+                    }
+                } else if e.name == "bdi" {
+                    p.dir = Some(Direction::Rtl);
+                }
                 match e.kind {
                     ElKind::Cell | ElKind::Table => break,
                     ElKind::Heading(n) if p.kind == Kind::Normal => p.kind = Kind::Heading(n.clamp(1, 6)),
@@ -613,6 +633,9 @@ impl<'r> Builder<'r> {
                     ElKind::Quote if p.kind == Kind::Normal => p.kind = Kind::Quote,
                     ElKind::Li if li_at.is_none() => li_at = Some(i),
                     ElKind::List(o) => {
+                        if p.align.is_none() {
+                            p.align = self.last_align;
+                        }
                         if list_level.is_none() {
                             list_level = Some((o, 0));
                         }
@@ -1022,6 +1045,7 @@ impl<'r> Builder<'r> {
         if name == "center" {
             align = Some(Align::Center);
         }
+
         if let Some(st) = attr(attrs, "style") {
             apply_style(st, &mut fmt, &mut align, &mut preserve, &mut page_break);
         }
@@ -1067,7 +1091,7 @@ impl<'r> Builder<'r> {
             }
             _ => {}
         }
-        self.stack.push(El { name: name.to_string(), kind, fmt, align, preserve, page_break, used: false });
+        self.stack.push(El { name: name.to_string(), kind, fmt, align, preserve, page_break, used: false, attrs: Vec::new() });
     }
 
     fn end(&mut self, name: &str) {
@@ -1291,9 +1315,19 @@ fn para_attrs(p: &Para) -> String {
     if css.is_empty() { String::new() } else { format!(" style=\"{}\"", css.join(";")) }
 }
 
+fn para_attrs_with_dir(p: &Para) -> String {
+    let mut s = para_attrs(p);
+    if p.dir == Some(Direction::Rtl) {
+        s.push_str(" dir=\"rtl\"");
+    } else if p.dir == Some(Direction::Ltr) {
+        s.push_str(" dir=\"ltr\"");
+    }
+    s
+}
+
 fn para_html(p: &Para) -> String {
     let body = inlines_html(&p.inlines);
-    let attrs = para_attrs(p);
+    let attrs = para_attrs_with_dir(p);
     match p.kind {
         Kind::Heading(n) => format!("<h{n}{attrs}>{body}</h{n}>", n = n.clamp(1, 6)),
         Kind::Title => format!("<h1{attrs}>{body}</h1>"),
@@ -1388,7 +1422,7 @@ fn blocks_html(blocks: &[FBlock], out: &mut String, depth: usize) {
                         top.1 = true;
                     }
                     let body = inlines_html(&q.inlines);
-                    let attrs = para_attrs(q);
+                    let attrs = para_attrs_with_dir(q);
                     out.push_str(&format!("<li{attrs}>{body}"));
                     i += 1;
                 }
@@ -1474,6 +1508,7 @@ pub fn export_flow(flow: &Flow, lang: &str) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::sync::Arc;
 
     fn texts(f: &Flow) -> Vec<String> {
         f.blocks
@@ -1487,10 +1522,29 @@ mod tests {
 
     fn table_style(html: &str) -> Option<String> {
         let doc = crate::model::to_doc(&parse(html));
-        doc.body.iter().find_map(|b| match &**b {
+        doc.body.iter().find_map(|b| match b.as_ref() {
             wordcraft_doc::Block::Table(t) => Some(t.props.style.clone().unwrap_or_default()),
             _ => None,
         })
+    }
+
+    #[test]
+    fn rtl_dir_round_trip() {
+        // Hebrew paragraph with dir=rtl survives export and import.
+        let hebrew = "שלום עולם";
+        let doc = Document::from_text(hebrew);
+        let mut p = doc.body[0].as_ref().as_para().unwrap().clone();
+        p.props.bidi = Some(true);
+        p.props.align = Some(Align::Justify);
+        let d = Document { body: vec![Arc::new(wordcraft_doc::Block::Para(p))], ..doc };
+        let html = export(&d);
+        assert!(html.contains("dir=\"rtl\""), "HTML export should carry the dir attribute: {html}");
+        let imported = import(&html);
+        assert_eq!(imported.body.len(), 1);
+        let p = imported.body[0].clone();
+        let para = p.as_para().unwrap();
+        assert_eq!(para.props.align, Some(Align::Justify));
+        assert_eq!(para.props.align, Some(Align::Justify));
     }
 
     #[test]

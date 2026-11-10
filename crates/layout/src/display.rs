@@ -1020,6 +1020,34 @@ fn lines(
                 });
             }
         }
+        // Kashida justification (Arabic): a short under-line on the tail of the last
+        // complex-script letter that carried the extra advance. `line.kashida` is set in
+        // `para::layout_para` and is a (cluster, extra) pair on the visual end of the
+        // cluster, so it is the right edge of the visually last glyph in an RTL paragraph.
+        if let Some((k, _)) = line.kashida {
+            let Some(c) = pl.clusters.get(k) else { continue };
+            let Some(st) = pl.styles.get(c.style as usize) else { continue };
+            let cx = x + line.vis.get(k - line.c0).map(|v| v.x).unwrap_or(0.0);
+            let w = line.vis.get(k - line.c0).map(|v| v.w).unwrap_or(0.0);
+            // Only right-to-left text gets kashida: the triangle-like tail of the letter is
+            // drawn on its visual end (the right edge for an RTL paragraph, which reads
+            // right to left). Left-to-right paragraphs keep the un-stretched geometry.
+            if line.rtl {
+                let uy = base - st.shift + st.size * 0.18;
+                let thick = (st.size / 24.0).max(0.5);
+                out.push(Draw::Line {
+                    x0: cx + w,
+                    y0: uy,
+                    x1: cx + w + st.size * 1.4,
+                    y1: uy,
+                    width: thick,
+                    color: text_color(&st.rc.color, None),
+                    stroke: Stroke::Solid,
+                    alpha,
+                });
+            }
+        }
+
         // Formatting marks.
         let marks = opts.always.shown(opts.marks);
         if marks.any() {
