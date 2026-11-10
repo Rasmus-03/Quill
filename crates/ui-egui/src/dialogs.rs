@@ -493,6 +493,74 @@ pub enum Dialog {
         documents: Vec<String>,
         selected: usize,
     },
+    /// Insert › Signature Line: a line to write, type or attach a signature to.
+    Signature {
+        /// The text that appears on the signature line (a display name, a job title or a
+        /// URL, as Word uses it).
+        text: String,
+        /// The person's email address, for the "Signed by" line.
+        email: String,
+    },
+    /// References › Table of Authorities: the legal-style authority list, Update Tableded.
+    TableOfAuthorities {
+        /// The category names (Cases, Statutes, Commerce, etc.) Word's authorities are divided into.
+        categories: Vec<String>,
+        /// Whether to show the category name next to each authority.
+        show_category: bool,
+    },
+    /// File › Print: preview the document and choose a printer, pages, copies, collation
+    /// and colour (grayscale).
+    PrintPreview {
+        /// The page numbers to print (e.g. "1,3,5-7").
+        ranges: String,
+        /// Number of copies.
+        copies: u32,
+        /// Collate the copies when printing multiple sets (Word's default).
+        collate: bool,
+        /// Print in grayscale rather than colour.
+        grayscale: bool,
+        /// Print one side (the other of the paper is FeedBothSides).
+        one_sided: bool,
+    },
+    /// File › Options › Advanced › Display / Edit › Customize / Advanced › Web Options:
+    /// the search, file, saving, security and update options for the document on the
+    /// Web. Word's Web Options dialog.
+    WebOptions {
+        /// * General: file name on the Web, title, author and keyword text.
+        /// * Saving: save a copy of the file on the Web, save a copy of the file on the Web
+        ///   so it can be accessed by anyone with the link, save the file on the Web via a
+        ///   server-based location (SharePoint).
+        /// * File: when saving a file via a Web server-based location, automatically save a
+        ///   copy of the file on the Web; whether to keep the original file; whether to save
+        ///   just the theme, picture, header, footer and footnote settings plus the web page
+        ///   that references them; and whether to save data with the document.
+        /// * File security: always use the most secure protocols to access a server; use
+        ///   SSL1 security when accessing a server; do not save the password for the
+        ///   server; use a secure connection when accessing the server.
+        /// * Links: update links to the server when updating linked files; prompt the user
+        ///   before updating a linked file; update fields before saving the file so the
+        ///   fields are current; update links when opening the file; and do not upgrade
+        ///   links that were saved with this file to use the absolute path.
+        /// * Formatting: automatically update fields before printing the file; and do not
+        ///   upgrade fields to use the absolute path.
+        /// * Authoring and spelling: always embed fonts in the file; do not embed common
+        ///   system fonts only; do not use OpenType hinting; add space at the bottom of each
+        ///   page for raindrops; do not use OpenType hinting for CJK fonts; and do not use
+        ///   OpenType hinting for Asian fonts.
+        /// * Web page preview: whether to show a preview of the Web page when printing;
+        ///   whether to save the Web page preview in the file; whether to include the
+        ///   document background in the Web page preview.
+        /// * Caching: cache HTML files and other web-based content produced by Microsoft
+        ///   Office; cache images in the document; and whether to download non-white elements
+        ///   into the cached copy of the Web page.
+        options: Vec<bool>,
+    },
+    /// File › Options › Add-ins: the loaded add-ins (COM add-ins, Word add-ins,
+    /// Global templates and add-ins) and the ActiveX controls. Word's Add-Ins dialog.
+    InstalledApps {
+        /// The names of the installed COM add-ins and Word add-ins, as Word lists them.
+        names: Vec<String>,
+    },
 }
 
 /// The Table Properties dialog's fields. Lengths are in the interface unit
@@ -925,6 +993,11 @@ impl Dialog {
             Dialog::Organizer { .. } => "organizer",
             Dialog::Layout(d) => d.name(),
             Dialog::SwitchWindows { .. } => "switchWindows",
+            Dialog::Signature { .. } => "signature",
+            Dialog::TableOfAuthorities { .. } => "tableOfAuthorities",
+            Dialog::PrintPreview { .. } => "printPreview",
+            Dialog::WebOptions { .. } => "webOptions",
+            Dialog::InstalledApps { .. } => "installedApps",
         }
     }
 
@@ -956,6 +1029,21 @@ impl Dialog {
         }
         if matches!(name, "compare" | "combine" | "autoCorrect" | "restrictEditing") {
             return crate::dialogs_review::open(name, app).map(|d| Dialog::Review(Box::new(d)));
+        }
+        if name == "signature" {
+            return Some(Dialog::Signature { text: String::new(), email: String::new() });
+        }
+        if name == "tableOfAuthorities" {
+            return Some(Dialog::TableOfAuthorities { categories: vec![], show_category: true });
+        }
+        if name == "printPreview" {
+            return Some(Dialog::PrintPreview { ranges: String::new(), copies: 1, collate: true, grayscale: false, one_sided: true });
+        }
+        if name == "webOptions" {
+            return Some(Dialog::WebOptions { options: vec![false; 7] });
+        }
+        if name == "installedApps" {
+            return Some(Dialog::InstalledApps { names: vec![] });
         }
         let st = app.session.run("format.state", &json!({})).unwrap_or_default();
         let s = |k: &str| st.get(k).and_then(Value::as_str).unwrap_or("").to_string();
@@ -1375,6 +1463,11 @@ pub fn show(app: &mut WordApp, ctx: &egui::Context) {
         Dialog::Organizer { .. } => "Organizer",
         Dialog::Layout(d) => d.title(),
         Dialog::SwitchWindows { .. } => "Switch Windows",
+        Dialog::Signature { .. } => "Signature",
+        Dialog::TableOfAuthorities { .. } => "Table of Authorities",
+        Dialog::PrintPreview { .. } => "Print Preview",
+        Dialog::WebOptions { .. } => "Web Options",
+        Dialog::InstalledApps { .. } => "Add-Ins",
     };
     let id = egui::Id::new(("dialog", title));
     let paste_special = matches!(d, Dialog::PasteSpecial { .. });
@@ -2063,6 +2156,102 @@ fn body(app: &mut WordApp, ui: &mut Ui, d: &mut Dialog) -> bool {
             if ok {
                 let _ = app.run("design.watermark", json!({"text": text, "diagonal": *diagonal}));
             }
+            ok || cancel
+        }
+        Dialog::Signature { text, email } => {
+            ui.horizontal(|ui| {
+                ui.label(tl!("Text on the line:"));
+                ui.text_edit_singleline(text);
+            });
+            ui.horizontal(|ui| {
+                ui.label(tl!("Email address (for the \"Signed by\" line):"));
+                ui.text_edit_singleline(email);
+            });
+            let (ok, cancel) = buttons(ui, tl!("OK"));
+            if ok {
+                let _ = app.run("insert.signature", json!({"text": text, "email": email}));
+            }
+            ok || cancel
+        }
+        Dialog::TableOfAuthorities { categories, show_category } => {
+            ui.horizontal(|ui| {
+                ui.label(tl!("Categories (comma separated):"));
+            });
+            ui.checkbox(show_category, tl!("Show category with each authority"));
+            let (ok, cancel) = buttons(ui, tl!("OK"));
+            if ok {
+                let _ = app.run("references.updateAuthorities", json!({"categories": categories, "showCategory": *show_category}));
+            }
+            ok || cancel
+        }
+        Dialog::PrintPreview { ranges, copies, collate, grayscale, one_sided } => {
+            ui.horizontal(|ui| {
+                ui.label(tl!("Pages (e.g. 1,3,5-7):"));
+                ui.text_edit_singleline(ranges);
+            });
+            ui.horizontal(|ui| {
+                ui.add(egui::Slider::new(copies, 1..=99).suffix(" copies"));
+                ui.checkbox(collate, tl!("Collate"));
+                ui.checkbox(grayscale, tl!("Grayscale"));
+                ui.checkbox(one_sided, tl!("One sided"));
+            });
+            let (ok, cancel) = buttons(ui, tl!("OK"));
+            if ok {
+                let _ = app.run(
+                    "file.print",
+                    json!({"ranges": ranges, "copies": copies, "collate": *collate, "grayscale": *grayscale, "oneSided": *one_sided}),
+                );
+            }
+            ok || cancel
+        }
+        Dialog::WebOptions { options } => {
+            ui.vertical(|ui| {
+                ui.label(tl!("General:"));
+                for (i, label) in ["Title", "Author", "Keywords", "Subject"].iter().enumerate() {
+                    ui.checkbox(&mut options[i], tl!(label));
+                }
+                ui.label(tl!("Saving:"));
+                for (i, label) in ["Save a copy on the Web", "Save data in the file"].iter().enumerate() {
+                    ui.checkbox(&mut options[4 + i], tl!(label));
+                }
+                ui.label(tl!("File security:"));
+                for (i, label) in ["Use most secure protocols", "Use SSL", "Don't save password", "Secure connection"].iter().enumerate() {
+                    ui.checkbox(&mut options[6 + i], tl!(label));
+                }
+                ui.label(tl!("Authoring and spelling:"));
+                for (i, label) in
+                    ["Always embed fonts", "Do not embed common system fonts only", "Do not use OpenType hinting", "Add space at bottom of each page"]
+                        .iter()
+                        .enumerate()
+                {
+                    ui.checkbox(&mut options[10 + i], tl!(label));
+                }
+                ui.label(tl!("Web page preview:"));
+                for (i, label) in ["Show a preview when printing", "Save the Web page preview", "Include the document background"].iter().enumerate()
+                {
+                    ui.checkbox(&mut options[14 + i], tl!(label));
+                }
+                ui.label(tl!("Caching:"));
+                for (i, label) in ["Cache HTML files", "Cache images", "Download non-white elements"].iter().enumerate() {
+                    ui.checkbox(&mut options[17 + i], tl!(label));
+                }
+            });
+            let (ok, cancel) = buttons(ui, tl!("OK"));
+            if ok {
+                let _ = app.run("file.webOptions", json!({"options": options}));
+            }
+            ok || cancel
+        }
+        Dialog::InstalledApps { names } => {
+            ui.label(tl!("Installed COM add-ins and Word add-ins (as Word lists them):"));
+            if names.is_empty() {
+                ui.label(tl!("No add-ins installed or loaded."));
+            } else {
+                for n in names.iter() {
+                    ui.label(n.clone());
+                }
+            }
+            let (ok, cancel) = buttons(ui, tl!("Close"));
             ok || cancel
         }
         Dialog::Phonetic { base, ruby, align, size, offset, existing } => {

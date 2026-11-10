@@ -1,23 +1,22 @@
 //! Scrolling performance with a very large table (#811).
 
 use std::time::Instant;
-
+use wordcraft_doc::props::HeightRule;
 use wordcraft_doc::table::{Cell, Table};
 use wordcraft_doc::{Block, Document, Path, StoryRef};
 
-use crate::{Services, WordApp};
+use crate::WordApp;
 
 fn build_big_table(rows: usize, cols: usize, height: Option<f32>) -> Document {
     let mut d = Document::from_text("Before the table\nAfter the table");
     let mut t = Table::new(rows, cols, 468.0);
     for (r, row) in t.rows.iter_mut().enumerate() {
-        for (_, cell) in row.cells.iter_mut().enumerate() {
+        for cell in row.cells.iter_mut() {
             let w = cell.props.width;
             *cell = Cell::with_text(&format!("R{r} C{} value", r * cols));
             cell.props.width = w;
         }
         if let Some(h) = height {
-            use wordcraft_doc::props::{HeightRule, RowProps};
             row.props.height = Some(h);
             row.props.height_rule = HeightRule::Exact;
         }
@@ -55,9 +54,9 @@ fn bench_open_1096_pages() -> (f64, usize) {
 fn probe_rows_to_pages() {
     for rows in [1000, 10000, 48700] {
         let doc = build_big_table(rows, 1, None);
-        let t = doc.body.iter().find_map(|b| b.as_table());
-        let n = t.as_ref().map(|x| x.rows.len()).unwrap_or(0);
-        std::fs::write("/tmp/probe.docx", wordcraft_engine::io::save_bytes("/tmp/probe.docx", &doc).unwrap());
+        let t = doc.body.iter().find_map(|b| b.as_table()).unwrap();
+        let n = t.rows.len();
+        std::fs::write("/tmp/probe.docx", wordcraft_engine::io::save_bytes("/tmp/probe.docx", &doc).unwrap()).unwrap();
         let opened = wordcraft_engine::io::open_path(std::path::Path::new("/tmp/probe.docx")).unwrap();
         let pages = wordcraft_engine::Session::new(opened).layout().pages.len();
         eprintln!("rows={} -> table_rows={} -> pages={}", rows, n, pages);
@@ -122,7 +121,7 @@ fn big_table_doc(rows: usize, cols: usize) -> Document {
 }
 
 fn harness(doc: Document) -> egui_kittest::Harness<'static, WordApp> {
-    let a = WordApp::new(wordcraft_engine::Session::new(doc), Services::default());
+    let a = WordApp::new(wordcraft_engine::Session::new(doc), crate::Services::default());
     egui_kittest::Harness::builder().with_size(egui::vec2(1440.0, 900.0)).build_ui_state(
         |ui, app: &mut WordApp| {
             let ctx = ui.ctx().clone();
