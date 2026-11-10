@@ -54,24 +54,13 @@ pub struct Server {
 impl Server {
     /// Create a new collaboration server.
     pub fn new() -> Self {
-        Self {
-            docs: Arc::new(Mutex::new(HashMap::new())),
-            sessions: Arc::new(Mutex::new(HashMap::new())),
-        }
+        Self { docs: Arc::new(Mutex::new(HashMap::new())), sessions: Arc::new(Mutex::new(HashMap::new())) }
     }
 
     /// Create a new document with the given text.
     pub fn create_doc(&self, id: &str, text: &str) {
         let mut docs = self.docs.lock().unwrap();
-        docs.insert(
-            id.to_string(),
-            Doc {
-                id: id.to_string(),
-                text: text.to_string(),
-                ops: vec![],
-                sessions: vec![],
-            },
-        );
+        docs.insert(id.to_string(), Doc { id: id.to_string(), text: text.to_string(), ops: vec![], sessions: vec![] });
     }
 
     /// Get a document.
@@ -82,13 +71,7 @@ impl Server {
     /// Add a session.
     pub fn add_session(&self, id: &str, doc_id: Option<String>) {
         let mut sessions = self.sessions.lock().unwrap();
-        sessions.insert(
-            id.to_string(),
-            Session {
-                id: id.to_string(),
-                doc_id,
-            },
-        );
+        sessions.insert(id.to_string(), Session { id: id.to_string(), doc_id });
     }
 
     /// Remove a session.
@@ -99,14 +82,8 @@ impl Server {
 
     /// Broadcast an operation to all sessions viewing this document.
     pub fn broadcast(&self, doc_id: &str, op: &Op) {
-        let sessions = self
-            .sessions
-            .lock()
-            .unwrap()
-            .values()
-            .filter(|s| s.doc_id.as_deref() == Some(doc_id))
-            .map(|s| s.id.clone())
-            .collect::<Vec<_>>();
+        let sessions =
+            self.sessions.lock().unwrap().values().filter(|s| s.doc_id.as_deref() == Some(doc_id)).map(|s| s.id.clone()).collect::<Vec<_>>();
         for sid in sessions {
             // In a real implementation, each session has a WebSocket, and we send the op
             // over that socket. Here we just record that the op was sent.
