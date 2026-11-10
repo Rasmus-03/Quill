@@ -52,7 +52,7 @@ pub struct LangInfo {
 }
 
 /// The registry. English first: it is the fallback and the source language.
-pub static LANGUAGES: [LangInfo; 19] = [
+pub static LANGUAGES: [LangInfo; 25] = [
     LangInfo { code: "en", name: "English", source: "", prefer_hans: false, editing_lang: None, catalog: OnceLock::new() },
     // Simplified Chinese; `zh`, `zh-CN`, `zh-SG` and `zh-Hans-*` resolve here (see `candidates`).
     LangInfo {
@@ -86,6 +86,37 @@ pub static LANGUAGES: [LangInfo; 19] = [
         source: include_str!("pt-br.tsv"),
         prefer_hans: false,
         editing_lang: Some("pt-BR"),
+        catalog: OnceLock::new(),
+    },
+    // Hindi, Devanagari script; `hi`, `hi-IN` and `hi_IN.UTF-8` resolve here.
+    LangInfo {
+        code: "hi", name: "हिन्दी", source: include_str!("hi.tsv"), prefer_hans: false, editing_lang: None, catalog: OnceLock::new()
+    },
+    // Arabic, right-to-left script; `ar`, `ar-SA` and `ar-SA.UTF-8` resolve here.
+    // The interface mirrors for right-to-left text: Options, menus and dialogs flip their
+    // layout, and the reading direction and tab order follow the script.
+    LangInfo { code: "ar", name: "العربية", source: include_str!("ar.tsv"), prefer_hans: false, editing_lang: None, catalog: OnceLock::new() },
+    // Indonesian; `id`, `id-ID` and `id_ID.UTF-8` resolve here.
+    LangInfo {
+        code: "id",
+        name: "Bahasa Indonesia",
+        source: include_str!("id.tsv"),
+        prefer_hans: false,
+        editing_lang: None,
+        catalog: OnceLock::new(),
+    },
+    // Korean; `ko`, `ko-KR` and `ko_KR.UTF-8` resolve here.
+    LangInfo { code: "ko", name: "한국어", source: include_str!("ko.tsv"), prefer_hans: false, editing_lang: None, catalog: OnceLock::new() },
+    // Vietnamese; `vi`, `vi-VN` and `vi_VN.UTF-8` resolve here.
+    LangInfo { code: "vi", name: "Tiếng Việt", source: include_str!("vi.tsv"), prefer_hans: false, editing_lang: None, catalog: OnceLock::new() },
+    // European Portuguese; `pt-PT`, `pt-PT` and `pt-PT.UTF-8` resolve here. The interface and
+    // the proofing dictionary are Portuguese European.
+    LangInfo {
+        code: "pt-pt",
+        name: "Português (Portugal)",
+        source: include_str!("pt-PT.tsv"),
+        prefer_hans: false,
+        editing_lang: Some("pt-PT"),
         catalog: OnceLock::new(),
     },
     // Serbian, Cyrillic script (the default per BCP 47 when no script is given); `sr`, `sr-RS`,
