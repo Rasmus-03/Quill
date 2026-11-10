@@ -1,0 +1,14 @@
+{
+  "name": "wordcraft-cloud-server",
+  "version": "1.0.0",
+  "private": true,
+  "description": "WordCraft real-time collaboration server",
+  "scripts": {
+    "start": "node src/index.js",
+    "install": "npm install express ws"
+  },
+  "dependencies": {
+    "express": "^5.1.0",
+    "ws": "^8.18.0"
+  }
+}
