@@ -461,6 +461,7 @@ pub(crate) fn write_parts(doc: &Document, flavor: Flavor) -> Result<Vec<(String,
     }
     if !doc.sources.is_empty() {
         root.add(rt::CUSTOM_XML, "customXml/item1.xml", false);
+        root.add(rt::CUSTOM_XML_PROPS, "customXml/itemProps1.xml", false);
         let mut item_rels = PartRels::default();
         item_rels.add(rt::CUSTOM_XML_PROPS, "itemProps1.xml", false);
         push_part(
