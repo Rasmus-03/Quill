@@ -73,7 +73,7 @@ font can't match Word's metrics.
 | Relayout after an edit | 1.4 ms | not measured | measured 2026-10-06 |
 | Font picker with many installed fonts | fixed freezes (#233) | instant | issue #31, #59 |
 | Large real-world documents (500+ pages, many pictures) | not measured | | gap |
-| Scrolling a 1,096-page document that is one 5,300-row table (#811) | ~2.4 ms idle, ~4.5 ms median scroll frame (was ~600 ms); opening still lays out for ~4–8 s | not measured | measured 2026-10-12, release, headless (`tests_perf::big_table_scroll_bench`) |
+| Scrolling a 1,096-page document that is one 5,300-row table (#811) | ~2.4 ms idle, ~4.5 ms median scroll frame (was ~600 ms); opening still lays out for ~1.8 s | measured 2026-11-08, headless (`tests_perf::open_1096_page_one_table`) | measured 2026-11-08 |
 
 ## Revision history
 

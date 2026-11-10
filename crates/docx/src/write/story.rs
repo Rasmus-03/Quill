@@ -73,7 +73,9 @@ impl Writer<'_> {
         if depth == 0 {
             self.move_ranges(w, &[]);
         }
-        if bl.last().is_none_or(|b| matches!(**b, Block::Table(_))) {
+        // The body and a table cell need a paragraph after a trailing table; a header or footer
+        // part does not, and Word saves those without one.
+        if !(self.in_hf && depth == 0) && bl.last().is_none_or(|b| matches!(**b, Block::Table(_))) {
             w.raw("<w:p/>");
         }
     }

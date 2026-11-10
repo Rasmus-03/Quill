@@ -44,6 +44,7 @@ pub mod dialogs_refs;
 pub mod dialogs_review;
 pub mod dialogs_ribbon;
 pub mod dialogs_smart_art;
+pub mod dialogs_switch_windows;
 pub mod dialogs_templates;
 pub mod equation_tab;
 /// The built-in file browser, for desktops without a system file dialog (#576).
@@ -1285,6 +1286,17 @@ impl WordApp {
             }
             "ui.dialog" => {
                 self.dialog = dialogs::Dialog::open(s("name").unwrap_or(""), self);
+                json!({"dialog": self.dialog.as_ref().map(|d| d.name())})
+            }
+            "view.switchWindows" => {
+                // Switch Windows opens the list of open documents; the list shows the
+                // document that is currently open, and selecting one switches to it.
+                let path = match self.session.path.clone() {
+                    Some(p) => p,
+                    None => return Some(Err("no document is open".into())),
+                };
+                let documents = vec![path.to_string_lossy().to_string()];
+                self.dialog = Some(dialogs::Dialog::SwitchWindows { documents, selected: 0 });
                 json!({"dialog": self.dialog.as_ref().map(|d| d.name())})
             }
             "ui.closeDialog" => {
