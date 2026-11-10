@@ -63,7 +63,7 @@ fi
 
 rm -rf "$WORK"
 mkdir -p "$WORK/bin"
-for bin in wordcraft wordcraft-cli; do
+for bin in quill quill-cli; do
   inputs=()
   for t in "${TARGETS[@]}"; do inputs+=("$CARGO_TARGET_DIR/$t/release/$bin"); done
   lipo -create -output "$WORK/bin/$bin" "${inputs[@]}"
@@ -101,8 +101,8 @@ notarize() {
 echo "==> assembling $APP"
 mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources"
 # Executable and icon carry the display name (CFBundleExecutable / CFBundleIconFile).
-cp "$WORK/bin/wordcraft" "$APP/Contents/MacOS/WordCraft"
-cp "$ROOT/assets/app-icon/wordcraft.icns" "$APP/Contents/Resources/WordCraft.icns"
+cp "$WORK/bin/quill" "$APP/Contents/MacOS/WordCraft"
+cp "$ROOT/assets/app-icon/quill.icns" "$APP/Contents/Resources/WordCraft.icns"
 # Licences of the embedded craft-fonts fonts (only when built with CRAFT_FONTS_DIR).
 copy_font_licences "$APP/Contents/Resources"
 sed -e "s/@VERSION@/$VERSION/g" -e "s/@SHORT_VERSION@/$SHORT_VERSION/g" \
@@ -153,17 +153,17 @@ fi
 
 # ---- CLI ---------------------------------------------------------------------------------------
 echo "==> building $CLI_ZIP"
-CLI_DIR="$WORK/wordcraft-cli-$VERSION-macos-$ARCH"
+CLI_DIR="$WORK/quill-cli-$VERSION-macos-$ARCH"
 mkdir -p "$CLI_DIR"
-cp "$WORK/bin/wordcraft-cli" "$CLI_DIR/"
+cp "$WORK/bin/quill-cli" "$CLI_DIR/"
 copy_docs "$CLI_DIR"
-sign --options runtime "$CLI_DIR/wordcraft-cli"
-codesign --verify --strict --verbose=2 "$CLI_DIR/wordcraft-cli"
+sign --options runtime "$CLI_DIR/quill-cli"
+codesign --verify --strict --verbose=2 "$CLI_DIR/quill-cli"
 rm -f "$CLI_ZIP"
 ditto -c -k --norsrc --noextattr --keepParent "$CLI_DIR" "$CLI_ZIP"
 # A bare Mach-O can't carry a stapled ticket; Gatekeeper looks the notarization up online.
 if [ "$NOTARIZE" = 1 ]; then notarize "$CLI_ZIP"; fi
 
-"$WORK/bin/wordcraft-cli" --version
+"$WORK/bin/quill-cli" --version
 echo "==> done"
 ls -lh "$DMG" "$CLI_ZIP"

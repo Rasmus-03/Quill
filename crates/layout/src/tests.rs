@@ -8,6 +8,24 @@ fn lay(doc: &Document) -> DocLayout {
     layout(doc, &mut c, &LayoutOptions::default())
 }
 
+/// The width `text` takes on one line, in points, measured by the same shaping the layout does.
+fn text_width(text: &str) -> f32 {
+    let doc = Document::from_text(text);
+    let l = lay(&doc);
+    let Some(Placed::Lines { para, .. }) = l.pages[0].items.iter().find(|i| matches!(i, Placed::Lines { .. })) else { panic!() };
+    let line = para.lines.first().unwrap_or_else(|| panic!("no line for {text:?}"));
+    para.x_of(0, line.stop).unwrap_or_else(|| panic!("no end position for {text:?}"))
+}
+
+/// A column wide enough for every text in `fits` but not for `over`. Measured from the text, so a
+/// test's break points do not depend on the metrics of whichever fonts the machine has.
+fn column_for(fits: &[&str], over: &str) -> f32 {
+    let fits = fits.iter().map(|t| text_width(t)).fold(0.0f32, f32::max);
+    let over = text_width(over);
+    assert!(fits < over, "no column fits {fits:?} and not {over:?}: this font cannot tell them apart");
+    (fits + over) / 2.0
+}
+
 fn lines_of(l: &DocLayout) -> usize {
     l.pages.iter().flat_map(|p| p.items.iter()).map(|it| if let Placed::Lines { l0, l1, .. } = it { l1 - l0 } else { 0 }).sum()
 }
@@ -170,10 +188,12 @@ fn deleted_soft_hyphen_is_no_hyphenation_point_without_markup() {
 #[test]
 fn deleted_text_adds_no_line_break_opportunity_without_markup() {
     // "xx ab\u{ad}cdef" in a column where "xx ab-" and "abcdef" fit but "xx abcdef" does not; only
-    // the soft hyphen (5..7) is track-deleted.
+    // the soft hyphen (5..7) is track-deleted. The column is measured from the text, so every
+    // font's metrics give the same breaks.
     let mut d = Document::from_text("xx ab\u{ad}cdef");
     d.format_range(&Pos::body(0, 5), &Pos::body(0, 7), &|c| c.del = Some(0)).unwrap();
-    d.format_paragraphs(&Pos::body(0, 0), &Pos::body(0, 0), &|p| p.indent_right = Some(468.0 - 40.0)).unwrap();
+    let column = column_for(&["xx ab-"], "xx abcdef");
+    d.format_paragraphs(&Pos::body(0, 0), &Pos::body(0, 0), &|p| p.indent_right = Some(468.0 - column)).unwrap();
     let line_starts = |hide_deleted: bool| {
         let l = layout(&d, &mut LayoutCache::new(), &LayoutOptions { hide_deleted, ..Default::default() });
         let Some(Placed::Lines { para, .. }) = l.pages[0].items.iter().find(|i| matches!(i, Placed::Lines { .. })) else { panic!() };
@@ -205,12 +225,14 @@ fn hidden_soft_hyphen_is_no_hyphenation_point_when_hidden_text_is_not_shown() {
 #[test]
 fn hidden_text_adds_no_line_break_opportunity_when_not_shown() {
     // "xx ab" + hidden soft hyphen or space + "cdef", in a column where "xx ab-" and "abcdef" fit
-    // but "xx abcdef" does not. Measured in Word (hidden text not printed): "xx" / "abcdef" both times.
+    // but "xx abcdef" does not. Measured in Word (hidden text not printed): "xx" / "abcdef" both
+    // times. The column comes from measured widths, so font metrics cannot move the breaks.
     for hidden in ["\u{ad}", " "] {
         let mut d = Document::from_text(&format!("xx ab{hidden}cdef"));
         let end = 5 + hidden.len();
         d.format_range(&Pos::body(0, 5), &Pos::body(0, end), &|c| c.hidden = Some(true)).unwrap();
-        d.format_paragraphs(&Pos::body(0, 0), &Pos::body(0, 0), &|p| p.indent_right = Some(468.0 - 40.0)).unwrap();
+        let column = column_for(&["xx ab-", "xx ab "], "xx abcdef");
+        d.format_paragraphs(&Pos::body(0, 0), &Pos::body(0, 0), &|p| p.indent_right = Some(468.0 - column)).unwrap();
         let line_starts = |show_hidden: bool| {
             let l = layout(&d, &mut LayoutCache::new(), &LayoutOptions { show_hidden, ..Default::default() });
             let Some(Placed::Lines { para, .. }) = l.pages[0].items.iter().find(|i| matches!(i, Placed::Lines { .. })) else { panic!() };
@@ -3639,14 +3661,17 @@ fn tight_wrap_follows_an_ellipse() {
         assert!(right <= a + 1.5 || left >= b - 1.5, "line {top}..{bottom} at {left}..{right} runs into {a}..{b}: {tight:?}");
     }
     // Lines near the ellipse's top and bottom start at the curve, well inside its frame; beside
-    // the middle they don't. Measured against each line's own contour edge, so the check holds
-    // whatever line height the test machine's fonts give.
-    let line = |pred: &dyn Fn(f32) -> bool| *tight.iter().find(|l| pred(l.0) && l.2 > 60.0).unwrap();
-    for (what, l) in [("first line", line(&|top| top < 1.0)), ("near the bottom", line(&|top| top > 140.0 && top < 160.0))] {
+    // the middle they don't. Picked from the lines' own tops rather than fixed bands, and measured
+    // against each line's own contour edge, so the check holds whatever line height the test
+    // machine's fonts give.
+    let first = tight[0];
+    let last = *tight.iter().filter(|l| l.0 < 160.0).max_by(|a, b| a.0.total_cmp(&b.0)).unwrap();
+    let middle = *tight.iter().find(|l| l.0 <= 80.0 && l.1 >= 80.0).unwrap();
+    for (what, l) in [("first line", first), ("near the bottom", last)] {
         let edge = contour(l.0, l.1).1;
         assert!(l.2 <= edge + 3.0 && l.2 < 169.0 - 10.0, "{what} hugs the curve at {edge}: {l:?} in {tight:?}");
     }
-    assert!(line(&|top| top > 65.0 && top < 80.0).2 >= 160.0, "beside the widest part: {tight:?}");
+    assert!(middle.2 >= 160.0, "beside the widest part: {middle:?} in {tight:?}");
     // A convex shape has no gaps for Through to use: it wraps as Tight.
     assert_eq!(through, tight);
 }
