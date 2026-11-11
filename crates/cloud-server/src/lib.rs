@@ -51,6 +51,12 @@ pub struct Server {
     pub sessions: Arc<Mutex<HashMap<String, Session>>>,
 }
 
+impl Default for Server {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl Server {
     /// Create a new collaboration server.
     pub fn new() -> Self {

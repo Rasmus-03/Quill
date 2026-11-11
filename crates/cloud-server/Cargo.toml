@@ -1,10 +1,15 @@
 [package]
-name = "wordcraft-cloud-server"
+name = "wordcraft_cloud_server"
+
 version.workspace = true
 edition.workspace = true
 license.workspace = true
 publish = false
 description = "WordCraft real-time collaboration server: shared documents with operational transform"
+
+[lib]
+name = "wordcraft_cloud_server"
+path = "src/lib.rs"
 
 [dependencies]
 serde = { workspace = true }

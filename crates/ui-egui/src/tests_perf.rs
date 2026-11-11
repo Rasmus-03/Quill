@@ -95,7 +95,7 @@ fn bench_open_500_pages_many_pictures() {
         let media = d.add_media(vec![1, 2, 3, 4, 5], "png");
         let props = wordcraft_doc::CharProps::default();
         let obj = InlineObject::Image {
-            media: media,
+            media,
             w: 300.0,
             h: 150.0,
             alt: format!("figure {pic}"),
