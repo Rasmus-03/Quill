@@ -128,6 +128,8 @@ impl Drop for Temporary {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use wordcraft_doc;
+    use wordcraft_docx;
 
     struct Scratch(PathBuf);
     impl Scratch {
@@ -163,6 +165,36 @@ mod tests {
             assert_eq!(fs::read(&path).unwrap(), b"Original bytes.");
             assert_eq!(fs::read_dir(&d.0).unwrap().count(), 1);
         }
+    }
+
+    /// A real document save cut off mid-prepare: the destination keeps its original bytes and
+    /// no temporary file survives, so a save that dies before replacement can't clobber the
+    /// document. `wordcraft-docx` is used to make the buffer a real document instead of seed
+    /// text, and `unsafe` is avoided per the project's never-crash rule.
+    #[test]
+    fn interrupted_document_save_before_replacement_keeps_original() {
+        let d = Scratch::new();
+        let path = d.target();
+        // The original document file — a real .docx, made from a snippet of text.
+        let original = wordcraft_docx::write(&wordcraft_doc::Document::from_text("Quarterly numbers\nSecond paragraph")).unwrap();
+        fs::write(&path, &original).unwrap();
+        let expected = fs::read(&path).unwrap();
+
+        // Tear off the save in the middle of a (real) document-sized preparation: the temp is
+        // only partially written and then the write fails, so replace_with returns an error and
+        // Temporary::Drop removes the partial file.
+        let err = replace_with(&path, true, |file| {
+            file.write_all(&original[..original.len() / 2]).unwrap();
+            file.sync_all().unwrap();
+            Err(io::Error::new(io::ErrorKind::WriteZero, "interrupted"))
+        })
+        .unwrap_err();
+        assert!(err.to_string().contains("interrupted"));
+
+        // The original document file is still intact byte-for-byte.
+        assert_eq!(fs::read(&path).unwrap(), expected);
+        // And no orphaned temporary file was left behind.
+        assert_eq!(fs::read_dir(&d.0).unwrap().count(), 1);
     }
 
     #[test]
