@@ -5090,3 +5090,33 @@ fn a_price_is_not_a_formula() {
     let e = s.run("edit.pasteAsEquation", &json!({"text": "It costs $5 and $10"})).expect_err("not a formula");
     assert!(e.to_string().contains("not a formula"), "{e}");
 }
+
+/// read_with_password(bytes, None) on a package made with docx::encrypt must say the
+/// document is protected with a password — never a `Zip` or `Malformed` error. The check is at
+/// the top of the decrypt path (`docx/src/crypt.rs`), before any zip parsing, so the answer is
+/// `PasswordRequired` with the `PASSWORD_REQUIRED` message and not a zip or malformed error.
+#[test]
+fn doc_password_required() {
+    use wordcraft_docx::{DocxError, PASSWORD_REQUIRED, read_with_password};
+
+    // A normal package, just to have bytes to encrypt: write a document built from text.
+    let doc = wordcraft_doc::Document::from_text("Top secret plans\nSecond paragraph");
+    let pkg = wordcraft_docx::write(&doc).unwrap();
+
+    let enc = wordcraft_docx::encrypt(&pkg, "s3cret").unwrap();
+    assert!(wordcraft_docx::is_encrypted(&enc));
+
+    // No password: refuse with PasswordRequired + the exact message, not Zip or Malformed.
+    let err = read_with_password(&enc, None).unwrap_err();
+    assert_eq!(err, DocxError::PasswordRequired, "{err:?}");
+    assert!(err.to_string().contains(PASSWORD_REQUIRED), "{err}");
+    assert_eq!(err.to_string(), PASSWORD_REQUIRED);
+
+    // A password that doesn't fit: WrongPassword, a different error.
+    assert_eq!(read_with_password(&enc, Some("wrong")), Err(DocxError::WrongPassword));
+
+    // A package that is not encrypted reads through as a plain zip, so an encrypted one must
+    // not be mistaken for one.
+    assert!(wordcraft_docx::read(&pkg).is_ok());
+    assert!(wordcraft_docx::read(&enc).is_err());
+}
