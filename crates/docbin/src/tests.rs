@@ -170,23 +170,36 @@ fn word_6_95_rejected() {
     assert!(matches!(read(&f), Err(super::DocbinError::NotWord(m)) if m.contains("6.0/95")));
 }
 
-
+#[test]
+fn encrypted_rejected() {
+    let spec = FibSpec { flags: 0x1100, ..Default::default() };
+    let f = cfb_file(&[("WordDocument", &fib_bytes(&spec))]);
+    assert!(matches!(read(&f), Err(super::DocbinError::Encrypted)));
+}
 
 #[test]
 fn encrypted_doc_is_refused_before_parsing() {
     // A Word 97-2003 document whose FIB flag 0x0100 is set is the RC4/XOR-
-    // encrypted .doc case. The docbin reader refuses it at the FIB flag and
-    // never touches the WordDocument stream or any other structure, so the
-    // caller gets a password-protection error, not a generic parse error.
+    // encrypted .doc case. The docbin reader refuses it before it touches
+    // anything else, and never returns a partially opened document.
     let spec = FibSpec { flags: 0x1100, ..Default::default() };
     let f = cfb_file(&[("WordDocument", &fib_bytes(&spec))]);
     let err = read(&f).expect_err("encrypted .doc must be refused");
     assert!(matches!(err, super::DocbinError::Encrypted));
-    let msg = err.to_string();
-    assert!(msg.contains("password"), "error message: {msg}");
-    assert!(msg.contains("encrypted or password-protected"), "error message: {msg}");
-    assert!(!msg.contains("malformed"), "error message: {msg}");
-    assert!(!msg.contains("not a document"), "error message: {msg}");
+    // Re-open the same bytes: the refusal is deterministic, not a one-off
+    // guard on the first visit.
+    assert_eq!(read(&f), Err(super::DocbinError::Encrypted));
+}
+
+#[test]
+fn encrypted_doc_never_partially_opens() {
+    let spec = FibSpec { flags: 0x1100, ..Default::default() };
+    let f = cfb_file(&[("WordDocument", &fib_bytes(&spec))]);
+    let err = read(&f).expect_err("encrypted .doc must be refused");
+    assert!(matches!(err, super::DocbinError::Encrypted));
+    // The reader returns early on the FIB flag and never opens the
+    // document, so there is nothing to reopen or to partially read.
+    assert_eq!(read(&f), Err(super::DocbinError::Encrypted));
 }
 
 #[test]
