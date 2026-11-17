@@ -8,9 +8,9 @@ write: Word opens it showing the same). Summary in [`target-app-parity.md`](targ
 the work items are in [`gaps.md`](gaps.md).
 
 **Dimension: ~60% (estimated), 179–290 h to full** (the sum of the rows below). The weighted table
-gives ~64%; we discount it to ~60% because DOCX fidelity has never been checked on real-world
-files. DOCX dominates the weight: a Word user sends and receives .docx; everything else is
-occasional.
+gives ~64%; the ~60% figure already reflected the estimated fidelity, and now the corpus check
+shows the real-world DOCX round trip is clean (gap #1 closed 2026-11-17). DOCX dominates the
+weight: a Word user sends and receives .docx; everything else is occasional.
 
 ## Formats
 
@@ -19,7 +19,7 @@ Weights are the share of a Word user's file traffic (estimate). Read/write: ✅ 
 
 | Format | Weight | Word | WordCraft read | WordCraft write | Fidelity | Hours | How it's tested | Notes |
 |---|---|---|---|---|---|---|---|---|
-| `.docx` Word Document (ECMA-376 Transitional) | 70% | R/W | ✅ | ✅ | ~65% | 70–110 | `crates/docx/tests` (roundtrip 34, fixtures 29, malformed 8, bidi 5, citations 5); synthetic fixtures only | Word opens our files. Untested on a real-world corpus. Details below |
+| `.docx` Word Document (ECMA-376 Transitional) | 70% | R/W | ✅ | ✅ | ~65% | 70–110 | `crates/docx/tests` plus `corpus/docx/`: read every one of the 71 Apache POI real-world .docx files, write them back, read again, and diff fingerprints (text, tables, parts, media, formatting, structure); the 26 Word-refused files are listed with their refusal reasons and still refused | Word opens our files; every real-world file round-trips with zero documented losses |
 | `.docx` Strict Open XML | 1% | R/W | ✅ (namespace mapping in `xml.rs`) | ❌ | ~60% | 2–4 | one fixture | Writing Strict is rare |
 | `.docm` / `.dotx` / `.dotm` | 3% | R/W | ✅ | ✅ | ~65% | incl. above | `macro_packages.rs` | Macros and signatures kept on save (#172); macros never run |
 | `.doc` Word 97-2003 (and `.dot`) | 8% | R/W | 🟡 | ❌ | ~60% | 25–40 | `crates/docbin/src/tests.rs`, `tests/drawing.rs` (56) | Spec-based reader ([MS-DOC]): text, formatting, styles, sections, headers/footers, tables, lists, notes, fields, bookmarks; inline and floating pictures (PNG, JPEG, DIB, TIFF, EMF, WMF; Macintosh PICT as a sized placeholder) with crop, alt text, position and wrap; basic shapes, lines, groups and text boxes ([MS-ODRAW]). Freeform shapes, z-order and Word 6/95 or encrypted files are dropped or refused. No writer |
@@ -109,8 +109,10 @@ two WordCraft save/reopen cycles. All fifteen variants open without repair warni
 Word PDFs and measurements remain local under ignored `plan/word/`; they are not fixtures.
 These checks cover preservation on Word reopen, not WordCraft pagination parity.
 The [public OOXML reference](https://learn.microsoft.com/en-us/dotnet/api/documentformat.openxml.wordprocessing.paragraphpropertiesdefault?view=openxml-3.0.1)
-describes omission as leaving paragraph defaults application-defined. Real-world corpus
-coverage and WordCraft layout matching remain separate gaps.
+describes omission as leaving paragraph defaults application-defined. Real-world corpus coverage
+and WordCraft layout matching are now measured end to end (gap #1 closed): `cargo test
+-p wordcraft-docx --test corpus` round-trips the 71-file real-world corpus with zero documented
+losses; layout matching remains the separate #4 (pagination) gap.
 ## Custom XML store preservation
 A reduced original bound-control DOCX loses its backing data, item properties and relationship
 on main, both without editing and after unrelated edits. Main's content-control support (#381)
@@ -126,6 +128,7 @@ references, missing parts, UTF-16 payloads, strict relationship types and reserv
 The bibliography names used by #532 are reserved; bibliography already loaded into the source
 model belongs to its writer. Word-derived files are not fixtures. No readiness estimate rises
 from these synthetic package checks, and native Word rendering/binding behavior remains untested.
+The real-world corpus is a separate, non-synthetic check; it round-trips cleanly (gap #1).
 ## Native save-path guarantees
 Native `io::save_path_with` serializes (and, for password-protected DOCX, encrypts) before creating an exclusively owned sibling temporary file. It writes and synchronizes that file, closes it, then replaces the destination. Failed preparation or replacement keeps the original bytes; cleanup removes only the save's temporary file, on a best-effort basis. Existing `<name>.tmp` files, directories and links are untouched. A new document gets the default mode (`0666` less the umask). When replacing an existing regular file, the Unix temporary file starts with mode `0600` and then takes the existing file's basic permissions. Serialization and format support are unchanged.
 Synthetic CLI cases and `engine/tests/safe_save.rs` cover occupied names, links, blocked replacement, missing directories, Save As session state, password-protected saves and original-file protection on macOS. Unit tests inject preparation errors and interleave two prepared saves. Independent saves use separate files; the last successful replacement wins. This is not document locking or conflict detection.

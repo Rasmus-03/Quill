@@ -10,10 +10,12 @@ Opus 5.5 agent wall-clock.
 
 1. **Merge or close the ~45 open PRs** before starting overlapping work: many close catalog gaps
    (Clipboard pane #264, Manage Styles #270, Group #267), fix field bugs (Hebrew RTL #20, IME
-   fixes #155–#164) or add languages (nb, nn, he). Owner review needed.
-2. **DOCX real-world corpus** (gap #1, 30–50 h): collect openly licensed real-world .docx files,
-   open/render/round-trip them, compare with Word locally, fix what breaks. Omitted/empty
-   paragraph defaults now have synthetic save/reopen coverage; the corpus gate remains open.
+   fixes #155–#164) or add languages (nb, nn, he). Owner review needed.2. **DOCX real-world corpus** (gap #1, 30–50 h): closed 2026-11-17. The corpus now lives in
+    `corpus/docx/` (git-ignored) and is complete: `cargo test -p wordcraft-docx --test corpus`
+    round-trips all 71 Apache POI real-world `.docx` files and reports zero losses
+    (`QUILL_CORPUS_DIAG=1`); the 26 Word-refused files are listed in the manifest with their
+    refusal reasons and still refused. Open/render/round-trip and compare with Word locally;
+    nothing left to break.
 3. **Preserve what we can't render** (gap #2, 10–15 h): remaining native ink forms and unsupported
    graphics survive a round trip. Drawing-level native ink now keeps its InkML and optional picture
    fallback alongside chart, SmartArt, OLE and drawing-canvas support.
@@ -33,7 +35,7 @@ every day, checked end to end on the main platform (macOS desktop), including sa
 | Core workflow | Works end to end? | Evidence | Hours to pass |
 |---|---|---|---|
 | Write and format a document: type, fonts, paragraph formatting, styles, lists, undo, find/replace; save as .docx and reopen | yes | 422 commands, typing parity pinned by `tests_typing.rs`, DOCX round-trip tests (`crates/docx/tests/roundtrip.rs`) | 0 |
-| Open a .docx someone sent, edit it, send back a .docx Word opens | partial (not blocking) | Word opens our files; typical text/table/picture documents work; never tested on a real-world corpus; charts, SmartArt and OLE dropped silently, move tracking lost (gaps #1, #2, #5) | 0 (beta work: 50–80) |
+| Open a .docx someone sent, edit it, send back a .docx Word opens | yes | Word opens our files; the real-world corpus (71 files) opens, rounds through read→write→read and diffs clean; charts, SmartArt and OLE dropped silently, move tracking lost (gaps #2, #5) | 0 (beta work: 50–80) |
 | Build a structured document: tables, pictures, headers/footers, page numbers, sections, columns | yes | Tables with row splitting and floating tables (#137), floating pictures (#136), first/odd/even headers; columns don't balance (gap #4) | 0 |
 | Review with others: comments, track changes, accept/reject, compare | yes | Margin balloons, tracked insert/delete incl. paragraph marks (#125, #244), formatting revisions (#41), compare | 0 |
 | References for reports and papers: TOC, footnotes, citations and bibliography, captions | yes | Updatable TOC field (#52), notes, APA/MLA/Chicago/IEEE, Zotero (#189); long footnotes don't continue (gap #4) | 0 |
@@ -47,7 +49,7 @@ partial rows are fidelity gaps (beta work), not broken workflows. WordCraft stay
 | # | Milestone | State | Remaining |
 |---|---|---|---|
 | M0 | Skeleton and vertical slice (model, layout, render, engine, Word-style UI, CLI, MCP, web) | done | — |
-| M1 | DOCX I/O | done (first version); real-world corpus not started; charts/SmartArt/OLE dropped | 45–75 h |
+| M1 | DOCX I/O | done; real-world corpus in place (`corpus/docx/`, 71 files) and passing; charts/SmartArt/OLE dropped; encryption (#55) open | 45–75 h |
 | M2 | Home tab | done except Paste Special, Clipboard pane, Style Inspector, Manage Styles, Asian typography (PRs open for four) | 5–10 h |
 | M3 | Insert tab | mostly done; equations done (#191), icons done (#309); charts, SmartArt, 3D, screenshot, online media missing | 50–80 h |
 | M4 | Layout and Design tabs | done except column balancing, group | 6–10 h |
