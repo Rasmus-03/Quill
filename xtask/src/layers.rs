@@ -43,10 +43,11 @@ pub const TABLE: &[(&str, Class)] = &[
     ("docx", Class::Layer(2)),
     ("docbin", Class::Layer(2)),
     ("formats", Class::Layer(2)),
-    ("cloud", Class::Layer(3)),
     ("render", Class::Layer(3)),
     ("pdf", Class::Layer(3)),
+    ("cloud", Class::Layer(3)),
     ("cloud-server", Class::Layer(3)),
+    ("cloud_server", Class::Layer(3)),
     ("engine", Class::Layer(4)),
     ("mcp", Class::Layer(5)),
     ("zotero", Class::Layer(5)),
@@ -81,7 +82,7 @@ pub const UI_CRATES: &[&str] = &["egui", "eframe", "winit", "egui_kittest", "rfd
 pub const UI_MIN_LAYER: u8 = 6;
 
 pub fn short_name(pkg: &str) -> &str {
-    pkg.strip_prefix("wordcraft-").unwrap_or(pkg)
+    pkg.strip_prefix("wordcraft-").or_else(|| pkg.strip_prefix("wordcraft_")).unwrap_or(pkg)
 }
 
 pub fn classify(pkg: &str) -> Option<Class> {
@@ -317,24 +318,24 @@ mod tests {
             assert!(check(&[c(app, &[("egui", Normal, false), ("wordcraft-ui-egui", Normal, true)])]).is_empty());
         }
     }
+}
 
-    #[test]
-    fn metadata_parsing() {
-        let meta: Value = serde_json::from_str(
-            r#"{"packages":[
+#[test]
+fn metadata_parsing() {
+    let meta: Value = serde_json::from_str(
+        r#"{"packages":[
                 {"name":"wordcraft-doc","dependencies":[
                     {"name":"wordcraft-geom","kind":null,"path":"/x/crates/geom"},
                     {"name":"serde","kind":null},
                     {"name":"proptest","kind":"dev"}]},
                 {"name":"wordcraft-geom","dependencies":[]}
             ]}"#,
-        )
-        .unwrap();
-        let g = from_metadata(&meta).unwrap();
-        assert_eq!(g.len(), 2);
-        let doc = g.iter().find(|c| c.name == "wordcraft-doc").unwrap();
-        assert!(doc.deps[0].workspace && !doc.deps[1].workspace);
-        assert_eq!(doc.deps[2].kind, Dev);
-        assert!(check(&g).is_empty());
-    }
+    )
+    .unwrap();
+    let g = from_metadata(&meta).unwrap();
+    assert_eq!(g.len(), 2);
+    let doc = g.iter().find(|c| c.name == "wordcraft-doc").unwrap();
+    assert!(doc.deps[0].workspace && !doc.deps[1].workspace);
+    assert_eq!(doc.deps[2].kind, DepKind::Dev);
+    assert!(check(&g).is_empty());
 }
