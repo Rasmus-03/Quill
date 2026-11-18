@@ -53,10 +53,13 @@ impl Reader<'_> {
     pub(super) fn keep_embedded(&mut self, el: &El, rels: &Rels, extra: &[String]) -> Option<Arc<Embedded>> {
         let mut ids = Vec::new();
         rel_ids(el, &mut ids, 0)?;
+        println!("keep_embedded ids={:?}", ids);
         let mut refs = Vec::new();
         for id in &ids {
             let rel = rels.by_id(id)?;
+            println!("keep_embedded rel id={} target={}", id, rel.target);
             if !rel.external && !self.keep_part_tree(&rel.target) {
+                println!("keep_embedded keep_part_tree failed for {}", rel.target);
                 return None;
             }
             refs.push(EmbeddedRef { id: id.clone(), kind: rel.kind.clone(), target: rel.target.clone(), external: rel.external });
@@ -68,7 +71,9 @@ impl Reader<'_> {
                 refs.push(EmbeddedRef { id: id.clone(), kind: rel.kind.clone(), target: rel.target.clone(), external: false });
             }
         }
+        println!("keep_embedded refs={:?}", refs);
         let xml = standalone_xml(el)?;
+        println!("keep_embedded standalone_xml ok");
         Some(Arc::new(Embedded { xml, refs }))
     }
 

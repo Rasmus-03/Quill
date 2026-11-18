@@ -695,6 +695,41 @@ impl Writer<'_> {
                             let id = self.shape_docpr(extra.id);
                             self.wsp(w, &c.obj, Some(&id), at, rels, depth);
                         }
+                        InlineObject::Graphic { w: gw, h: gh, float, graphic, .. } => {
+                            // Native-ink group member: write a w:drawing whose a:graphicData
+                            // points at wordprocessingInk, so readers that handle ambient
+                            // mc:AlternateContent (and the bare-w:drawing path in group_members)
+                            // both keep the source across a round-trip.
+                            if let Some(src) = graphic.source.as_deref() {
+                                if let Some(root) = self.embedded_tree(src, rels, None) {
+                                    let (cx, cy) = (emu(gw.max(0.0)), emu(gh.max(0.0)));
+                                    w.open("w:drawing", &[]);
+                                    if float.wrap == Wrap::Inline {
+                                        w.open("wp:inline", &[]);
+                                    } else {
+                                        w.open("wp:anchor", &[]);
+                                        w.empty("wp:simplePos", &[("x", "0"), ("y", "0")]);
+                                    }
+                                    w.empty("wp:extent", &[("cx", &cx), ("cy", &cy)]);
+                                    w.empty("wp:docPr", &[("id", &self.next_docpr()), ("name", "Group ink")]);
+                                    w.open("a:graphic", &[("uri", "http://schemas.openxmlformats.org/drawingml/2006/main")]);
+                                    w.open("a:graphicData", &[("uri", "http://schemas.microsoft.com/office/word/2010/wordprocessingInk")]);
+                                    // The group member's a:graphicData must carry the InkML part
+                                    // exactly like the paragraph writer does.
+                                    w.raw(root.find("a:graphicData").map(|gd| gd.to_xml()).unwrap_or_default().as_str());
+                                    w.close("a:graphicData");
+                                    w.close("a:graphic");
+                                    if float.wrap == Wrap::Inline {
+                                        w.close("wp:inline");
+                                    } else {
+                                        w.close("wp:anchor");
+                                    }
+                                    w.close("w:drawing");
+                                }
+                            } else {
+                                // No source: drop the member (unrecoverable ink).
+                            }
+                        }
                         _ => {}
                     }
                 }

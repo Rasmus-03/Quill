@@ -6,7 +6,7 @@ use wordcraft_doc::connector::{ConnEnd, ShapeExtra};
 use wordcraft_doc::control::{ContentControl, ControlKind, ControlWrap};
 use wordcraft_doc::effects::{Glow, Shadow, ShapeEffects};
 use wordcraft_doc::graphic::{Embedded, Graphic, GraphicItem, GraphicKind};
-use wordcraft_doc::para::{AltText, Anchor, Float, FloatAlign, NoteKind, ShapeKind, Wrap, WrapText, cap_alt};
+use wordcraft_doc::para::{AltText, Anchor, Float, FloatAlign, GroupChild, NoteKind, ShapeKind, Wrap, WrapText, cap_alt};
 use wordcraft_doc::props::{CharProps, NumChange, PropChange, Rgb};
 use wordcraft_doc::table::{Cell, MAX_COLS, MAX_ROWS, Row, Table};
 use wordcraft_doc::{Block, Blocks, InlineObject, Paragraph, PartKind, RevisionKind, Run, para_block};
@@ -901,6 +901,7 @@ impl Reader<'_> {
     // ---- drawings ----
 
     fn read_drawing(&mut self, sc: &mut StoryCtx, d: &El, rels: &Rels) -> Option<InlineObject> {
+        println!("read_drawing drawing uri={:?}", d.find("a:graphicData").and_then(|gd| gd.attr("uri")));
         let (c, anchored) = match d.child("wp:inline") {
             Some(c) => (c, false),
             None => (d.child("wp:anchor")?, true),
@@ -921,13 +922,18 @@ impl Reader<'_> {
         // Checked by URI before the blip search: a diagram's data can hold a blip further down.
         let uri = gd.attr("uri").unwrap_or("");
         if uri == INK_URI {
+            println!("read_drawing ink: w14:contentPart found");
             let content = gd.child("w14:contentPart")?;
             let part = super::part_of(rels, content.attr("r:id")?, INK_REL)?;
             let pkg = self.pkg;
             if self.content_types.get_or_insert_with(|| ContentTypes::read(pkg)).of(&part) != Some("application/inkml+xml") {
+                println!("read_drawing ink: content type mismatch");
                 return None;
             }
+            println!("read_drawing ink: part_of={:?}", part);
             let source = self.keep_embedded(c.child("a:graphic")?, rels, &[])?;
+            println!("read_drawing ink: source kept");
+            let _ = source;
             float.set_spin(xfrm_spin(content.child("w14:xfrm")));
             let (px, py) = float.spin_pad(w, h);
             for (e, p) in float.effect.iter_mut().zip([px, py, px, py]) {
@@ -1150,6 +1156,7 @@ impl Reader<'_> {
 
     /// The members of group `g` into `out`, mapped into the outermost group's space by `t`
     /// (x0, y0, sx, sy: outer = x0 + inner × sx).
+    #[allow(clippy::collapsible_if)]
     fn group_members(
         &mut self,
         sc: &mut StoryCtx,
@@ -1161,16 +1168,47 @@ impl Reader<'_> {
     ) {
         let (x0, y0, sx, sy) = t;
         for e in g.els() {
+            if e.name == "mc:AlternateContent" || e.name == "w:drawing" || e.name == "wpg:grpSp" || e.name == "wpg:wgp" {
+                println!("group_members elem: {:?} depth={} count", e.name, depth);
+            }
             if out.len() >= wordcraft_doc::para::MAX_GROUP_CHILDREN {
                 return;
             }
             let e = match e.name.as_str() {
-                "mc:AlternateContent" => match children_of_choice(e).and_then(|c| c.els().next()) {
-                    Some(c) => c,
-                    None => continue,
-                },
+                "mc:AlternateContent" => {
+                    // Native-ink `mc:AlternateContent`: keep the ink Graphic, preserving its InkML
+                    // source, instead of treating the choice as a generic member (which would
+                    // otherwise be dropped as an unknown element).
+                    if let Some(choice) = children_of_choice(e).filter(|c| c.name == "mc:Choice").and_then(|c| c.child("w:drawing")) {
+                        if let Some(uri) = choice.find("a:graphicData").map(|gd| gd.attr("uri")) {
+                            if uri == Some(INK_URI) {
+                                if let Some(o) = self.read_ink_alternate(sc, e, rels) {
+                                    out.push(GroupChild { x: 0.0, y: 0.0, obj: o });
+                                    continue;
+                                }
+                            }
+                        }
+                    }
+                    // Fall through: non-ink alternate content (e.g. picture fallback) handled
+                    // by the generic member path below.
+                    match children_of_choice(e).and_then(|c| c.els().next()) {
+                        Some(c) => c,
+                        None => continue,
+                    }
+                }
                 _ => e,
             };
+            // Native-ink drawing (standalone, not in an mc:AlternateContent) is a Graphic,
+            // not a shape: read it as an inline object.
+            if e.name == "w:drawing" && e.find("a:graphicData")
+                .and_then(|gd| gd.attr("uri"))
+                == Some(INK_URI)
+            {
+                if let Some(o) = self.read_drawing(sc, e, rels) {
+                    out.push(GroupChild { x: 0.0, y: 0.0, obj: o });
+                    continue;
+                }
+            }
             let sppr = match e.name.as_str() {
                 "wps:wsp" => e.child("wps:spPr"),
                 "pic:pic" => e.child("pic:spPr"),
