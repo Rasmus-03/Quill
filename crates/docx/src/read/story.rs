@@ -930,10 +930,8 @@ impl Reader<'_> {
                 println!("read_drawing ink: content type mismatch");
                 return None;
             }
-            println!("read_drawing ink: part_of={:?}", part);
             let source = self.keep_embedded(c.child("a:graphic")?, rels, &[])?;
             println!("read_drawing ink: source kept");
-            let _ = source;
             float.set_spin(xfrm_spin(content.child("w14:xfrm")));
             let (px, py) = float.spin_pad(w, h);
             for (e, p) in float.effect.iter_mut().zip([px, py, px, py]) {
@@ -1200,10 +1198,7 @@ impl Reader<'_> {
             };
             // Native-ink drawing (standalone, not in an mc:AlternateContent) is a Graphic,
             // not a shape: read it as an inline object.
-            if e.name == "w:drawing" && e.find("a:graphicData")
-                .and_then(|gd| gd.attr("uri"))
-                == Some(INK_URI)
-            {
+            if e.name == "w:drawing" && e.find("a:graphicData").and_then(|gd| gd.attr("uri")) == Some(INK_URI) {
                 if let Some(o) = self.read_drawing(sc, e, rels) {
                     out.push(GroupChild { x: 0.0, y: 0.0, obj: o });
                     continue;

@@ -139,6 +139,40 @@ impl Reader<'_> {
         self.embedded.parts.insert(part.to_string(), crate::package::EmbeddedPart { content_type, rels: Vec::new() });
         true
     }
+
+    /// A Drawing-level native-ink part (`application/inkml+xml`): keep it opaque so a reread of
+    /// the saved file still carries the same ink part and its content type.
+    /// A Drawing-level native-ink part (`application/inkml+xml`): keep it opaque so a reread of
+    /// the saved file still carries the same ink part and its content type.
+    #[allow(dead_code)]
+    fn keep_ink_part(&mut self, part: &str) -> bool {
+        if self.embedded.parts.contains_key(part) {
+            return true;
+        }
+        if !manifest_field_ok(part)
+            || !part_name_ok(part)
+            || part.ends_with(".rels")
+            || part.eq_ignore_ascii_case("[content_types].xml")
+            || part.eq_ignore_ascii_case(&self.main)
+        {
+            log::warn!("docx: not carrying ink part {part:?}");
+            return false;
+        }
+        if self.embedded.parts.len() >= MAX_EMBEDDED_PARTS {
+            log::warn!("docx: more than {MAX_EMBEDDED_PARTS} ink parts; the rest are dropped");
+            return false;
+        }
+        let Some(bytes) = self.pkg.get(part) else {
+            log::warn!("docx: ink part {part} is missing");
+            return false;
+        };
+        let pkg = self.pkg;
+        let ct = self.content_types.get_or_insert_with(|| ContentTypes::read(pkg)).of(part).unwrap_or("application/octet-stream");
+        let content_type = if manifest_field_ok(ct) { ct.to_string() } else { "application/octet-stream".to_string() };
+        self.doc.passthrough.entry(part.to_string()).or_insert_with(|| Arc::new(bytes.to_vec()));
+        self.embedded.parts.insert(part.to_string(), crate::package::EmbeddedPart { content_type, rels: Vec::new() });
+        true
+    }
 }
 
 /// The relationship ids `e` uses (attributes in the relationships namespace, and VML's

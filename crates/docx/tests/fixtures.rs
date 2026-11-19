@@ -1854,7 +1854,7 @@ fn native_ink_in_group_survives_read_back() {
             .expect("no group in any paragraph objects");
         let InlineObject::Group { children, .. } = group else { panic!("{:?}", group) };
         let InlineObject::Graphic { graphic, .. } = &children[0].obj else { panic!("{:?}", children[0].obj) };
-        assert_eq!((*graphic).kind, GraphicKind::Ink);
+        assert_eq!(graphic.kind, GraphicKind::Ink);
         assert!(graphic.source.is_some());
 
         // A second save must re-emit the InkML content part.
@@ -1862,9 +1862,4 @@ fn native_ink_in_group_survives_read_back() {
         let files = unzip(&out);
         check_ink(&files);
     }
-}
-
-fn rt(doc: &Document) -> Document {
-    let bytes = wordcraft_docx::write(doc).expect("write");
-    wordcraft_docx::read(&bytes).expect("read")
 }
