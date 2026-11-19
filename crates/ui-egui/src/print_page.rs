@@ -88,8 +88,17 @@ fn page_texture(app: &WordApp, ctx: &egui::Context, lay: &DocLayout, page: usize
     let pg = lay.pages.get(page)?;
     let scale = (width / pg.w.max(1.0) * ctx.pixels_per_point()).clamp(0.05, 4.0);
     let img = wordcraft_render::render_page(&app.session.doc, pg, scale, &Default::default());
-    let color = egui::ColorImage::from_rgba_unmultiplied([img.width as usize, img.height as usize], &img.to_straight());
-    let tex = ctx.load_texture("print_page_preview", color, egui::TextureOptions::LINEAR);
+    // A failed/empty raster never takes the app down: log it, keep the previous texture when we
+    // have one (driver- or GPU-limited hardware: #170), else show an empty preview.
+    let ci = if img.width == 0 || img.height == 0 || img.pixels.is_empty() {
+        if let Some((_, t)) = ctx.data(|d| d.get_temp::<((u64, usize, u32, u32), TextureHandle)>(id)) {
+            return Some(t.clone());
+        }
+        egui::ColorImage::from_rgba_unmultiplied([1usize, 1usize], &[255, 255, 255, 255])
+    } else {
+        egui::ColorImage::from_rgba_unmultiplied([img.width as usize, img.height as usize], &img.to_straight())
+    };
+    let tex = ctx.load_texture("print_page_preview", ci, egui::TextureOptions::LINEAR);
     ctx.data_mut(|d| d.insert_temp(id, (key, tex.clone())));
     Some(tex)
 }

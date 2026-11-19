@@ -489,7 +489,9 @@ pub fn render_text_line(face: &wordcraft_fonts::FontFace, text: &str, size: f32,
     let baseline = margin + ascent * k;
     let mut x = margin;
     for g in wordcraft_fonts::shape(face, text, &[], |c| c) {
-        let o = face.glyph_outline(g.gid);
+        // Glyph outlines come straight from the face, never the shared cache, so a face read
+        // just for a preview leaves nothing behind once the raster completes (#848).
+        let o = Arc::new(face.glyph_outline(g.gid));
         ctx.set_transform(view * Affine::translate((x + g.x_offset as f64 * k, baseline - g.y_offset as f64 * k)) * Affine::scale(k));
         ctx.fill_path(&o);
         x += g.x_advance as f64 * k;
