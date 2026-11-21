@@ -3103,7 +3103,11 @@ fn place_table(ctx: &mut Ctx, pb: &mut PageBuilder, t: &wordcraft_doc::Table, bl
         // so the edge sits a cell margin further out.
         // Word 2013+ (compat mode 15) puts the table border at the margin — no first-cell
         // offset, like the table-in-flow case below.
-        let legacy = if ctx.doc.settings.compat_mode < 15 && f.is_some() { table::first_cell_left_margin(ctx, t) } else { 0.0 };
+        let legacy = if ctx.doc.settings.compat_mode < 15 && matches!(f.h_rel, Anchor::Margin | Anchor::Page) {
+            table::first_cell_left_margin(ctx, t)
+        } else {
+            0.0
+        };
         let h: f32 = tl.rows.iter().map(|r| r.height).sum();
         if h <= pb.uncapped_bottom() - pb.top + 0.01 {
             place_floating_table(pb, &tl, &f, legacy, block, body_top);
