@@ -260,6 +260,10 @@ pub enum Dialog {
     Zoom {
         percent: f32,
     },
+    DateTime {
+        format: String,
+        update: bool,
+    },
     Watermark {
         text: String,
         diagonal: bool,
@@ -954,6 +958,7 @@ impl Dialog {
             Dialog::Bookmark { .. } => "bookmark",
             Dialog::WordCount { .. } => "wordCount",
             Dialog::Zoom { .. } => "zoom",
+            Dialog::DateTime { .. } => "dateTime",
             Dialog::Watermark { .. } => "watermark",
             Dialog::Phonetic { .. } => "phonetic",
             Dialog::NewStyle { .. } => "newStyle",
@@ -1180,6 +1185,7 @@ impl Dialog {
             "bookmark" => Dialog::Bookmark { name: String::new() },
             "wordCount" => Dialog::WordCount { stats: app.session.run("review.wordCount", &json!({})).unwrap_or_default() },
             "zoom" => Dialog::Zoom { percent: (app.session.view.zoom * 100.0).round() },
+            "dateTime" => Dialog::DateTime { format: "M/d/yyyy".into(), update: false },
             "watermark" => Dialog::Watermark { text: "CONFIDENTIAL".into(), diagonal: true },
             "phonetic" => {
                 let v = wordcraft_engine::cmd::phonetic::state(&app.session);
@@ -1424,6 +1430,7 @@ pub fn show(app: &mut WordApp, ctx: &egui::Context) {
         Dialog::Bookmark { .. } => "Bookmark",
         Dialog::WordCount { .. } => "Word Count",
         Dialog::Zoom { .. } => "Zoom",
+        Dialog::DateTime { .. } => "Date & Time",
         Dialog::Watermark { .. } => "Custom Watermark",
         Dialog::Phonetic { .. } => "Phonetic Guide",
         Dialog::NewStyle { .. } => "Create New Style",
@@ -2140,6 +2147,22 @@ fn body(app: &mut WordApp, ui: &mut Ui, d: &mut Dialog) -> bool {
             let (ok, cancel) = buttons(ui, tl!("OK"));
             if ok {
                 let _ = app.run("view.zoom", json!({"value": *percent}));
+            }
+            ok || cancel
+        }
+        Dialog::DateTime { format, update } => {
+            const FORMATS: [&str; 6] = ["M/d/yyyy", "MMMM d, yyyy", "dddd, MMMM d, yyyy", "yyyy-MM-dd", "h:mm AM/PM", "M/d/yyyy h:mm AM/PM"];
+            let preview = wordcraft_engine::cmd::insert::format_date(format);
+            egui::ComboBox::from_id_salt("date_time_format").selected_text(format!("{format}   {preview}")).show_ui(ui, |ui| {
+                for value in FORMATS {
+                    let preview = wordcraft_engine::cmd::insert::format_date(value);
+                    ui.selectable_value(format, value.to_string(), format!("{value}   {preview}"));
+                }
+            });
+            ui.checkbox(update, tl!("Update automatically"));
+            let (ok, cancel) = buttons(ui, tl!("OK"));
+            if ok {
+                let _ = app.run("insert.dateTime", json!({"format": format, "update": *update}));
             }
             ok || cancel
         }
@@ -3537,6 +3560,13 @@ mod tests {
             assert!(matches!(&app.dialog, Some(Dialog::Find { tab: t, .. }) if *t == tab), "{name}");
             assert_eq!(app.dialog.as_ref().map(|d| d.name()), Some(name));
         }
+    }
+
+    #[test]
+    fn date_time_opens_its_insert_dialog() {
+        let mut app = app_with("");
+        let _ = app.run("ui.dialog", json!({"name": "dateTime"}));
+        assert!(matches!(app.dialog, Some(Dialog::DateTime { .. })));
     }
 
     fn app_with(text: &str) -> WordApp {
