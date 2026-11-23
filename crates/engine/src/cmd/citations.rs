@@ -925,6 +925,11 @@ fn ref_targets(s: &Session, to: &str) -> Vec<(String, Pos)> {
     targets
 }
 
+/// Labels of cross-reference targets of a kind, in document order.
+pub fn cross_reference_targets(s: &Session, to: &str) -> Vec<String> {
+    ref_targets(s, to).into_iter().map(|(label, _)| label).collect()
+}
+
 /// The hidden `_Ref` bookmark around the target paragraph at `pos` (its label and number only
 /// when `number_only`), reusing one already there. Returns its name and `at` moved past the
 /// bookmark marks inserted before it.

@@ -831,7 +831,7 @@ fn insert(app: &mut WordApp, ui: &mut Ui) {
         stack(ui, |ui| {
             small(ui, app, "link", Some("Link"), "Link", "ui.dialog", json!({"name": "link"}), false);
             small(ui, app, "bookmark", Some("Bookmark"), "Bookmark", "ui.dialog", json!({"name": "bookmark"}), false);
-            small(ui, app, "crossRef", Some("Cross-reference"), "Cross-reference", "insert.crossReference", json!({}), false);
+            small(ui, app, "crossRef", Some("Cross-reference"), "Cross-reference", "ui.dialog", json!({"name": "crossReference"}), false);
         });
     });
     group(ui, "Comments", None, app, |ui, app| {
@@ -1389,7 +1389,7 @@ fn references(app: &mut WordApp, ui: &mut Ui) {
                 false,
             );
             small(ui, app, "update", Some("Update Table"), "Update Table of Figures", "references.updateFigures", json!({}), false);
-            small(ui, app, "crossRef", Some("Cross-reference"), "Cross-reference", "insert.crossReference", json!({}), false);
+            small(ui, app, "crossRef", Some("Cross-reference"), "Cross-reference", "ui.dialog", json!({"name": "crossReference"}), false);
         });
     });
     group(ui, "Index", None, app, |ui, app| {
