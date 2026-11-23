@@ -18,6 +18,8 @@
 //!   dictionary installed on the system (VERO and friends; not bundled), suggestions tuned for
 //!   Portuguese (missing accents, `seje`/`seja` confusions, missing spaces), conservative
 //!   grammar rules with Portuguese messages, and `hyph-utf8`'s Portuguese patterns.
+//! - **Thai** ([`ProofLang::Th`], module [`th`]): Thai-aware segmentation and spelling against
+//!   kham-core's CC0 Thai word list; grammar and hyphenation are not included.
 //! - **Other languages** ([`ProofLang::Other`]): no spelling or grammar marks, like Word without
 //!   the language's proofing tools.
 //! - **Hyphenation** ([`hyphen`]): dictionary, Liang patterns (English, Polish, Portuguese),
@@ -35,6 +37,7 @@ pub mod lang;
 pub mod patterns;
 pub mod pl;
 pub mod pt;
+pub mod th;
 
 use std::collections::HashSet;
 use std::ops::Range;
@@ -482,6 +485,9 @@ pub fn check_spelling_in(text: &str, lang: ProofLang) -> Vec<Issue> {
     if !lang.is_proofed() {
         return Vec::new();
     }
+    if lang == ProofLang::Th {
+        return th::unknown_words(text).into_iter().filter_map(|r| spelling_issue(text, r.start, r.end, lang, &Options::default())).collect();
+    }
     words(text).into_iter().filter_map(|(a, b)| spelling_issue(text, a, b, lang, &Options::default())).collect()
 }
 
@@ -499,6 +505,7 @@ fn spelling_issue(text: &str, a: usize, b: usize, lang: ProofLang, opts: &Option
     let message = match lang {
         ProofLang::Pl => "Możliwy błąd pisowni",
         ProofLang::Pt => "Possível erro de ortografia",
+        ProofLang::Th => "อาจสะกดผิด",
         _ => "Possible spelling mistake",
     };
     Some(Issue { start: a, end: b, kind: IssueKind::Spelling, message: message.into(), suggestions: Vec::new(), lang })
@@ -515,6 +522,7 @@ pub fn is_correct_in_with(word: &str, lang: ProofLang, opts: &Options) -> bool {
         ProofLang::En => is_correct_with(word, opts),
         ProofLang::Pl => accepted_by_options(word, opts) || pl::is_correct(word),
         ProofLang::Pt => accepted_by_options(word, opts) || pt::is_correct(word),
+        ProofLang::Th => th::is_correct(word) || (accepted_by_options(word, opts) && !word.chars().any(|c| ('\u{0E00}'..='\u{0E7F}').contains(&c))),
         ProofLang::Bg | ProofLang::Other => true,
     }
 }
@@ -525,6 +533,7 @@ pub fn suggest_in(word: &str, max: usize, lang: ProofLang) -> Vec<String> {
         ProofLang::En => suggest(word, max),
         ProofLang::Pl => pl::suggest(word, max),
         ProofLang::Pt => pt::suggest(word, max),
+        ProofLang::Th => th::suggest(word, max),
         ProofLang::Bg | ProofLang::Other => Vec::new(),
     }
 }
@@ -537,7 +546,7 @@ pub fn check_grammar_in(text: &str, lang: ProofLang) -> Vec<Issue> {
         ProofLang::En => check_grammar(text),
         ProofLang::Pl => pl::grammar::check(text),
         ProofLang::Pt => pt::grammar::check(text),
-        ProofLang::Bg | ProofLang::Other => Vec::new(),
+        ProofLang::Bg | ProofLang::Th | ProofLang::Other => Vec::new(),
     }
 }
 
@@ -568,7 +577,27 @@ pub fn check_text_with(text: &str, spans: &[(Range<usize>, ProofLang)], opts: &O
         let k = merged.partition_point(|(r, _)| r.end <= i);
         merged.get(k).filter(|(r, _)| r.start <= i).map_or(ProofLang::En, |s| s.1)
     };
-    let mut v: Vec<Issue> = words(text).into_iter().filter_map(|(a, b)| spelling_issue(text, a, b, lang_at(a), opts)).collect();
+    let mut v = Vec::new();
+    for (a, b) in words(text) {
+        let lang = lang_at(a);
+        if lang != ProofLang::Th
+            && let Some(issue) = spelling_issue(text, a, b, lang, opts)
+        {
+            v.push(issue);
+        }
+    }
+    for (range, lang) in &merged {
+        if *lang != ProofLang::Th {
+            continue;
+        }
+        if let Some(thai) = text.get(range.clone()) {
+            v.extend(th::unknown_words(thai).into_iter().filter_map(|r| {
+                let start = range.start.checked_add(r.start)?;
+                let end = range.start.checked_add(r.end)?;
+                spelling_issue(text, start, end, *lang, opts)
+            }));
+        }
+    }
     if !grammar {
         v.sort_by_key(|i| (i.start, i.end));
         return v;
@@ -990,6 +1019,27 @@ mod tests {
     }
 
     #[test]
+    fn thai_spelling_segments_continuous_text_and_keeps_offsets() {
+        let text = "ฉันกินข้าว สวัดสี";
+        let issues = check_spelling_in(text, ProofLang::Th);
+        assert_eq!(flagged(text, &issues), ["ส"]);
+        assert_eq!(issues[0].lang, ProofLang::Th);
+        assert!(suggest_in("สวัดสี", 5, ProofLang::Th).contains(&"สวัสดี".to_string()));
+        assert!(check_grammar_in(text, ProofLang::Th).is_empty());
+
+        let mixed = "hello ฉันกินข้าว สวัดสี";
+        let start = mixed.find("ฉัน").unwrap();
+        let end = mixed.len();
+        let issues = check_text(mixed, &[(start..end, ProofLang::Th)]);
+        assert_eq!(flagged(mixed, &issues), ["ส"]);
+    }
+
+    #[test]
+    fn thai_has_no_hyphenation_points() {
+        assert!(hyphen::hyphen_points_in("ภาษาไทย", &hyphen::Limits::default(), ProofLang::Th).is_empty());
+    }
+
+    #[test]
     fn mixed_language_paragraphs_check_each_run_in_its_language() {
         pl::test_dict::install();
         // A Polish paragraph quoting English: English spelling and rules inside the quote only.
@@ -1025,7 +1075,7 @@ mod tests {
             let _ = has_dictionary(Some(&s));
             let _ = is_correct_for(&s, Some(&s));
             let _ = hyphen::hyphen_points(&s, &hyphen::Limits::default());
-            for lang in [ProofLang::En, ProofLang::Pl, ProofLang::Pt, ProofLang::Other] {
+            for lang in [ProofLang::En, ProofLang::Pl, ProofLang::Pt, ProofLang::Th, ProofLang::Other] {
                 let _ = check_spelling_in(&s, lang);
                 let _ = check_grammar_in(&s, lang);
                 let _ = is_correct_in(&s, lang);

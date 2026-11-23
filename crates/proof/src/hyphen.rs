@@ -113,6 +113,9 @@ fn core_breaks(core: &[char], lang: ProofLang) -> (Vec<usize>, Source) {
     if lang == ProofLang::Pl {
         return core_breaks_pl(core);
     }
+    if lang == ProofLang::Th && core.iter().all(|c| ('\u{0E00}'..='\u{0E7F}').contains(c)) {
+        return (Vec::new(), Source::None);
+    }
     // Bulgarian words follow the Bulgarian syllable rules; Latin-script words in a Bulgarian run
     // (`WordCraft`, `email`) are hyphenated as English, as in any other language.
     if lang == ProofLang::Bg && core.iter().all(|&c| crate::bg::is_letter(c)) {
