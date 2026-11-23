@@ -99,9 +99,6 @@ pub(crate) fn note(app: &mut WordApp, command: &str, started: Started, result: &
         },
         _ => return false,
     };
-    if app.session.rev() == started.rev || app.session.document_id() != started.document || started.in_math || app.session.math.is_some() {
-        return false;
-    }
     let latex = value.get("latex").and_then(|l| {
         let latex = l.get("latex")?.as_str()?.to_string();
         let display = l.get("display").and_then(Value::as_bool).unwrap_or(false);
