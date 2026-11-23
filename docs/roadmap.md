@@ -1,6 +1,6 @@
 # WordCraft roadmap: milestones and what's next
 
-> **Last reviewed:** 2026-10-10 · **Last updated:** 2026-10-21 · **Change:** minor (release 1.1.0: Nextcloud, deeper Obsidian vaults, Focus mode and the cleanup ritual; previously minor: Portuguese proofing; previously minor: Polish interface and Polish proofing; previously trivial: M7: formatting revisions landed, #41; previously trivial: M5: Draw Table and Eraser landed, #303; previously minor: beta distance restated: ~15 points, ~150–230 h; previously: alpha gate checked: six core workflows pass; previously major: milestones moved here from ROADMAP.md; Current focus set from the re-measured gaps) · **Target:** Microsoft Word (Microsoft 365) for Mac 16.113.4
+> **Last reviewed:** 2026-10-10 · **Last updated:** 2026-11-23 · **Change:** minor (Group/Ungroup #267 reflected in M4 and M11; previously minor: release 1.1.0: Nextcloud, deeper Obsidian vaults, Focus mode and the cleanup ritual; previously minor: Portuguese proofing; previously minor: Polish interface and Polish proofing; previously trivial: M7: formatting revisions landed, #41; previously trivial: M5: Draw Table and Eraser landed, #303; previously minor: beta distance restated: ~15 points, ~150–230 h; previously: alpha gate checked: six core workflows pass; previously major: milestones moved here from ROADMAP.md; Current focus set from the re-measured gaps) · **Target:** Microsoft Word (Microsoft 365) for Mac 16.113.4
 
 Forward-looking plan. The summary is [`ROADMAP.md`](../ROADMAP.md); the ranked work list is
 [`gaps.md`](gaps.md); the numbers are in [`target-app-parity.md`](target-app-parity.md). Hours are
@@ -9,7 +9,7 @@ Opus 5.5 agent wall-clock.
 ## Current focus (toward beta, ~150–230 h)
 
 1. **Merge or close the ~45 open PRs** before starting overlapping work: many close catalog gaps
-   (Clipboard pane #264, Manage Styles #270, Group #267), fix field bugs (Hebrew RTL #20, IME
+   (Clipboard pane #264, Manage Styles #270), fix field bugs (Hebrew RTL #20, IME
    fixes #155–#164) or add languages (nb, nn, he). Owner review needed.2. **DOCX real-world corpus** (gap #1, 30–50 h): closed 2026-11-17. The corpus now lives in
     `corpus/docx/` (git-ignored) and is complete: `cargo test -p wordcraft-docx --test corpus`
     round-trips all 71 Apache POI real-world `.docx` files and reports zero losses
@@ -52,14 +52,14 @@ partial rows are fidelity gaps (beta work), not broken workflows. WordCraft stay
 | M1 | DOCX I/O | done; real-world corpus in place (`corpus/docx/`, 71 files) and passing; charts/SmartArt/OLE dropped; encryption (#55) open | 45–75 h |
 | M2 | Home tab | done except Paste Special, Clipboard pane, Style Inspector, Manage Styles, Asian typography (PRs open for four) | 5–10 h |
 | M3 | Insert tab | mostly done; equations done (#191), icons done (#309); charts, SmartArt, 3D, screenshot, online media missing | 50–80 h |
-| M4 | Layout and Design tabs | done except column balancing, group | 6–10 h |
+| M4 | Layout and Design tabs | done except column balancing | 6–10 h |
 | M5 | Tables | done (row splitting, floating tables, style formatting); custom table styles (#256); Draw Table and Eraser (#303) | 6–10 h |
 | M6 | References | first version done (TOC fields, cross-references, Zotero); footnote continuation missing; all 12 bibliography styles (#383) | 15–25 h |
 | M7 | Review | done (balloons, paragraph-mark revisions, formatting revisions #41); move tracking, multilingual proofing missing | 35–60 h |
 | M8 | View | mostly done; window commands missing | 3–5 h |
 | M9 | Mailings | done (first version); Excel/Outlook data sources and email merge missing | 6–10 h |
 | M10 | File/Backstage | mostly done; native printing, Options depth missing | 12–20 h |
-| M11 | Draw and objects | text wrap, text boxes, canvas handles, rotation (#332), ink pens and eraser (#307), contour wrap (#354), lasso, Add Pen, Ink to Shape and Ink Replay (#395) done; Ink to Math, grouping missing | 35–55 h |
+| M11 | Draw and objects | text wrap, text boxes, canvas handles, rotation (#332), ink pens and eraser (#307), contour wrap (#354), grouping (#267), lasso, Add Pen, Ink to Shape and Ink Replay (#395) done; Ink to Math missing | 35–55 h |
 | M12 | Formats breadth (PDF, ODT, RTF, HTML, MD, TXT, LaTeX, `.doc` import) | done (first versions); `.doc` write, encryption, minor formats missing | 60–100 h |
 | M13 | Performance budgets | on track (1.4 ms relayout); large real-world documents unmeasured | 10–20 h |
 | M14 | 1.0 polish, packaging, signing | releases v0.1.0–v0.4.0 published (signed macOS, Windows MSI x64/x86/arm64, Linux, FreeBSD, web) | — |
@@ -75,6 +75,7 @@ languages, screen-reader access, ecosystem decisions (VBA, add-ins, cloud), an i
 
 | Date | Change | Summary |
 |---|---|---|
+| 2026-11-23 | trivial | M4 and M11: grouping and ungrouping floating pictures, shapes and text boxes are implemented; remaining object gaps are listed in `gaps.md` #10 |
 | 2026-10-21 | minor | Release 1.1.0: Nextcloud (a new `wordcraft-cloud` crate; the Navigation pane's Nextcloud tab connects, browses, opens, saves, shares and searches a server; a file that changed there is not overwritten), Obsidian with a backlinks view, a tags view and Insert › Link, Focus mode that really hides the interface, and the cleanup ritual (`cargo xtask test` removes what the run left behind). The roadmap's focus is unchanged: the beta list (gaps #1–#7) comes first |
 | 2026-10-12 | minor | M15: Portuguese proofing (pt-BR spelling from the installed VERO dictionary, suggestions, grammar, hyphenation; Review › Language gains Português (Brasil)) |
 | 2026-10-11 | trivial | M15: Polish interface and Polish proofing landed |
