@@ -71,17 +71,17 @@ pub(crate) fn started(app: &WordApp, params: Value) -> Started {
 
 /// Show the Paste Options button for a successful paste, unless it was a picture (the three text
 /// forms would not apply) or the paste went into an equation.
-pub(crate) fn note(app: &mut WordApp, command: &str, started: Started, result: &Result<Value, String>) {
+pub(crate) fn note(app: &mut WordApp, command: &str, started: Started, result: &Result<Value, String>) -> bool {
     let Ok(value) = result else {
-        return;
+        return false;
     };
-    if app.session.rev() == started.rev || app.session.document_id() != started.document || started.in_math || app.session.math.is_some() {
-        return;
-    }
     let pasted_as = value.get("pastedAs").and_then(Value::as_str);
     // The three text forms do not apply to a picture.
     if pasted_as == Some("picture") {
-        return;
+        return false;
+    }
+    if app.session.rev() == started.rev || app.session.document_id() != started.document || started.in_math || app.session.math.is_some() {
+        return false;
     }
     let choice = match command {
         // Keep Source Formatting and Keep Text Only produce the same text when the source is
@@ -95,10 +95,13 @@ pub(crate) fn note(app: &mut WordApp, command: &str, started: Started, result: &
         "edit.pasteSpecial" => match pasted_as {
             Some("formatted" | "rtf" | "html") => Choice::Keep,
             Some("text") => Choice::Text,
-            _ => return,
+            _ => return false,
         },
-        _ => return,
+        _ => return false,
     };
+    if app.session.rev() == started.rev || app.session.document_id() != started.document || started.in_math || app.session.math.is_some() {
+        return false;
+    }
     let latex = value.get("latex").and_then(|l| {
         let latex = l.get("latex")?.as_str()?.to_string();
         let display = l.get("display").and_then(Value::as_bool).unwrap_or(false);
@@ -115,6 +118,7 @@ pub(crate) fn note(app: &mut WordApp, command: &str, started: Started, result: &
         document: app.session.document_id(),
         latex,
     });
+    true
 }
 
 /// Whether the button may be shown: the paste is still the document's latest selection and no
@@ -158,17 +162,17 @@ pub(crate) fn dismiss_if_stale(app: &mut WordApp) {
 /// same as if that form had been chosen from the start (and it is one undo step, like any paste).
 /// Paste Special first undoes the paste and opens its dialog on the destination; [`restore`] puts
 /// the original paste back if the dialog is cancelled.
-pub(crate) fn choose(app: &mut WordApp, choice: Choice) {
+pub(crate) fn choose(app: &mut WordApp, choice: Choice) -> bool {
+    let before_undo = app.session.rev();
     let Some(state) = app.canvas.paste_options.take() else {
-        return;
+        return false;
     };
     if state.rev != app.session.rev() || state.document != app.session.document_id() || state.selection != app.session.sel {
-        return;
+        return false;
     }
-    let before_undo = app.session.rev();
     if app.run("edit.undo", json!({})).is_err() || app.session.rev() == before_undo {
         // The paste isn't undoable any more (or protection refuses): never paste it a second time.
-        return;
+        return false;
     }
     let State { command, params, latex, .. } = state;
     if choice == Choice::Equation {
@@ -177,7 +181,7 @@ pub(crate) fn choose(app: &mut WordApp, choice: Choice) {
             let _ = app.run("edit.pasteAsEquation", json!({"text": text, "display": display}));
             app.canvas.want_focus = true;
         }
-        return;
+        return false;
     }
     if choice == Choice::Special {
         let restore_state = State {
@@ -199,13 +203,13 @@ pub(crate) fn choose(app: &mut WordApp, choice: Choice) {
             restore(app);
         }
         // The Paste Special dialog owns the keyboard while it is open.
-        return;
+        return false;
     }
     let id = match choice {
         Choice::Keep => "edit.paste",
         Choice::Merge => "edit.pasteMerge",
         Choice::Text => "edit.pasteText",
-        Choice::Equation | Choice::Special => return,
+        Choice::Equation | Choice::Special => return false,
     };
     let fallback = (command, params.clone());
     if app.run(id, params).is_err() {
@@ -214,15 +218,17 @@ pub(crate) fn choose(app: &mut WordApp, choice: Choice) {
         let _ = app.run(&fallback.0, fallback.1);
     }
     app.canvas.want_focus = true;
+    true
 }
 
 /// Put back the paste a cancelled Paste Special dialog took away. Also used when the dialog's OK
 /// cannot paste anything (its format list is empty).
-pub(crate) fn restore(app: &mut WordApp) {
+pub(crate) fn restore(app: &mut WordApp) -> bool {
     let Some(state) = app.canvas.paste_options_restore.take() else {
-        return;
+        return false;
     };
     let _ = app.run(&state.command, state.params);
+    true
 }
 
 /// Where the button goes for a caret line: below and just right of the caret, flipped above when
@@ -248,22 +254,32 @@ pub(crate) fn anchor_rect(caret: Pos2, line_height: f32, viewport: Rect) -> Opti
 }
 
 /// Draw the button and its menu inside the canvas viewport.
-pub(crate) fn show(app: &mut WordApp, ctx: &egui::Context, viewport: Rect) {
+pub(crate) fn show(app: &mut WordApp, ctx: &egui::Context, viewport: Rect) -> bool {
     dismiss_if_stale(app);
     if !visible(app) {
-        return;
+        return false;
     }
     let Some((caret, line_height)) = crate::canvas::caret_screen(app) else {
-        return;
+        return false;
     };
-    let Some(rect) = anchor_rect(caret, line_height, viewport) else {
-        return;
+    let Some(_rect) = anchor_rect(caret, line_height, viewport) else {
+        return false;
     };
     let current = app.canvas.paste_options.as_ref().map(|s| s.choice).unwrap_or(Choice::Keep);
-    let area = egui::Area::new(egui::Id::new("wc_paste_options")).order(Order::Tooltip).interactable(true).fixed_pos(rect.min);
+    dismiss_if_stale(app);
+    if !visible(app) {
+        return false;
+    }
+    let Some((caret, line_height)) = crate::canvas::caret_screen(app) else {
+        return false;
+    };
+    let Some(_rect) = anchor_rect(caret, line_height, viewport) else {
+        return false;
+    };
+    let area = egui::Area::new(egui::Id::new("wc_paste_options")).order(Order::Tooltip).interactable(true).fixed_pos(_rect.min);
     area.show(ctx, |ui| {
         let t = Tokens::get(ctx);
-        let (r, resp) = ui.allocate_exact_size(rect.size(), Sense::click());
+        let (r, resp) = ui.allocate_exact_size(_rect.size(), Sense::click());
         let fill = if resp.hovered() { t.hover } else { t.menu };
         let painter = ui.painter();
         painter.rect_filled(r.translate(vec2(0.0, 1.0)), CornerRadius::same(4), t.page_shadow);
@@ -276,6 +292,7 @@ pub(crate) fn show(app: &mut WordApp, ctx: &egui::Context, viewport: Rect) {
             menu(ui, app, current);
         });
     });
+    true
 }
 
 fn menu(ui: &mut egui::Ui, app: &mut WordApp, current: Choice) {
