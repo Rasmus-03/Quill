@@ -70,12 +70,12 @@ impl SwitchWindows {
                 }
             });
 
-        if switch_requested
-            && self.selected < self.documents.len()
-            && let Some(p) = self.documents.get(self.selected).cloned()
-            && p != app.session.path.as_ref().map(|x| x.to_string_lossy().to_string()).unwrap_or_default()
-        {
-            let _ = app.session.run("file.open", &serde_json::json!({ "path": p }));
+        if switch_requested {
+            let current = app.session.path.as_ref().map(|x| x.to_string_lossy().to_string()).unwrap_or_default();
+            let target = self.documents.get(self.selected).cloned();
+            if let Some(p) = target.filter(|p| p != &current) {
+                let _ = app.session.run("file.open", &serde_json::json!({ "path": p }));
+            }
             self.need_show = false;
         } else {
             self.need_show = pending;

@@ -37,8 +37,8 @@ modules:
   - name: wordcraft
     buildsystem: simple
     build-commands:
-      - install -Dm755 bin/wordcraft /app/bin/wordcraft
-      - install -Dm755 bin/wordcraft-cli /app/bin/wordcraft-cli
+      - install -Dm755 bin/quill /app/bin/quill
+      - install -Dm755 bin/quill-cli /app/bin/quill-cli
       - install -Dm644 share/applications/io.github.rasmus03.quill.desktop /app/share/applications/io.github.rasmus03.quill.desktop
       - install -Dm644 share/mime/packages/io.github.rasmus03.quill.xml /app/share/mime/packages/io.github.rasmus03.quill.xml
       # Already has the release's version and date substituted by package.sh.

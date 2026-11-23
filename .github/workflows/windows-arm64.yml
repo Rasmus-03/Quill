@@ -31,3 +31,7 @@ jobs:
     with:
       app-name: wordcraft
       app-dir: WordCraft
+      # The crates were renamed to quill/quill-cli, so the MSIs contain quill.exe; without these
+      # the installer check looks for the old name and fails after a 10-minute build.
+      main-binary: quill.exe
+      cli-binary: quill-cli.exe

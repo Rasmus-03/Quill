@@ -88,3 +88,9 @@ Progress docs follow [`craftrules/standards/progress-docs.md`](https://github.co
   GitHub profiles). Never hand-edit `contributors.json`.
 - Maintainers refresh the stats with `python3 ../../craftrules/scripts/contributors.py .` (it also
   re-verifies who wrote each `people.toml` entry; `--check` only verifies).
+
+## Commits carry no AI attribution
+
+Never put attribution to an AI tool in a commit message: no `Co-Authored-By:` trailer naming an assistant, no `Generated with ...` or `🤖 Generated with ...` footer, and no mention of an assistant, agent or model. Every message is written as the project author: a subject that says why the change was made, an optional body explaining the problem, and nothing after it.
+
+The history of this repository has been rewritten to remove such lines, so they must not come back; strip them if a tool adds them.
