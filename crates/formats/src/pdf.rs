@@ -644,14 +644,37 @@ fn samples_to_png(pdf: &pdf_extract::Document, dict: &pdf_extract::Dictionary, s
         return None;
     }
     // One pixel's worth of components after any palette (Indexed) has been opened.
-    let comps = color_comps(pdf, dict.get(b"ColorSpace").ok())?;
+    let cs = dict.get(b"ColorSpace").ok()?;
+    let palette = indexed_palette(pdf, cs)?;
+    let comps = if palette.is_some() { 1 } else { color_comps(pdf, Some(cs))? };
     let need = u64::from(w) * u64::from(h) * comps as u64;
     if u64::try_from(samples.len()).ok()? < need {
         log::warn!("PDF: a picture holds fewer samples than its size needs and is left out");
         return None;
     }
-    let mut rgba = Vec::with_capacity(w as usize * h as usize * 4);
+    let rgba_len = usize::try_from(need.checked_mul(4)?).ok()?;
+    let mut rgba = Vec::with_capacity(rgba_len);
     for px in samples[..need as usize].chunks_exact(comps) {
+        if let Some((base_comps, high, lookup)) = &palette {
+            let index = usize::from(px[0]);
+            if index > *high {
+                log::warn!("PDF: an indexed picture sample exceeds its palette and the picture is left out");
+                return None;
+            }
+            let start = index.checked_mul(*base_comps)?;
+            let color = lookup.get(start..start.checked_add(*base_comps)?)?;
+            match *base_comps {
+                1 => rgba.extend_from_slice(&[color[0], color[0], color[0], 255]),
+                3 => rgba.extend_from_slice(&[color[0], color[1], color[2], 255]),
+                4 => {
+                    let (cy, mg, ye, k) = (color[0], color[1], color[2], color[3]);
+                    let conv = |v: u8| (255.0 * (1.0 - f64::from(v) / 255.0) * (1.0 - f64::from(k) / 255.0)) as u8;
+                    rgba.extend_from_slice(&[conv(cy), conv(mg), conv(ye), 255]);
+                }
+                _ => return None,
+            }
+            continue;
+        }
         match comps {
             1 => {
                 let v = px[0];
@@ -674,6 +697,24 @@ fn samples_to_png(pdf: &pdf_extract::Document, dict: &pdf_extract::Dictionary, s
     Some(out)
 }
 
+/// An Indexed colour space: base component count, highest permitted index, and the lookup bytes.
+fn indexed_palette(pdf: &pdf_extract::Document, cs: &pdf_extract::Object) -> Option<Option<(usize, usize, Vec<u8>)>> {
+    let pdf_extract::Object::Array(a) = cs else { return Some(None) };
+    if a.first().and_then(|x| x.as_name().ok()) != Some(b"Indexed".as_slice()) {
+        return Some(None);
+    }
+    let base = a.get(1)?;
+    let comps = color_comps(pdf, Some(base))?;
+    let high = a.get(2)?.as_i64().ok().and_then(|v| usize::try_from(v).ok()).filter(|v| *v < 256)?;
+    let lookup_obj = deref(pdf, a.get(3)?)?;
+    let lookup = lookup_obj.as_stream().ok()?.decompressed_content().ok()?;
+    let required = high.checked_add(1)?.checked_mul(comps)?;
+    if lookup.len() < required {
+        return None;
+    }
+    Some(Some((comps, high, lookup)))
+}
+
 /// How many components one pixel of a colour space has.
 fn color_comps(pdf: &pdf_extract::Document, cs: Option<&pdf_extract::Object>) -> Option<usize> {
     let cs = cs?;
@@ -692,15 +733,52 @@ fn color_comps(pdf: &pdf_extract::Document, cs: Option<&pdf_extract::Object>) ->
                 let n = stream.dict.get(b"N").ok().and_then(|v| v.as_i64().ok())?;
                 matches!(n, 1 | 3 | 4).then(|| n as usize)
             }
-            Some(b"Indexed") => {
-                // A palette's indices themselves are not pixels; opening the palette needs the
-                // base space's samples, which v1 leaves out.
-                log::warn!("PDF: a picture's palette colour space is not read and it is left out");
-                None
-            }
+            Some(b"Indexed") => None,
             _ => None,
         },
         _ => None,
+    }
+}
+
+#[cfg(test)]
+mod indexed_tests {
+    use super::*;
+
+    fn indexed_doc(lookup: Vec<u8>) -> (pdf_extract::Document, pdf_extract::Object) {
+        let mut pdf = pdf_extract::Document::new();
+        let palette = pdf_extract::Stream::new(pdf_extract::Dictionary::new(), lookup);
+        let id = pdf.add_object(palette);
+        let cs = pdf_extract::Object::Array(vec![
+            pdf_extract::Object::Name(b"Indexed".to_vec()),
+            pdf_extract::Object::Name(b"DeviceRGB".to_vec()),
+            pdf_extract::Object::Integer(1),
+            pdf_extract::Object::Reference(id),
+        ]);
+        (pdf, cs)
+    }
+
+    #[test]
+    fn indexed_rgb_samples_expand_through_palette() {
+        let (pdf, cs) = indexed_doc(vec![255, 0, 0, 0, 255, 0]);
+        let mut dict = pdf_extract::Dictionary::new();
+        dict.set("BitsPerComponent", 8);
+        dict.set("ColorSpace", cs);
+        let png = samples_to_png(&pdf, &dict, &[0, 1], 2, 1).expect("indexed PNG");
+        let decoded = image::load_from_memory(&png).expect("PNG decode").to_rgba8();
+        assert_eq!(decoded.get_pixel(0, 0).0, [255, 0, 0, 255]);
+        assert_eq!(decoded.get_pixel(1, 0).0, [0, 255, 0, 255]);
+    }
+
+    #[test]
+    fn indexed_palette_rejects_short_lookups_and_bad_indices() {
+        let (pdf, cs) = indexed_doc(vec![255, 0, 0]);
+        assert!(indexed_palette(&pdf, &cs).is_none());
+
+        let (pdf, cs) = indexed_doc(vec![255, 0, 0, 0, 255, 0]);
+        let mut dict = pdf_extract::Dictionary::new();
+        dict.set("BitsPerComponent", 8);
+        dict.set("ColorSpace", cs);
+        assert!(samples_to_png(&pdf, &dict, &[2], 1, 1).is_none());
     }
 }
 
