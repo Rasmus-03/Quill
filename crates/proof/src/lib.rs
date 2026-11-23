@@ -539,14 +539,15 @@ pub fn suggest_in(word: &str, max: usize, lang: ProofLang) -> Vec<String> {
 }
 
 /// Grammar issues in a paragraph of text in `lang`: the English rules, the Polish ones
-/// ([`pl::grammar`]), the Portuguese ones ([`pt::grammar`]), or none for a language WordCraft
-/// doesn't proof.
+/// ([`pl::grammar`]), the Portuguese ones ([`pt::grammar`]), Thai checks ([`th`]), or none for a
+/// language WordCraft doesn't proof.
 pub fn check_grammar_in(text: &str, lang: ProofLang) -> Vec<Issue> {
     match lang {
         ProofLang::En => check_grammar(text),
         ProofLang::Pl => pl::grammar::check(text),
         ProofLang::Pt => pt::grammar::check(text),
-        ProofLang::Bg | ProofLang::Th | ProofLang::Other => Vec::new(),
+        ProofLang::Th => th::check_grammar(text),
+        ProofLang::Bg | ProofLang::Other => Vec::new(),
     }
 }
 
