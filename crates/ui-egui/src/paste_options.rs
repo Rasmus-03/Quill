@@ -72,7 +72,9 @@ pub(crate) fn started(app: &WordApp, params: Value) -> Started {
 /// Show the Paste Options button for a successful paste, unless it was a picture (the three text
 /// forms would not apply) or the paste went into an equation.
 pub(crate) fn note(app: &mut WordApp, command: &str, started: Started, result: &Result<Value, String>) {
-    let Ok(value) = result else { return };
+    let Ok(value) = result else {
+        return;
+    };
     if app.session.rev() == started.rev || app.session.document_id() != started.document || started.in_math || app.session.math.is_some() {
         return;
     }
@@ -157,7 +159,9 @@ pub(crate) fn dismiss_if_stale(app: &mut WordApp) {
 /// Paste Special first undoes the paste and opens its dialog on the destination; [`restore`] puts
 /// the original paste back if the dialog is cancelled.
 pub(crate) fn choose(app: &mut WordApp, choice: Choice) {
-    let Some(state) = app.canvas.paste_options.take() else { return };
+    let Some(state) = app.canvas.paste_options.take() else {
+        return;
+    };
     if state.rev != app.session.rev() || state.document != app.session.document_id() || state.selection != app.session.sel {
         return;
     }
@@ -215,7 +219,9 @@ pub(crate) fn choose(app: &mut WordApp, choice: Choice) {
 /// Put back the paste a cancelled Paste Special dialog took away. Also used when the dialog's OK
 /// cannot paste anything (its format list is empty).
 pub(crate) fn restore(app: &mut WordApp) {
-    let Some(state) = app.canvas.paste_options_restore.take() else { return };
+    let Some(state) = app.canvas.paste_options_restore.take() else {
+        return;
+    };
     let _ = app.run(&state.command, state.params);
 }
 
@@ -247,8 +253,12 @@ pub(crate) fn show(app: &mut WordApp, ctx: &egui::Context, viewport: Rect) {
     if !visible(app) {
         return;
     }
-    let Some((caret, line_height)) = crate::canvas::caret_screen(app) else { return };
-    let Some(rect) = anchor_rect(caret, line_height, viewport) else { return };
+    let Some((caret, line_height)) = crate::canvas::caret_screen(app) else {
+        return;
+    };
+    let Some(rect) = anchor_rect(caret, line_height, viewport) else {
+        return;
+    };
     let current = app.canvas.paste_options.as_ref().map(|s| s.choice).unwrap_or(Choice::Keep);
     let area = egui::Area::new(egui::Id::new("wc_paste_options")).order(Order::Tooltip).interactable(true).fixed_pos(rect.min);
     area.show(ctx, |ui| {
