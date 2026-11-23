@@ -1839,6 +1839,10 @@ fn chart_design(app: &mut WordApp, ui: &mut Ui) {
             mi_check(ui, app, "None", !chart.data_labels, "chart.dataLabels", json!({"on": false}));
             mi_check(ui, app, "Show", chart.data_labels, "chart.dataLabels", json!({"on": true}));
         });
+        menu_button(ui, app, "gridlines", Some("Gridlines"), "Value Axis Gridlines", true, "", |ui, app| {
+            mi_check(ui, app, "None", !chart.gridlines, "chart.gridlines", json!({"on": false}));
+            mi_check(ui, app, "Show", chart.gridlines, "chart.gridlines", json!({"on": true}));
+        });
     });
     group(ui, "Data", None, app, |ui, app| {
         big(ui, app, "chartData", "Edit\nData", "chart.editData", json!({}), false);

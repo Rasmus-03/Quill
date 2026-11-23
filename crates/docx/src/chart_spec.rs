@@ -158,7 +158,7 @@ fn plot(w: &mut W, spec: &ChartSpec) {
         }
         _ => {
             category_axis(w, if horizontal { "l" } else { "b" });
-            value_axis(w, VAL_AX, CAT_AX, if horizontal { "b" } else { "l" }, true, "between");
+            value_axis(w, VAL_AX, CAT_AX, if horizontal { "b" } else { "l" }, spec.gridlines, "between");
         }
     }
 }
@@ -352,7 +352,12 @@ pub(crate) fn spec_of(space: &El) -> Option<ChartSpec> {
         _ => LegendPos::Right,
     });
     let data_labels = ty.child("c:dLbls").and_then(|d| d.child("c:showVal")).and_then(|v| v.attr("val")) == Some("1");
-    let spec = ChartSpec { kind, categories, series, title, legend, data_labels }.sanitized();
+    let gridlines = plot
+        .children("c:valAx")
+        .find(|a| a.child("c:axId").and_then(|id| id.attr("val")) == Some(VAL_AX))
+        .map(|a| a.child("c:majorGridlines").is_some())
+        .unwrap_or(true);
+    let spec = ChartSpec { kind, categories, series, title, legend, data_labels, gridlines }.sanitized();
     // Editable only when nothing would be lost: writing the model again gives the same part.
     let again = xml::parse(chart_xml(&spec).as_bytes()).ok()?;
     same(space, &again, 0).then_some(spec)
@@ -445,6 +450,13 @@ mod tests {
         assert_eq!(spec_of(&xml::parse(x.as_bytes()).unwrap()), None);
         let x = chart_xml(&spec).replace("<c:v>3.2</c:v>", "<c:v>3.20</c:v>");
         assert_eq!(spec_of(&xml::parse(x.as_bytes()).unwrap()), None);
+    }
+
+    #[test]
+    fn value_axis_gridline_visibility_round_trips() {
+        let mut spec = ChartSpec::sample(ChartType::Column);
+        spec.gridlines = false;
+        assert_eq!(spec_of(&parse(&spec)), Some(spec));
     }
 
     #[test]

@@ -104,6 +104,15 @@ pub fn specs() -> Vec<CommandSpec> {
         })
         .params(r#"{"on"?: bool} (no value: switch the data labels on or off)"#)
         .when(has_chart),
+        CommandSpec::new("chart.gridlines", "Value Axis Gridlines", "Chart Design › Chart Layouts › Add Chart Element", |s, v| {
+            let on = p::bool(v, "on").or_else(|| p::bool(v, "value"));
+            edit(s, move |c| {
+                c.gridlines = on.unwrap_or(!c.gridlines);
+                Ok(())
+            })
+        })
+        .params(r#"{"on"?: bool} (no value: switch value-axis gridlines on or off)"#)
+        .when(has_chart),
     ]
 }
 

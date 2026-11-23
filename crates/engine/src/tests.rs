@@ -3170,10 +3170,12 @@ fn chart_edits_are_one_undo_step_each() {
     run(&mut s, "chart.title", json!({"text": "Totals"}));
     run(&mut s, "chart.legend", json!({"pos": "none"}));
     run(&mut s, "chart.dataLabels", json!({"on": true}));
+    run(&mut s, "chart.gridlines", json!({"on": false}));
     let c = first_chart(&s.doc).unwrap();
-    assert_eq!((c.kind, c.title.as_deref(), c.legend, c.data_labels), (ChartType::BarStacked, Some("Totals"), None, true));
+    assert_eq!((c.kind, c.title.as_deref(), c.legend, c.data_labels, c.gridlines), (ChartType::BarStacked, Some("Totals"), None, true, false));
     assert_eq!((c.categories.len(), c.series.len()), (2, 1));
-    let steps: [&dyn Fn(&wordcraft_doc::chart::ChartSpec) -> bool; 5] = [
+    let steps: [&dyn Fn(&wordcraft_doc::chart::ChartSpec) -> bool; 6] = [
+        &|c| c.gridlines,
         &|c| !c.data_labels,
         &|c| c.legend == Some(LegendPos::Bottom),
         &|c| c.title.is_none(),

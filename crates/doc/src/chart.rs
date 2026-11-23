@@ -151,6 +151,13 @@ pub struct ChartSpec {
     /// Show each point's value next to it.
     #[serde(default)]
     pub data_labels: bool,
+    /// Whether value-axis major gridlines are drawn.
+    #[serde(default = "default_gridlines")]
+    pub gridlines: bool,
+}
+
+fn default_gridlines() -> bool {
+    true
 }
 
 impl ChartSpec {
@@ -172,6 +179,7 @@ impl ChartSpec {
             title: None,
             legend: Some(LegendPos::Bottom),
             data_labels: false,
+            gridlines: true,
         }
     }
 
