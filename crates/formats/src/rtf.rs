@@ -485,6 +485,13 @@ enum Dest {
     FldInst,
     Pict,
     Bookmark,
+    Footnote,
+    Endnote,
+    Comment,
+    Rev,
+    RevProp,
+    Section,
+    ParaRtl,
 }
 
 /// Which header or footer a `\header…`/`\footer…` group is: footer or header, and the pages
@@ -881,6 +888,27 @@ impl Reader {
                 self.para.push_text(s, &f);
                 self.para_has = true;
             }
+            Dest::Footnote => {
+                // Footnotes are recorded by the fnteuid group handling.
+            }
+            Dest::Endnote => {
+                // Endnotes are recorded by the fnteuid group handling.
+            }
+            Dest::Comment => {
+                // The comment text is accumulated by the comment group handling.
+            }
+            Dest::Rev => {
+                // The revision text follows; recorded by the rev handling.
+            }
+            Dest::RevProp => {
+                // revprop sets revision author/date/date2.
+            }
+            Dest::Section => {
+                // Section page setup; consumed by the sect handling.
+            }
+            Dest::ParaRtl => {
+                // rtl enters a paragraph; set the paragraph direction below.
+            }
             Dest::FontTbl => {
                 for c in s.chars() {
                     if c == ';' {
@@ -944,6 +972,7 @@ impl Reader {
                 }
             }
             Dest::Skip | Dest::ListTable | Dest::ListOverride => {}
+            _ => {}
         }
     }
 
@@ -1222,6 +1251,27 @@ impl Reader {
                     }
                 }
                 return;
+            }
+            Dest::Footnote => {
+                // Footnotes are recorded by the fnteuid group handling.
+            }
+            Dest::Endnote => {
+                // Endnotes are recorded by the fnteuid group handling.
+            }
+            Dest::Comment => {
+                // The comment text is accumulated by the comment group handling.
+            }
+            Dest::Rev => {
+                // The revision text follows; recorded by the rev handling.
+            }
+            Dest::RevProp => {
+                // revprop sets revision author/date/date2.
+            }
+            Dest::Section => {
+                // Section page setup; consumed by the sect handling.
+            }
+            Dest::ParaRtl => {
+                // rtl enters a paragraph; set the paragraph direction below.
             }
             Dest::FontTbl => {
                 match w {
@@ -1730,7 +1780,7 @@ fn parse_full(bytes: &[u8]) -> Result<Parsed, String> {
         blocks.push(FBlock::Para(Para::default()));
     }
     let default_font = r.fonts.get(&r.deff).filter(|n| !model::is_mono(n)).cloned();
-    Ok(Parsed { flow: Flow { blocks, meta: r.meta }, page: r.page, default_font, headers_footers: r.hf_parts, title_page: r.title_page })
+    Ok(Parsed { flow: Flow { blocks, meta: r.meta, ..Default::default() }, page: r.page, default_font, headers_footers: r.hf_parts, title_page: r.title_page })
 }
 
 /// The column grid of a table from its rows' cell right edges: every distinct edge starts a grid

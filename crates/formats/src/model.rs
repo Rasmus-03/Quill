@@ -325,10 +325,78 @@ pub struct Meta {
 }
 
 #[derive(Clone, Debug, Default, PartialEq)]
+pub struct Note {
+    pub kind: NoteKind,
+    pub text: String,
+}
+
+#[derive(Clone, Debug, Default, PartialEq)]
+pub struct Comment {
+    pub author: String,
+    pub text: String,
+}
+
+#[derive(Clone, Debug, Default, PartialEq)]
+pub struct Revision {
+    pub kind: RevisionKind,
+    pub author: String,
+    pub move_name: Option<String>,
+}
+
+#[derive(Clone, Debug, Default, PartialEq)]
+pub struct Section {
+    pub orientation: Orientation,
+    pub cols: u16,
+    pub text_direction: wordcraft_doc::props::TextDirection,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum RevisionKind {
+    Insert,
+    Delete,
+    Format,
+}
+
+impl Default for RevisionKind {
+    fn default() -> Self { RevisionKind::Insert }
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum NoteKind {
+    Footnote,
+    Endnote,
+}
+
+impl Default for NoteKind {
+    fn default() -> Self { NoteKind::Footnote }
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Orientation {
+    Portrait,
+    Landscape,
+}
+
+impl Default for Orientation {
+    fn default() -> Self { Orientation::Portrait }
+}
+
+impl Orientation {
+    pub fn from_section(s: &wordcraft_doc::section::SectionProps) -> Self {
+        if s.landscape { Orientation::Landscape } else { Orientation::Portrait }
+    }
+}
+
+#[derive(Clone, Debug, Default, PartialEq)]
 pub struct Flow {
     pub blocks: Vec<FBlock>,
     pub meta: Meta,
+    pub notes: Vec<Note>,
+    pub comments: Vec<Comment>,
+    pub revisions: Vec<Revision>,
+    pub sections: Vec<Section>,
 }
+
 
 /// `inlines` with equations as their linear text (default formatting), for formats that have no
 /// equations.
@@ -977,6 +1045,10 @@ pub fn from_doc(doc: &Document) -> Flow {
             description: c.description.clone(),
             created: c.created.clone(),
         },
+        notes: Vec::new(),
+        comments: Vec::new(),
+        revisions: Vec::new(),
+        sections: Vec::new(),
     }
 }
 
