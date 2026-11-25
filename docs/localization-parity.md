@@ -29,8 +29,8 @@ native-speaker review (human).
   English until someone translates them. Two tests hold that line:
   `no_catalog_is_a_copy_of_another` (a catalog that repeats another) and
   `every_catalog_covers_and_translates_the_reference_keys` (a key missing or translated to nothing).
-- Measured by `the_parity_document_counts_match_the_catalogs`: registry **19**, catalog files **18**, copy groups **0**, entries per catalog **2,104–2,512**.
-  Catalogs have 2,104–2,512 entries each; Polish has every key of every other catalog, including the built-in style names and the equation gallery, except the citation style names only Hungarian and Bulgarian translate so far (a test checks it). A test (`every_tab_and_command_is_translated`) enforces that every ribbon tab, command label and ribbon location is translated in every catalog.
+- Measured by `the_parity_document_counts_match_the_catalogs`: registry **19**, catalog files **18**, copy groups **0**, entries per catalog **2,105–2,513**.
+  Catalogs have 2,105–2,513 entries each; Polish has every key of every other catalog, including the built-in style names and the equation gallery, except the citation style names only Hungarian and Bulgarian translate so far (a test checks it). A test (`every_tab_and_command_is_translated`) enforces that every ribbon tab, command label and ribbon location is translated in every catalog.
   `pl`, `pl-PL` and `pl_PL.UTF-8` system locales pick Polish automatically.
 - Of the 675 English strings a scan extracts from `tl!(…)` calls and command labels/locations, each
   catalog covers **661 (98%)**. Some newer dialog and pane strings (Equation tab tooltips, Zotero,
