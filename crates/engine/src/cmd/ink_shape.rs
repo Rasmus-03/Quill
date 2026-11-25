@@ -13,6 +13,8 @@ use wordcraft_doc::freeform::MAX_POINTS;
 pub enum InkShape {
     /// A straight line from `a` to `b`.
     Line { a: [f32; 2], b: [f32; 2] },
+    /// Three or more straight strokes joined end to end (an open or closed arrow).
+    Arrow(Vec<[f32; 2]>),
     /// An upright rectangle: top-left and size (equal sides when drawn nearly square).
     Rectangle { x: f32, y: f32, w: f32, h: f32 },
     /// An upright ellipse in this box (a circle when drawn nearly round).
@@ -30,6 +32,7 @@ impl InkShape {
             InkShape::Rectangle { .. } => "rectangle",
             InkShape::Ellipse { w, h, .. } if w == h => "circle",
             InkShape::Ellipse { .. } => "ellipse",
+            InkShape::Arrow(_) => "arrow",
             InkShape::Polygon(c) if c.len() == 3 => "triangle",
             InkShape::Polygon(_) => "polygon",
         }
@@ -40,7 +43,7 @@ impl InkShape {
         match self {
             InkShape::Rectangle { x, y, w, h } | InkShape::Ellipse { x, y, w, h } => [*x, *y, *w, *h],
             InkShape::Line { a, b } => bbox(&[*a, *b]),
-            InkShape::Polygon(c) => bbox(c),
+            InkShape::Arrow(c) | InkShape::Polygon(c) => bbox(c),
         }
     }
 }
@@ -78,6 +81,22 @@ pub fn recognise(pts: &[[f32; 2]]) -> Option<InkShape> {
             return Some(InkShape::Line { a: first, b: last });
         }
     }
+    // An open stroke that bends away from the chord in the middle is an arrow.
+    // Detect a V, >, or a chain of strokes that change direction along the chord.
+    if gap > 0.85 * length && gap >= MIN_SIZE && p.len() >= 4 {
+        let mid = p.len() / 2;
+        // Deviation of the middle portion from the chord; an arrow bends noticeably.
+        let (a, b) = (*p.first()?, *p.last()?);
+        let mut mid_off: f32 = 0.0;
+        for q in &p[mid.saturating_sub(2)..mid + 2] {
+            mid_off = mid_off.max(seg_distance(a, b, *q));
+        }
+        if mid_off > 0.15 * gap || (p.len() > 5 && (p[mid][0] - first[0]).abs() >= 0.25 * gap) {
+            return Some(InkShape::Arrow(p.clone()));
+        }
+    }
+
+    // Other shapes are closed: the stroke ends near where it began and goes around.
     // Other shapes are closed: the stroke ends near where it began and goes around.
     if gap > 0.2 * size || length < 2.0 * size {
         return None;

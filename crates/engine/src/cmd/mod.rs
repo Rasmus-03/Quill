@@ -13,6 +13,7 @@ pub mod design;
 pub mod draw;
 pub mod edit;
 pub mod equation;
+pub mod equation_ink;
 pub mod fields;
 pub mod file;
 pub mod find_pattern;
