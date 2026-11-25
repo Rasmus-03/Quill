@@ -22,6 +22,8 @@ use wordcraft_doc::{CharProps, Pos, StoryRef};
 use wordcraft_geom::Rect;
 use wordcraft_layout::{DocLayout, Placed};
 
+use super::equation::insert_nodes_as_equation;
+use super::equation_ink;
 use super::ink_shape::{InkShape, recognise};
 use super::pos_json;
 use crate::{CmdError, CmdResult, CommandSpec, Session, p};
@@ -146,6 +148,8 @@ pub struct DrawState {
     /// Ink Replay is showing (the app plays the strokes back and turns this off when done).
     #[serde(skip)]
     pub replay: bool,
+    /// Ink to Math is on: a selected stroke becomes an equation.
+    pub ink_to_math: bool,
 }
 
 impl Default for DrawState {
@@ -157,6 +161,7 @@ impl Default for DrawState {
             highlighter: PenSettings::of(InkTool::Highlighter),
             pens: Vec::new(),
             ink_to_shape: false,
+            ink_to_math: false,
             lasso: None,
             replay: false,
         }
@@ -191,6 +196,37 @@ const MAX_LASSO_POINTS: usize = 512;
 const LASSO_SAMPLES: usize = 64;
 /// Farthest the lasso moves its selection in one step, points.
 const MAX_MOVE: f32 = 10_000.0;
+
+/// Convert selected ink strokes into an editable equation (draw.inkToMath).
+fn ink_to_math(s: &mut Session, v: &Value) -> CmdResult {
+    // Without a value: convert the lasso-selected strokes to an equation and turn the
+    // mode on; with a value it just turns the mode on or off.
+    if let Some(on) = p::bool(v, "value") {
+        s.view.draw.ink_to_math = on;
+        return Ok(json!({"value": on}));
+    }
+    let ink_selected = lasso_selection(s)
+        .is_some_and(|l| l.items.iter().any(|pos| s.doc.para_at(pos).and_then(|p| p.object_at(pos.off)).and_then(InlineObject::ink).is_some()));
+    if !ink_selected {
+        s.view.draw.ink_to_math = true;
+        return Ok(json!({"value": true}));
+    }
+    let lasso_items = lasso_selection(s).map(|l| l.items.clone()).unwrap_or_default();
+    let mut converted = 0u32;
+    for pos in lasso_items {
+        if let Some(first_path) = ink_points_at(s, &pos)
+            && let Some((nodes, display)) = equation_ink::build_ink_equation(&first_path)
+        {
+            insert_nodes_as_equation(s, nodes, &json!({"display": display, "edit": false}))?;
+            converted += 1;
+        }
+    }
+    if converted == 0 {
+        s.view.draw.ink_to_math = !s.view.draw.ink_to_math;
+        return Ok(json!({"value": s.view.draw.ink_to_math}));
+    }
+    Ok(json!({"converted": converted, "value": true}))
+}
 
 pub fn specs() -> Vec<CommandSpec> {
     vec![
@@ -250,6 +286,9 @@ pub fn specs() -> Vec<CommandSpec> {
         })
         .params(r#"{"value"?: bool}  (no value: convert the lasso-selected strokes, or turn Ink to Shape on or off)"#)
         .pure(),
+                CommandSpec::new("draw.inkToMath", "Ink to Math", "Draw › Convert", |s: &mut Session, v: &Value| ink_to_math(s, v))
+            .params(r#"{"value"?: bool}  (no value: convert the lasso-selected strokes to an equation; false turns it off)"#)
+            .pure(),
         CommandSpec::new("draw.convertInk", "Convert to Shapes", "Draw › Convert", convert_selection),
         CommandSpec::new("draw.replay", "Ink Replay", "Draw › Replay", replay)
             .params(r#"{"value"?: bool}  (starts or stops Ink Replay; returns the strokes in the order they were drawn)"#)
@@ -323,6 +362,9 @@ impl PlacedInk {
 
 /// Ink strokes laid out on `page`, in the page's drawing order: their position, unturned frame,
 /// turn and geometry on the page.
+/// Ink strokes laid out on `page`, in the page's drawing order: their position, unturned frame,
+/// turn and geometry on the page.
+
 pub fn ink_on(s: &Session, layout: &DocLayout, page: usize) -> Vec<PlacedInk> {
     let Some(pg) = layout.pages.get(page) else { return Vec::new() };
     pg.items
@@ -342,12 +384,27 @@ pub fn ink_on(s: &Session, layout: &DocLayout, page: usize) -> Vec<PlacedInk> {
         .collect()
 }
 
+/// Independent points (page coordinates) of every ink stroke under `pos`.
+/// Independent points (page coordinates) of every ink stroke under `pos`.
+
+/// Independent points (page coordinates) of the ink stroke under `pos`.
+/// Independent points (page coordinates) of the ink stroke under `pos`.
+pub fn ink_points_at(s: &Session, pos: &Pos) -> Option<Vec<[f32; 2]>> {
+    let layout = s.export_layout();
+    // The stroke's frame sits on whichever page placed it, and the layout's index records lines
+    // rather than objects, so the pages are searched in order.
+    (0..layout.pages.len())
+        .flat_map(|page| ink_on(s, &layout, page))
+        .find(|k| k.pos == *pos)
+        .map(|placed| placed.freeform.placed(placed.rect.x, placed.rect.y, placed.rect.w, placed.rect.h).into_iter().next().map(|(pts, _)| pts))
+        .flatten()
+}
 /// The ink stroke on `page` under (`x`, `y`), topmost first; none while ink is hidden.
-pub fn ink_at(s: &mut Session, page: usize, x: f32, y: f32) -> Option<Pos> {
+pub fn ink_at(s: &Session, page: usize, x: f32, y: f32) -> Option<Pos> {
     if s.view.hide_ink || !x.is_finite() || !y.is_finite() {
         return None;
     }
-    let layout = s.layout();
+    let layout = s.export_layout();
     ink_on(s, &layout, page).into_iter().rev().find_map(|k| {
         let reach = (if k.width.is_finite() { k.width.clamp(0.0, MAX_WIDTH) } else { 1.0 }) / 2.0 + ERASE_SLOP;
         // A turned stroke is drawn turned about its frame's centre: test the point turned back
@@ -716,8 +773,8 @@ fn convert_at(s: &mut Session, pos: &Pos) -> Result<Option<&'static str>, CmdErr
     let (new_kind, geometry) = match &found {
         InkShape::Rectangle { .. } => (ShapeKind::Rectangle, None),
         InkShape::Ellipse { .. } => (ShapeKind::Ellipse, None),
+        InkShape::Arrow(c) | InkShape::Polygon(c) => (ShapeKind::Freeform, outline(local(c), true)),
         InkShape::Line { a, b } => (ShapeKind::Freeform, outline(local(&[*a, *b]), false)),
-        InkShape::Polygon(c) => (ShapeKind::Freeform, outline(local(c), true)),
     };
     *kind = new_kind;
     *freeform = geometry;
