@@ -375,6 +375,7 @@
 	Greeting Line	Anrede
 	Greeting\nLine	Anrede-\nzeile
 	Gridlines	Rasterlinien
+	Value Axis Gridlines	Rasterlinien der Wertachse
 	Group	Gruppieren
 	Grow Font 1 Point	Schrift um 1 Punkt vergrößern
 	Hanging Indent	Hängender Einzug

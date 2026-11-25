@@ -478,6 +478,7 @@
 	Greeting Line	Red pozdrava
 	Greeting\nLine	Red\npozdrava
 	Gridlines	Linije mreže
+	Value Axis Gridlines	Linije mreže ose vrednosti
 	Group	Grupisanje
 	Grow Font 1 Point	Uvećaj font za 1 tačku
 	Hanging Indent	Uvlačenje viseće linije
