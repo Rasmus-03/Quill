@@ -14,6 +14,9 @@
 //! # Adding a language
 //! 1. Add `xx.tsv` next to `zh-hans.tsv` (copy its header; translate from the *meaning* of the
 //!    English text, clean-room: never from Microsoft Word's or another product's localisation).
+//!    Copying another catalog and renaming its header is what shipped five Chinese "Arabic",
+//!    "Hindi", "Indonesian", "Korean" and "Vietnamese" interfaces; `no_catalog_is_a_copy_of_another`
+//!    fails if two catalogs carry the same text.
 //! 2. Add one row to [`LANGUAGES`]. Set its `editing_lang` only when `wordcraft-proof` can proof
 //!    the language (Polish: `pl-PL`): new documents are then written in it.
 //!
@@ -52,7 +55,12 @@ pub struct LangInfo {
 }
 
 /// The registry. English first: it is the fallback and the source language.
-pub static LANGUAGES: [LangInfo; 25] = [
+pub static LANGUAGES: [LangInfo; 19] = [
+    // `ar`, `hi`, `id`, `ko` and `vi` were registered on 2026-11-10 with catalogs that were
+    // `zh-hans` under a renamed header (`a889a05`): every one of their 2,104 translations was the
+    // Chinese text, so the picker offered a Chinese interface under five other names. They are
+    // unregistered until they are translated, so `hi-IN`, `ar-SA` and a saved `ui.language` of one
+    // of them resolve to no catalog and the interface stays English.
     LangInfo { code: "en", name: "English", source: "", prefer_hans: false, editing_lang: None, catalog: OnceLock::new() },
     // Simplified Chinese; `zh`, `zh-CN`, `zh-SG` and `zh-Hans-*` resolve here (see `candidates`).
     LangInfo {
@@ -78,45 +86,14 @@ pub static LANGUAGES: [LangInfo; 25] = [
     },
     // Spanish, neutral across Spain and Latin America; `es-ES`, `es-MX`, `es-419` … resolve here.
     LangInfo { code: "es", name: "Español", source: include_str!("es.tsv"), prefer_hans: false, editing_lang: None, catalog: OnceLock::new() },
-    // Brazilian Portuguese; `pt-BR` and `pt-BR-*` resolve here. Plain `pt` and `pt-PT` have no
-    // catalog yet (the European vocabulary differs), so they stay in English.
+    // Brazilian Portuguese; `pt-BR` and `pt-BR-*` resolve here. A bare `pt` and `pt-PT` have no
+    // catalog and stay in English.
     LangInfo {
         code: "pt-br",
         name: "Português (Brasil)",
         source: include_str!("pt-br.tsv"),
         prefer_hans: false,
         editing_lang: Some("pt-BR"),
-        catalog: OnceLock::new(),
-    },
-    // Hindi, Devanagari script; `hi`, `hi-IN` and `hi_IN.UTF-8` resolve here.
-    LangInfo {
-        code: "hi", name: "हिन्दी", source: include_str!("hi.tsv"), prefer_hans: false, editing_lang: None, catalog: OnceLock::new()
-    },
-    // Arabic, right-to-left script; `ar`, `ar-SA` and `ar-SA.UTF-8` resolve here.
-    // The interface mirrors for right-to-left text: Options, menus and dialogs flip their
-    // layout, and the reading direction and tab order follow the script.
-    LangInfo { code: "ar", name: "العربية", source: include_str!("ar.tsv"), prefer_hans: false, editing_lang: None, catalog: OnceLock::new() },
-    // Indonesian; `id`, `id-ID` and `id_ID.UTF-8` resolve here.
-    LangInfo {
-        code: "id",
-        name: "Bahasa Indonesia",
-        source: include_str!("id.tsv"),
-        prefer_hans: false,
-        editing_lang: None,
-        catalog: OnceLock::new(),
-    },
-    // Korean; `ko`, `ko-KR` and `ko_KR.UTF-8` resolve here.
-    LangInfo { code: "ko", name: "한국어", source: include_str!("ko.tsv"), prefer_hans: false, editing_lang: None, catalog: OnceLock::new() },
-    // Vietnamese; `vi`, `vi-VN` and `vi_VN.UTF-8` resolve here.
-    LangInfo { code: "vi", name: "Tiếng Việt", source: include_str!("vi.tsv"), prefer_hans: false, editing_lang: None, catalog: OnceLock::new() },
-    // European Portuguese; `pt-PT`, `pt-PT` and `pt-PT.UTF-8` resolve here. The interface and
-    // the proofing dictionary are Portuguese European.
-    LangInfo {
-        code: "pt-pt",
-        name: "Português (Portugal)",
-        source: include_str!("pt-PT.tsv"),
-        prefer_hans: false,
-        editing_lang: Some("pt-PT"),
         catalog: OnceLock::new(),
     },
     // Serbian, Cyrillic script (the default per BCP 47 when no script is given); `sr`, `sr-RS`,
