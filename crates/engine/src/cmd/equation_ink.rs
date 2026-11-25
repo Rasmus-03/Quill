@@ -7,8 +7,7 @@
 //! document as its linear form. The fit is bounded, clamps hostiles and never panics, so a tap,
 //! a shaky line or a closed loop is always a defined result.
 
-use wordcraft_doc::math::{self, Arg, FracKind, MNode, MRun, ScriptKind};
-use wordcraft_doc::math_edit::units;
+use wordcraft_doc::math::{Arg, FracKind, MNode, MRun, ScriptKind};
 
 use super::ink_shape::{InkShape, recognise};
 
@@ -48,21 +47,20 @@ pub fn build_ink_equation(pts: &[[f32; 2]]) -> Option<(Arg, bool)> {
     // A display equation is a large stroke on an otherwise empty line; an inline one is small.
     // Anything else is inline, which is the common case.
     let display = display_of(pts);
-    Some((build_nodes(shape, display), display))
+    Some((build_nodes(shape), display))
 }
 
 /// Whether a stroke is large enough on an empty line to be a display equation.
 fn display_of(pts: &[[f32; 2]]) -> bool {
-    let size = pts.iter().fold(0.0f32, |m, p| p.iter().map(|v| *v).fold(m, f32::max));
+    let size = pts.iter().fold(0.0f32, |m, p| p.iter().copied().fold(m, f32::max));
     size >= 200.0
 }
 
 /// Convert a recognised shape into the `Math` nodes the linear format needs.
-fn build_nodes(shape: InkShape, display: bool) -> Arg {
+fn build_nodes(shape: InkShape) -> Arg {
     match shape {
         InkShape::Line { a, b } => {
             // A slanted stroke: a function or a limit, built as an operator over the operand.
-            let [x0, y0, w, h] = bbox(&[a, b]);
             let operand = build_operand(a, b);
             let base = vec![MNode::Run(MRun::new(operand))];
             vec![MNode::Nary { chr: '∫', lim_loc: None, grow: false, sub_hide: true, sup_hide: true, sub: Vec::new(), sup: Vec::new(), e: base }]
@@ -99,7 +97,7 @@ fn build_nodes(shape: InkShape, display: bool) -> Arg {
                 e: vec![MNode::Run(MRun::new(operand))],
             }]
         }
-        InkShape::Arrow(c) => {
+        InkShape::Arrow(_) => {
             // An arrow is drawn as a sum operator.
             vec![MNode::Nary {
                 chr: '∑',
@@ -116,7 +114,7 @@ fn build_nodes(shape: InkShape, display: bool) -> Arg {
 }
 
 /// The operand inside a boxed structure: everything the fit found inside the ink's own box.
-fn boxed_operand(x: f32, y: f32, w: f32, h: f32) -> Vec<MNode> {
+fn boxed_operand(x: f32, _y: f32, _w: f32, _h: f32) -> Vec<MNode> {
     // Word's linear format for a boxed formula is the bounding box of its glyphs, so a small
     // set of letters inside the rectangle maps to the same letters in the linear output.
     // The coordinates are the glyph box; render them as a tiny superscript base+exponent.
@@ -132,20 +130,20 @@ fn boxed_operand(x: f32, y: f32, w: f32, h: f32) -> Vec<MNode> {
 }
 
 fn polygon_operand(corners: &[[f32; 2]]) -> String {
-    let [x0, y0, w, h] = bbox(corners);
+    let [_, _, w, h] = bbox(corners);
     if w > h * 2.0 {
         // A wide loop: an integral with an integrand in the base.
         "x".to_string()
     } else {
         // A tall loop: an integral with a limit, written with the limit above.
-        format!("∫_a^b{}", "x".repeat(1))
+        "∫_a^bx".to_string()
     }
 }
 
 /// The operand of a straight stroke: either the letter it carries (if it is slanted like a
 /// function name) or the bounding box of the whole stroke as an operator base.
 fn build_operand(a: [f32; 2], b: [f32; 2]) -> String {
-    let [x0, y0, w, h] = bbox(&[a, b]);
+    let [_, _, w, h] = bbox(&[a, b]);
     if w > h * 3.0 && w > 40.0 {
         // A long slanted stroke reads as a function name followed by its argument.
         "sin".to_string()
@@ -170,6 +168,7 @@ fn bbox(pts: &[[f32; 2]]) -> [f32; 4] {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use wordcraft_doc::math;
 
     /// Points along a closed polygon, `per` to a side, with a little deterministic hand wobble.
     fn around(corners: &[[f32; 2]], per: usize) -> Vec<[f32; 2]> {
@@ -257,7 +256,7 @@ mod tests {
         assert!(!display, "a rectangle drawn inside a line is an inline equation");
         // A display stroke on an empty line is a display equation.
         let big = around(&[[250.0, 10.0], [350.0, 10.0], [350.0, 110.0], [250.0, 110.0]], 12);
-        let (nodes2, display2) = build_ink_equation(&big).unwrap();
+        let (_, display2) = build_ink_equation(&big).unwrap();
         assert!(display2, "a large stroke on a blank line is a display equation");
     }
 

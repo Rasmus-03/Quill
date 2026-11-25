@@ -362,9 +362,6 @@ impl PlacedInk {
 
 /// Ink strokes laid out on `page`, in the page's drawing order: their position, unturned frame,
 /// turn and geometry on the page.
-/// Ink strokes laid out on `page`, in the page's drawing order: their position, unturned frame,
-/// turn and geometry on the page.
-
 pub fn ink_on(s: &Session, layout: &DocLayout, page: usize) -> Vec<PlacedInk> {
     let Some(pg) = layout.pages.get(page) else { return Vec::new() };
     pg.items
@@ -384,10 +381,6 @@ pub fn ink_on(s: &Session, layout: &DocLayout, page: usize) -> Vec<PlacedInk> {
         .collect()
 }
 
-/// Independent points (page coordinates) of every ink stroke under `pos`.
-/// Independent points (page coordinates) of every ink stroke under `pos`.
-
-/// Independent points (page coordinates) of the ink stroke under `pos`.
 /// Independent points (page coordinates) of the ink stroke under `pos`.
 pub fn ink_points_at(s: &Session, pos: &Pos) -> Option<Vec<[f32; 2]>> {
     let layout = s.export_layout();
@@ -396,8 +389,7 @@ pub fn ink_points_at(s: &Session, pos: &Pos) -> Option<Vec<[f32; 2]>> {
     (0..layout.pages.len())
         .flat_map(|page| ink_on(s, &layout, page))
         .find(|k| k.pos == *pos)
-        .map(|placed| placed.freeform.placed(placed.rect.x, placed.rect.y, placed.rect.w, placed.rect.h).into_iter().next().map(|(pts, _)| pts))
-        .flatten()
+        .and_then(|placed| placed.freeform.placed(placed.rect.x, placed.rect.y, placed.rect.w, placed.rect.h).into_iter().next().map(|(pts, _)| pts))
 }
 /// The ink stroke on `page` under (`x`, `y`), topmost first; none while ink is hidden.
 pub fn ink_at(s: &Session, page: usize, x: f32, y: f32) -> Option<Pos> {

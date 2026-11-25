@@ -106,7 +106,7 @@ pub fn pointer(app: &mut WordApp, ui: &Ui, resp: &egui::Response, rects: &[Rect]
             if (starts || down)
                 && let Some(erased) = app.canvas.erasing
                 && let Some((page, x, y)) = at.and_then(|p| page_at(rects, layout, scale, p))
-                && wordcraft_engine::cmd::draw::ink_at(&mut app.session, page, x, y).is_some()
+                && wordcraft_engine::cmd::draw::ink_at(&app.session, page, x, y).is_some()
             {
                 // The first stroke a drag erases starts an undo step; the rest join it.
                 if erased {
