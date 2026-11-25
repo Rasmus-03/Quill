@@ -350,41 +350,26 @@ pub struct Section {
     pub text_direction: wordcraft_doc::props::TextDirection,
 }
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 pub enum RevisionKind {
+    #[default]
     Insert,
     Delete,
     Format,
 }
 
-impl Default for RevisionKind {
-    fn default() -> Self {
-        RevisionKind::Insert
-    }
-}
-
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 pub enum NoteKind {
+    #[default]
     Footnote,
     Endnote,
 }
 
-impl Default for NoteKind {
-    fn default() -> Self {
-        NoteKind::Footnote
-    }
-}
-
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 pub enum Orientation {
+    #[default]
     Portrait,
     Landscape,
-}
-
-impl Default for Orientation {
-    fn default() -> Self {
-        Orientation::Portrait
-    }
 }
 
 impl Orientation {

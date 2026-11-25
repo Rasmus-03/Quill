@@ -485,13 +485,6 @@ enum Dest {
     FldInst,
     Pict,
     Bookmark,
-    Footnote,
-    Endnote,
-    Comment,
-    Rev,
-    RevProp,
-    Section,
-    ParaRtl,
 }
 
 /// Which header or footer a `\header…`/`\footer…` group is: footer or header, and the pages
@@ -888,27 +881,6 @@ impl Reader {
                 self.para.push_text(s, &f);
                 self.para_has = true;
             }
-            Dest::Footnote => {
-                // Footnotes are recorded by the fnteuid group handling.
-            }
-            Dest::Endnote => {
-                // Endnotes are recorded by the fnteuid group handling.
-            }
-            Dest::Comment => {
-                // The comment text is accumulated by the comment group handling.
-            }
-            Dest::Rev => {
-                // The revision text follows; recorded by the rev handling.
-            }
-            Dest::RevProp => {
-                // revprop sets revision author/date/date2.
-            }
-            Dest::Section => {
-                // Section page setup; consumed by the sect handling.
-            }
-            Dest::ParaRtl => {
-                // rtl enters a paragraph; set the paragraph direction below.
-            }
             Dest::FontTbl => {
                 for c in s.chars() {
                     if c == ';' {
@@ -972,7 +944,6 @@ impl Reader {
                 }
             }
             Dest::Skip | Dest::ListTable | Dest::ListOverride => {}
-            _ => {}
         }
     }
 
@@ -1251,27 +1222,6 @@ impl Reader {
                     }
                 }
                 return;
-            }
-            Dest::Footnote => {
-                // Footnotes are recorded by the fnteuid group handling.
-            }
-            Dest::Endnote => {
-                // Endnotes are recorded by the fnteuid group handling.
-            }
-            Dest::Comment => {
-                // The comment text is accumulated by the comment group handling.
-            }
-            Dest::Rev => {
-                // The revision text follows; recorded by the rev handling.
-            }
-            Dest::RevProp => {
-                // revprop sets revision author/date/date2.
-            }
-            Dest::Section => {
-                // Section page setup; consumed by the sect handling.
-            }
-            Dest::ParaRtl => {
-                // rtl enters a paragraph; set the paragraph direction below.
             }
             Dest::FontTbl => {
                 match w {
