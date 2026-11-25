@@ -1,6 +1,6 @@
 # Localization parity with Microsoft Word
 
-> **Last reviewed:** 2026-10-10 · **Last updated:** 2026-11-23 · **Change:** minor (Thai grammar checks for repeated adjacent words and spaces before punctuation; previously trivial: Turkish interface catalog completed, 2,325 entries, #774; previously minor: Hungarian interface added; previously trivial: sorting and table numbers follow the text's language, #836, #837; previously minor: Polish interface; Polish proofing — spelling, grammar, hyphenation — and a proofing language per run; previously minor: Turkish interface added; previously major: first version; catalogs measured from `crates/ui-egui/src/i18n`, Word's languages from its bundle listing) · **Target:** Microsoft Word (Microsoft 365) for Mac 16.113.4
+> **Last reviewed:** 2026-11-25 · **Last updated:** 2026-11-25 · **Change:** minor (the interface-language counts and the six copied catalogs now match the code; previously minor: Thai grammar checks for repeated adjacent words and spaces before punctuation; previously trivial: Turkish interface catalog completed, 2,325 entries, #774; previously minor: Hungarian interface added; previously trivial: sorting and table numbers follow the text's language, #836, #837; previously minor: Polish interface; Polish proofing — spelling, grammar, hyphenation — and a proofing language per run; previously minor: Turkish interface added; previously major: first version; catalogs measured from `crates/ui-egui/src/i18n`, Word's languages from its bundle listing) · **Target:** Microsoft Word (Microsoft 365) for Mac 16.113.4
 
 Interface languages, script support and proofing per language. How translation works (catalog
 format, adding a language, clean-room rule): `crates/ui-egui/src/i18n/mod.rs`.
@@ -19,10 +19,18 @@ native-speaker review (human).
 
 ## What WordCraft ships (measured)
 
-- **19 interface languages**: English plus `zh-hans`, `zh-hant`, `ja`, `uk`, `es`, `pt-br`,
-  Serbian `sr`/`sr-latn` (#250), Estonian `et`, Turkish `tr`, Russian `ru`, Italian `it` (#594), German `de` (#574), Polish `pl`, Czech `cs`, Hungarian `hu`, French `fr` and Bulgarian `bg`. Catalogs have 2,057–2,454 entries
-  each; Polish has every key of every other catalog, including the built-in style names and the equation gallery, except the citation style names only Hungarian and Bulgarian translate so far (a test checks it). A test (`every_tab_and_command_is_translated`) enforces that every ribbon tab, command
-  label and ribbon location is translated in every language.
+- **19 interface languages in the picker**: English plus 18 catalogs — `zh-hans`, `zh-hant`, `ja`,
+  `uk`, `es`, `pt-br`, Serbian `sr`/`sr-latn` (#250), Estonian `et`, Turkish `tr`, Russian
+  `ru`, Italian `it` (#594), German `de` (#574), Polish `pl`, Czech `cs`, Hungarian `hu`, French `fr`
+  and Bulgarian `bg`. **All 18 carry real translations**. `ar`, `hi`, `id`, `ko` and `vi` were
+  registered on 2026-11-10 with catalogs that were `zh-hans` under a renamed header (`a889a05`), and
+  `pt-PT` repeated the `pt-br` text (2,104 of 2,104 entries identical); their catalogs are deleted and
+  they are unregistered, so those locales and a saved `ui.language` of one of them fall back to
+  English until someone translates them. Two tests hold that line:
+  `no_catalog_is_a_copy_of_another` (a catalog that repeats another) and
+  `every_catalog_covers_and_translates_the_reference_keys` (a key missing or translated to nothing).
+- Measured by `the_parity_document_counts_match_the_catalogs`: registry **19**, catalog files **18**, copy groups **0**, entries per catalog **2,104–2,512**.
+  Catalogs have 2,104–2,512 entries each; Polish has every key of every other catalog, including the built-in style names and the equation gallery, except the citation style names only Hungarian and Bulgarian translate so far (a test checks it). A test (`every_tab_and_command_is_translated`) enforces that every ribbon tab, command label and ribbon location is translated in every catalog.
   `pl`, `pl-PL` and `pl_PL.UTF-8` system locales pick Polish automatically.
 - Of the 675 English strings a scan extracts from `tl!(…)` calls and command labels/locations, each
   catalog covers **661 (98%)**. Some newer dialog and pane strings (Equation tab tooltips, Zotero,
@@ -47,18 +55,18 @@ shared items below.
 | English | en | source (100%) | ✅ | Latin ✅ | yes | **full** | 0 |
 | Simplified Chinese (Mandarin) | zh-hans | 929 entries; 98% of extracted, ~95% of visible | most; newer panes English | CJK ✅, IME ✅; Windows UI font fixed (#248); interface font chain covers every catalog character, installed CJK font after the embedded ones when it doesn't, PingFang found on macOS 12 (#486); font list by Chinese names (宋体, 微软雅黑, #505); no vertical text | no | partial | 3–5 |
 | Spanish | es | ~930; 98% / ~95% | most | Latin ✅ | no | partial | 1–2 |
-| Hindi | hi | 0 | ❌ | Devanagari shaping via HarfRust, untested; no hyphenation | no | none | 4–6 |
-| Arabic | ar | 0 | ❌ | shaping, joining, lam-alef, bidi ✅ (#207); no kashida; **no mirrored UI** | no | none | 6–8 |
+| Hindi | hi | 0 — not registered; the interface stays English | ❌ | Devanagari shaping via HarfRust, untested; no hyphenation | no | none | 4–6 |
+| Arabic | ar | 0 — not registered; the interface stays English | ❌ | shaping, joining, lam-alef, bidi ✅ (#207); no kashida; **no mirrored UI** | no | none | 6–8 |
 | French | fr | 2,033 entries | most; newer dialogs partly English | Latin ✅ | no | partial | 1–2 |
-| Portuguese | pt-br (pt-PT none) | ~930; 98% / ~95% (pt-BR) | most | Latin ✅ | no | partial | 2–4 (pt-BR finish + pt-PT) |
-| Indonesian | id | 0 | ❌ | Latin ✅ | no | none | 3–4 |
+| Portuguese | pt-br (pt-PT not registered; those locales read English) | ~930; 98% / ~95% | most | Latin ✅ | no | partial | 1–2 (pt-BR finish) |
+| Indonesian | id | 0 — not registered; the interface stays English | ❌ | Latin ✅ | no | none | 3–4 |
 | Japanese | ja | ~930; 98% / ~95% | most | CJK ✅, IME ✅; no vertical text, ruby or document grid | no | partial | 3–5 |
 | German | de | 2,021 entries; same key set as zh-hans (#574); 98% of extracted, ~95% of visible | most | Latin ✅ | no | partial | 1–2 |
-| Korean | ko | 0 | ❌ | Hangul ✅; macOS Korean IME fixes pending (#163, #164) | no | none | 3–5 |
-| Vietnamese | vi | 0 | ❌ | Latin with stacked diacritics, untested | no | none | 3–4 |
+| Korean | ko | 0 — not registered; the interface stays English | ❌ | Hangul ✅; macOS Korean IME fixes pending (#163, #164) | no | none | 3–5 |
+| Vietnamese | vi | 0 — not registered; the interface stays English | ❌ | Latin with stacked diacritics, untested | no | none | 3–4 |
 
-Other shipped languages: **13** — Traditional Chinese (`zh-hant`), Ukrainian (`uk`), Serbian
-Cyrillic and Latin (`sr`, `sr-latn`, #250), Estonian (`et`), Turkish (`tr`), Russian (`ru`), Italian (`it`, #594), Polish (`pl`), Czech (`cs`), Hungarian (`hu`), French (`fr`) and Bulgarian (`bg`), all partial.
+Other shipped languages: **12** — Traditional Chinese (`zh-hant`), Ukrainian (`uk`), Serbian
+Cyrillic and Latin (`sr`, `sr-latn`, #250), Estonian (`et`), Turkish (`tr`), Russian (`ru`), Italian (`it`, #594), Polish (`pl`), Czech (`cs`), Hungarian (`hu`) and Bulgarian (`bg`), all partial. Seven of the twelve key languages ship (English, Chinese, Spanish, French, Portuguese, Japanese and German); with these twelve that is the 19 the picker lists. The other five key languages - Arabic, Hindi, Indonesian, Korean and Vietnamese - are not registered, so they stay in English.
 Estonian uses the existing fonts, follows `et-EE` system locales, and is available in Options or
 through `ui.language` with `{"value":"et"}`. Its 1,307 entries cover the existing interface catalog.
 Estonian spelling, grammar, dates and document templates are not added by the interface catalog.
@@ -159,6 +167,9 @@ WordCraft keeps 2,54 cm).
 
 | Date | Change | Summary |
 |---|---|---|
+| 2026-11-25 | minor | `pt-PT` is deleted and unregistered like the five copies before it: its catalog was the `pt-br` text (2,104 of 2,104 entries identical), so the picker offered Brazilian Portuguese under a second name. `pt-PT` locales read English until European Portuguese is written, and `no_catalog_is_a_copy_of_another` needs no exception |
+| 2026-11-25 | minor | `ar`, `hi`, `id`, `ko` and `vi` are deleted and unregistered, so those locales fall back to English instead of showing a Chinese interface; the per-language coverage and font tests `a889a05` deleted are restored, with `no_catalog_is_a_copy_of_another` and one coverage test that now checks both directions |
+| 2026-11-25 | minor | Interface-language counts measured against the code and made to agree: 25 entries in the picker (English, 18 real catalogs, six copies), catalogs 2,104–2,512 entries, and `ar`/`hi`/`id`/`ko`/`vi` recorded as copies of `zh-hans` (2,104 of 2,104 identical, 2,089 Han characters) and `pt-PT` as a copy of `pt-br` (2,104 of 2,104). They stay as they are; the picker and the translation work are unchanged |
 | 2026-11-23 | minor | Thai grammar: repeated adjacent Thai words and spaces before punctuation are reported with Thai messages; hyphenation remains unsupported |
 | 2026-11-23 | minor | Thai proofing added: kham-core Thai segmentation and spelling with its built-in CC0 vocabulary, suggestions and Review › Language entry; grammar and hyphenation remain open |
 | 2026-10-11 | minor | Turkish interface catalog completed (2,325 entries, the same keys as Russian): equation gallery, built-in style names, watermarks, paper sizes and preview tiles; the interface audit checks Turkish too (#774) |
