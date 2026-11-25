@@ -122,7 +122,7 @@ pub(crate) fn note(app: &mut WordApp, command: &str, started: Started, result: &
 /// modal surface owns the screen.
 pub(crate) fn visible(app: &WordApp) -> bool {
     let Some(state) = &app.canvas.paste_options else { return false };
-    if state.rev != app.session.rev()
+    let stale = state.rev != app.session.rev()
         || state.document != app.session.document_id()
         || state.selection != app.session.sel
         || app.session.view.read_mode
@@ -130,11 +130,8 @@ pub(crate) fn visible(app: &WordApp) -> bool {
         || app.colors.is_some()
         || app.ui.backstage
         || app.canvas.context_menu_open
-        || app.ui.keytips != crate::keytips::Phase::Off
-    {
-        return false;
-    }
-    true
+        || app.ui.keytips != crate::keytips::Phase::Off;
+    !stale
 }
 
 /// Forget the button once an edit, undo, document replacement or caret move has made its range
