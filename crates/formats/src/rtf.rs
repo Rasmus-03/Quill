@@ -1780,7 +1780,13 @@ fn parse_full(bytes: &[u8]) -> Result<Parsed, String> {
         blocks.push(FBlock::Para(Para::default()));
     }
     let default_font = r.fonts.get(&r.deff).filter(|n| !model::is_mono(n)).cloned();
-    Ok(Parsed { flow: Flow { blocks, meta: r.meta, ..Default::default() }, page: r.page, default_font, headers_footers: r.hf_parts, title_page: r.title_page })
+    Ok(Parsed {
+        flow: Flow { blocks, meta: r.meta, ..Default::default() },
+        page: r.page,
+        default_font,
+        headers_footers: r.hf_parts,
+        title_page: r.title_page,
+    })
 }
 
 /// The column grid of a table from its rows' cell right edges: every distinct edge starts a grid

@@ -358,7 +358,9 @@ pub enum RevisionKind {
 }
 
 impl Default for RevisionKind {
-    fn default() -> Self { RevisionKind::Insert }
+    fn default() -> Self {
+        RevisionKind::Insert
+    }
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -368,7 +370,9 @@ pub enum NoteKind {
 }
 
 impl Default for NoteKind {
-    fn default() -> Self { NoteKind::Footnote }
+    fn default() -> Self {
+        NoteKind::Footnote
+    }
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -378,7 +382,9 @@ pub enum Orientation {
 }
 
 impl Default for Orientation {
-    fn default() -> Self { Orientation::Portrait }
+    fn default() -> Self {
+        Orientation::Portrait
+    }
 }
 
 impl Orientation {
@@ -396,7 +402,6 @@ pub struct Flow {
     pub revisions: Vec<Revision>,
     pub sections: Vec<Section>,
 }
-
 
 /// `inlines` with equations as their linear text (default formatting), for formats that have no
 /// equations.

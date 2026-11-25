@@ -1460,7 +1460,7 @@ fn parse_limited(bytes: &[u8], max_images: u64) -> Result<Flow, String> {
     if blocks.is_empty() {
         blocks.push(FBlock::Para(Para::default()));
     }
-Ok(Flow { blocks, meta, notes: Vec::new(), comments: Vec::new(), revisions: Vec::new(), sections: Vec::new() })
+    Ok(Flow { blocks, meta, notes: Vec::new(), comments: Vec::new(), revisions: Vec::new(), sections: Vec::new() })
 }
 
 /// Parse an `.odt` package into a document.
