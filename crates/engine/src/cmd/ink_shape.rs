@@ -126,7 +126,7 @@ pub fn recognise(pts: &[[f32; 2]]) -> Option<InkShape> {
 }
 
 /// Left, top, width and height of `pts` (zero for none).
-fn bbox(pts: &[[f32; 2]]) -> [f32; 4] {
+pub(crate) fn bbox(pts: &[[f32; 2]]) -> [f32; 4] {
     let Some(f) = pts.first() else { return [0.0; 4] };
     let (mut x0, mut y0, mut x1, mut y1) = (f[0], f[1], f[0], f[1]);
     for [x, y] in pts {

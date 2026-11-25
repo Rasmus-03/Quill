@@ -1,4 +1,4 @@
-//! Ink equations (Equations › Ink Equation): a hand-drawn stroke on the equation drawing area is
+//! Ink equations (Draw › Ink to Math): a hand-drawn stroke on the equation drawing area is
 //! converted into the equation's `Math` tree, so a formula written with the pen lands in the
 //! document as an equation object instead of as a drawing.
 //!
@@ -9,20 +9,7 @@
 
 use wordcraft_doc::math::{Arg, FracKind, MNode, MRun, ScriptKind};
 
-use super::ink_shape::{InkShape, recognise};
-
-/// A recognised ink stroke that can be turned into an equation: a line, a rectangle (fraction
-/// bar, radical check mark, limit under-overline) or a closed polygon. Anything that does not
-/// fit keeps the points as ink and is reported back so the drawing can be redrawn.
-#[derive(Clone, Debug, PartialEq)]
-pub enum InkEquation {
-    /// A straight line. `above`/`below` hold the fitted structures (fraction bar, limit).
-    Line { a: [f32; 2], b: [f32; 2] },
-    /// A rectangle (stacked fraction, radical check mark, enclosed box).
-    Rectangle { x: f32, y: f32, w: f32, h: f32 },
-    /// A closed polygon (integral, big operator, boxed formula).
-    Polygon(Vec<[f32; 2]>),
-}
+use super::ink_shape::{InkShape, bbox, recognise};
 
 /// Build an equation's `Math` tree from a drawn stroke.
 ///
@@ -33,15 +20,6 @@ pub enum InkEquation {
 ///
 /// The fit is bounded: hostile, degenerate or unrecognisable input returns `None`, and callers
 /// may redraw those points as ink without losing progress.
-///
-/// # Examples
-///
-/// A hand-drawn fraction (numerator above, a bar near the middle, denominator below) is read as
-/// a fraction, so the drawer does not have to type `a/b`:
-///
-/// ```ignore
-/// let nodes = wordcraft_ink_equation::build_ink_equation(&[[10., 20.], [60., 20.]])?;
-/// ```
 pub fn build_ink_equation(pts: &[[f32; 2]]) -> Option<(Arg, bool)> {
     let shape = recognise(pts)?;
     // A display equation is a large stroke on an otherwise empty line; an inline one is small.
@@ -65,23 +43,21 @@ fn build_nodes(shape: InkShape) -> Arg {
             let base = vec![MNode::Run(MRun::new(operand))];
             vec![MNode::Nary { chr: '∫', lim_loc: None, grow: false, sub_hide: true, sup_hide: true, sub: Vec::new(), sup: Vec::new(), e: base }]
         }
-        InkShape::Rectangle { x, y, w, h } => {
-            // A rectangle is a fraction with a bar: numerator above, denominator below, or a
-            // radical if the check mark is at the top, else a boxed formula.
+        InkShape::Rectangle { x, y, h, .. } => {
+            // The strokes around the box are what tell a bar from a radical; until that fit exists
+            // this decides from where the box sits on the page.
             if y >= h * 0.7 {
-                // The bar is at the bottom: a stacked fraction.
-                let num = boxed_operand(x, y + h * 0.25, w, h * 0.45);
-                let den = boxed_operand(x, y + h * 0.55, w, h * 0.45);
-                vec![MNode::Frac { kind: FracKind::Bar, num, den }]
+                // Low on the page: a stacked fraction.
+                let operand = boxed_operand(x);
+                vec![MNode::Frac { kind: FracKind::Bar, num: operand.clone(), den: operand }]
             } else {
-                // The bar is at the top: a radical with check mark and a base, else a box.
-                let base = boxed_operand(x, y + h * 0.3, w, h * 0.55);
-                vec![MNode::Rad { deg: Vec::new(), deg_hide: true, e: base }]
+                // High on the page: a radical with its check mark.
+                vec![MNode::Rad { deg: Vec::new(), deg_hide: true, e: boxed_operand(x) }]
             }
         }
-        InkShape::Ellipse { x, y, w, h } => {
+        InkShape::Ellipse { x, .. } => {
             // An ellipse is a boxed formula: a small letter inside its bounding box.
-            vec![MNode::Rad { deg: Vec::new(), deg_hide: true, e: boxed_operand(x, y, w, h) }]
+            vec![MNode::Rad { deg: Vec::new(), deg_hide: true, e: boxed_operand(x) }]
         }
         InkShape::Polygon(c) => {
             // A closed polygon is an integral or a boxed formula.
@@ -113,19 +89,16 @@ fn build_nodes(shape: InkShape) -> Arg {
     }
 }
 
-/// The operand inside a boxed structure: everything the fit found inside the ink's own box.
-fn boxed_operand(x: f32, _y: f32, _w: f32, _h: f32) -> Vec<MNode> {
-    // Word's linear format for a boxed formula is the bounding box of its glyphs, so a small
-    // set of letters inside the rectangle maps to the same letters in the linear output.
-    // The coordinates are the glyph box; render them as a tiny superscript base+exponent.
-    // The superscript is a `Script` node, not `a^{..}` in a run: a run's text is written to the
-    // linear form verbatim and read back as markup, so the tree would not survive its own round
-    // trip.
+/// The operand inside a boxed structure: a placeholder, since the fit reads no glyphs yet.
+fn boxed_operand(x: f32) -> Vec<MNode> {
+    // The box's left edge rides as a superscript. It is a `Script` node, not `a^{..}` in a run:
+    // a run's text is written to the linear form verbatim and read back as markup, so the tree
+    // would not survive its own round trip.
     vec![MNode::Script {
         kind: ScriptKind::Sup,
         base: vec![MNode::Run(MRun::new("a"))],
         sub: Vec::new(),
-        sup: vec![MNode::Run(MRun::new(format!("{}", x)))],
+        sup: vec![MNode::Run(MRun::new(x.to_string()))],
     }]
 }
 
@@ -150,19 +123,6 @@ fn build_operand(a: [f32; 2], b: [f32; 2]) -> String {
     } else {
         "x".to_string()
     }
-}
-
-// The shape fit itself lives in `ink_shape` (Draw › Ink to Shape): one
-// recogniser for both commands, so Ink to Math reads a stroke exactly as the Draw
-// command does.
-
-fn bbox(pts: &[[f32; 2]]) -> [f32; 4] {
-    let Some(f) = pts.first() else { return [0.0; 4] };
-    let (mut x0, mut y0, mut x1, mut y1) = (f[0], f[1], f[0], f[1]);
-    for [x, y] in pts {
-        (x0, y0, x1, y1) = (x0.min(*x), y0.min(*y), x1.max(*x), y1.max(*y));
-    }
-    [x0, y0, x1 - x0, y1 - y0]
 }
 
 #[cfg(test)]
